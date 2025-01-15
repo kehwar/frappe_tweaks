@@ -8,6 +8,10 @@ bench drop-site --no-backup --root-password 123 development.localhost
 
 bench new-site development.localhost --admin-password admin --db-root-password 123
 
+## Uninstall apps
+
+bench --site development.localhost uninstall-app tweaks --yes --no-backup
+
 ## Install apps
 
 bench --site development.localhost install-app erpnext
