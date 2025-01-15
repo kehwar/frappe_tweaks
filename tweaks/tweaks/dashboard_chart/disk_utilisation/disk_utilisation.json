@@ -1,0 +1,34 @@
+{
+ "based_on": "creation",
+ "chart_name": "Disk Utilisation",
+ "chart_type": "Average",
+ "color": "#449CF0",
+ "creation": "2025-01-15 11:31:37.174571",
+ "docstatus": 0,
+ "doctype": "Dashboard Chart",
+ "document_type": "Server Performance Log",
+ "filters_json": "[]",
+ "group_by_type": "Count",
+ "idx": 0,
+ "is_public": 1,
+ "is_standard": 1,
+ "last_synced_on": "2025-01-15 11:28:31.091923",
+ "modified": "2025-01-15 11:31:37.174571",
+ "modified_by": "Administrator",
+ "module": "Tweaks",
+ "name": "Disk Utilisation",
+ "number_of_groups": 0,
+ "owner": "Administrator",
+ "roles": [
+  {
+   "role": "Administrator"
+  }
+ ],
+ "time_interval": "Daily",
+ "timeseries": 1,
+ "timespan": "Last Week",
+ "type": "Line",
+ "use_report_chart": 0,
+ "value_based_on": "disk_utilisation",
+ "y_axis": []
+}
