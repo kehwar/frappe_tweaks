@@ -34,3 +34,5 @@ bench --site development.localhost migrate
 bench start
 
 bench set-config -g server_script_enabled 1
+
+bench update --reset
