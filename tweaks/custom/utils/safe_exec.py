@@ -1,3 +1,4 @@
+import re
 import traceback
 
 import frappe
@@ -40,6 +41,7 @@ def get_safe_globals(get_safe_globals):
             "frappe.db.unsafe_sql": admin_sql,
             "frappe.has_permission": frappe.has_permission,
             "has_permission": frappe.has_permission,
+            "re": re,
             "traceback.format_stack": traceback.format_stack,
         }
 
@@ -60,3 +62,4 @@ def get_safe_globals(get_safe_globals):
 def apply_safe_exec_patches():
     safe_exec.get_safe_globals = get_safe_globals(safe_exec.get_safe_globals)
     safe_exec.WHITELISTED_SAFE_EVAL_GLOBALS["len"] = len
+    safe_exec.WHITELISTED_SAFE_EVAL_GLOBALS["re"] = re
