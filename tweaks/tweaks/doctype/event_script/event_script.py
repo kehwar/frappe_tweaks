@@ -91,7 +91,6 @@ def get_script_map_key(doctype, event, action=None, workflow_action=None):
     return key
 
 
-@frappe.whitelist()
 def get_script_map(cached=True):
     """
     Fetch or create the script map.
@@ -189,7 +188,7 @@ def get_resolved_script_map(cached=True):
     if frappe.session.user != "Administrator":
         frappe.throw(_("Must be Administrator to run this query"))
 
-    script_map = get_script_map()
+    script_map = get_script_map(cached=cached)
 
     for scripts in script_map.values():
         for script in scripts:
@@ -208,27 +207,16 @@ def unwrap_doctype_event(event):
 
 
 def on_change(doc, method=None):
-    if doc.doctype in ["User", "User Group", "Role", "Role Profile"]:
-        clear_script_cache()
-
     # Get the workflow linked to the document type
     workflow_name = get_workflow_name(doc.doctype)
     if workflow_name:
         apply_auto_workflow_transition(doc)
 
 
-def after_rename(doc, method=None, old=None, new=None, merge=None):
-    if doc.doctype == "User":
-        clear_script_cache()
-
-
 event_script_hooks = {
     "doc_events": {
         "*": {
-            "on_change": ["tweaks.tweaks.doctype.event_script.event_script.on_change"],
-            "after_rename": [
-                "tweaks.tweaks.doctype.event_script.event_script.after_rename"
-            ],
+            "on_change": ["tweaks.tweaks.doctype.event_script.event_script.on_change"]
         }
     },
     "permission_query_conditions": {

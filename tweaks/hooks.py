@@ -21,7 +21,6 @@ before_uninstall = (
 doc_events = {
     "*": {
         "on_change": event_script_hooks["doc_events"]["*"]["on_change"],
-        "after_rename": event_script_hooks["doc_events"]["*"]["after_rename"],
     }
 }
 
