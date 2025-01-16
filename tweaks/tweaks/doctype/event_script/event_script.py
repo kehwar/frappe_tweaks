@@ -70,6 +70,14 @@ class EventScript(Document):
         ] and self.action not in ["read", "write", "*"]:
             frappe.throw(_("Action must be 'read', 'write', or '*'"))
 
+        # TODO: Implement
+        if self.doctype_event == "has_field_permission" and self.disabled == 0:
+            frappe.throw(
+                _("Doctype Event '{}' is not implemented yet").format(
+                    self.doctype_event
+                )
+            )
+
     def on_change(self):
 
         get_script_map(cached=False)
