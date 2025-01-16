@@ -28,6 +28,9 @@ has_permission = event_script_hooks["has_permission"]
 
 permission_query_conditions = event_script_hooks["permission_query_conditions"]
 
+override_whitelisted_methods = {
+    "frappe.desk.form.utils.get_next": f"tweaks.custom.utils.virtual_doctype.get_next"
+}
 
 # Scheduler
 
