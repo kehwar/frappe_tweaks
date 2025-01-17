@@ -247,7 +247,7 @@ def resolve_parameters(parameters):
         value = frappe.db.get_value(doctype, docname, field)
         docname = docname or doctype
         resolved_parameters.append(value)
-    return resolve_parameters
+    return resolved_parameters
 
 
 def resolve_users(user_filters):
