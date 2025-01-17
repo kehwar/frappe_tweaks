@@ -5,6 +5,7 @@ from typing import Union
 
 import frappe
 from frappe import _
+from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.model.db_query import DatabaseQuery
 from frappe.model.docstatus import DocStatus
 from frappe.model.document import Document
@@ -221,6 +222,23 @@ def on_change(doc, method=None):
         apply_auto_workflow_transition(doc)
 
 
+def create_workflow_fields():
+
+    create_custom_fields(
+        {
+            "Workflow Transition": [
+                {
+                    "fieldname": "auto_apply",
+                    "fieldtype": "Check",
+                    "label": "Auto Apply",
+                    "insert_after": "allow_self_approval",
+                }
+            ]
+        },
+        ignore_validate=True,
+    )
+
+
 event_script_hooks = {
     "doc_events": {
         "*": {
@@ -233,6 +251,9 @@ event_script_hooks = {
     "has_permission": {
         "*": "tweaks.tweaks.doctype.event_script.event_script.has_permission"
     },
+    "after_install": [
+        "tweaks.tweaks.doctype.event_script.event_script.create_workflow_fields"
+    ],
 }
 
 

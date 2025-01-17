@@ -12,7 +12,9 @@ app_license = "mit"
 
 # Hooks
 
-after_install = "tweaks.tweaks.doctype.server_performance_log.install.after_install"
+after_install = [
+    "tweaks.tweaks.doctype.server_performance_log.install.after_install",
+] + event_script_hooks["after_install"]
 
 before_uninstall = (
     "tweaks.tweaks.doctype.server_performance_log.install.before_uninstall"
