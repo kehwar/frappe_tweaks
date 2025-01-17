@@ -29,6 +29,10 @@ bench --site development.localhost restore --db-root-password 123 "backups/20250
 
 bench --site development.localhost migrate
 
+## Run patch
+
+bench --site development.localhost run-patch --force tweaks.custom.patches.2025.2025_01_17__add_workflow_field
+
 # Bench
 
 bench start
