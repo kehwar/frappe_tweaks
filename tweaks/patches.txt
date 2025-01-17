@@ -5,4 +5,4 @@
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
 
-tweaks.custom.patches.2025.2025_01_17__add_workflow_field
+tweaks.patches.2025.2025_01_17__add_workflow_field
