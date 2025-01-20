@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 
 tweaks.patches.2025.2025_01_17__add_workflow_field_v2
+tweaks.patches.2025.2025_01_20__add_pricing_rule_field

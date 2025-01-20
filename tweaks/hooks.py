@@ -1,4 +1,5 @@
 from tweaks.custom.utils.hooks import join_doc_events
+from tweaks.custom.utils.pricing_rule import pricing_rule_hooks
 from tweaks.tweaks.doctype.event_script.event_script import event_script_hooks
 
 # App data
@@ -12,9 +13,13 @@ app_license = "mit"
 
 # Hooks
 
-after_install = [
-    "tweaks.tweaks.doctype.server_performance_log.install.after_install",
-] + event_script_hooks["after_install"]
+after_install = (
+    [
+        "tweaks.tweaks.doctype.server_performance_log.install.after_install",
+    ]
+    + event_script_hooks["after_install"]
+    + pricing_rule_hooks["after_install"]
+)
 
 before_uninstall = (
     "tweaks.tweaks.doctype.server_performance_log.install.before_uninstall"
