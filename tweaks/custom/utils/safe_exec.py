@@ -60,6 +60,7 @@ def get_safe_globals(get_safe_globals):
             "has_permission": frappe.has_permission,
             "re": get_re_module(),
             "traceback.format_stack": traceback.format_stack,
+            "safe_exec": safe_exec.safe_exec,
         }
 
         for key, method in overrides.items():
