@@ -45,8 +45,15 @@ def get_re_module():
         compile=re.compile,
         escape=re.escape,
         purge=re.purge,
+        DOTALL=re.DOTALL,
+        IGNORECASE=re.IGNORECASE,
+        MULTILINE=re.MULTILINE,
+        VERBOSE=re.VERBOSE,
+        ASCII=re.ASCII,
+        LOCALE=re.LOCALE,
+        UNICODE=re.UNICODE,
+        DEBUG=re.DEBUG
     )
-
 
 def get_safe_globals(get_safe_globals):
 
