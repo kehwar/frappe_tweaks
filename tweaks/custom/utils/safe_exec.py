@@ -3,8 +3,10 @@ import traceback
 
 import frappe
 from frappe import _
+from frappe.model.naming import getseries
 from frappe.utils import safe_exec
 from frappe.utils.safe_exec import NamespaceDict
+from tweaks.custom.utils.naming import setseries
 
 
 def log_traceback():
@@ -52,8 +54,9 @@ def get_re_module():
         ASCII=re.ASCII,
         LOCALE=re.LOCALE,
         UNICODE=re.UNICODE,
-        DEBUG=re.DEBUG
+        DEBUG=re.DEBUG,
     )
+
 
 def get_safe_globals(get_safe_globals):
 
@@ -68,6 +71,8 @@ def get_safe_globals(get_safe_globals):
             "re": get_re_module(),
             "traceback.format_stack": traceback.format_stack,
             "safe_exec": safe_exec.safe_exec,
+            "frappe.utils.getseries": getseries,
+            "frappe.utils.setseries": setseries,
         }
 
         for key, method in overrides.items():
