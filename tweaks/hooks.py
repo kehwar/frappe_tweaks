@@ -1,4 +1,4 @@
-from tweaks.custom.utils.hooks import join_doc_events
+from tweaks.custom.doctype.client_script import client_script_hooks
 from tweaks.custom.utils.pricing_rule import pricing_rule_hooks
 from tweaks.tweaks.doctype.event_script.event_script import event_script_hooks
 
@@ -13,12 +13,15 @@ app_license = "mit"
 
 # Hooks
 
+app_include_js = "frappe_tweaks.bundle.js"
+
 after_install = (
     [
         "tweaks.tweaks.doctype.server_performance_log.install.after_install",
     ]
     + event_script_hooks["after_install"]
     + pricing_rule_hooks["after_install"]
+    + client_script_hooks["after_install"]
 )
 
 before_uninstall = (
@@ -37,6 +40,10 @@ permission_query_conditions = event_script_hooks["permission_query_conditions"]
 
 override_whitelisted_methods = {
     "frappe.desk.form.utils.get_next": f"tweaks.custom.utils.virtual_doctype.get_next"
+}
+
+override_doctype_class = {
+    "Client Script": "tweaks.custom.doctype.client_script.TweaksClientScript"
 }
 
 # Scheduler

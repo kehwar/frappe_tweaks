@@ -1,3 +1,4 @@
+from tweaks.custom.doctype.client_script import apply_client_script_patches
 from tweaks.custom.utils.fixtures import apply_fixtures_patches
 from tweaks.custom.utils.pricing_rule import apply_pricing_rule_patches
 from tweaks.custom.utils.safe_exec import apply_safe_exec_patches
@@ -6,6 +7,7 @@ from tweaks.tweaks.doctype.event_script.event_script import apply_event_script_p
 
 def apply_patches():
 
+    apply_client_script_patches()
     apply_event_script_patches()
     apply_fixtures_patches()
     apply_pricing_rule_patches()

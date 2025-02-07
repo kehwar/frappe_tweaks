@@ -7,6 +7,7 @@ from frappe import _
 from frappe.model.naming import getseries
 from frappe.utils import safe_exec
 from frappe.utils.safe_exec import NamespaceDict
+from tweaks.custom.utils.formatter import to_snake_case
 from tweaks.custom.utils.naming import setseries
 
 
@@ -75,6 +76,7 @@ def get_safe_globals(get_safe_globals):
             "frappe.utils.getseries": getseries,
             "frappe.utils.setseries": setseries,
             "yaml": NamespaceDict(load=yaml.safe_load, dump=yaml.safe_dump),
+            "frappe.utils.to_snake_case": to_snake_case,
         }
 
         for key, method in overrides.items():
