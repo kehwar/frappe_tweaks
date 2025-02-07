@@ -83,6 +83,10 @@ class EventScript(Document):
 
         get_script_map(cached=False)
 
+    def after_delete(self):
+
+        get_script_map(cached=False)
+
 
 def clear_script_cache():
     """
