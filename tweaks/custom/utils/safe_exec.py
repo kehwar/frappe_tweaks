@@ -2,6 +2,7 @@ import re
 import traceback
 
 import frappe
+import yaml
 from frappe import _
 from frappe.model.naming import getseries
 from frappe.utils import safe_exec
@@ -73,6 +74,7 @@ def get_safe_globals(get_safe_globals):
             "safe_exec": safe_exec.safe_exec,
             "frappe.utils.getseries": getseries,
             "frappe.utils.setseries": setseries,
+            "yaml": NamespaceDict(load=yaml.safe_load, dump=yaml.safe_dump),
         }
 
         for key, method in overrides.items():
