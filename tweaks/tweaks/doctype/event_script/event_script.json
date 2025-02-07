@@ -66,12 +66,14 @@
    "fieldname": "doctype_filter",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "DocType Filter"
   },
   {
    "fieldname": "user_filter",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "User Filter"
   },
   {
