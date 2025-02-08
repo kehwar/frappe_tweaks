@@ -70,6 +70,7 @@ def create_custom_client_script_fields():
                     "insert_after": "dt",
                     "set_only_once": 1,
                     "depends_on": "eval:!doc.dt && doc.view != 'Global'",
+                    "in_standard_filter": 1,
                 },
                 {
                     "fieldname": "safe_title",
@@ -102,6 +103,20 @@ def set_custom_client_script_properties():
         "Client Script",
         "view",
         "set_only_once",
+        "0",
+        "Check",
+    )
+    make_property_setter(
+        "Client Script",
+        "view",
+        "in_standard_filter",
+        "1",
+        "Check",
+    )
+    make_property_setter(
+        "Client Script",
+        "dt",
+        "reqd",
         "0",
         "Check",
     )
