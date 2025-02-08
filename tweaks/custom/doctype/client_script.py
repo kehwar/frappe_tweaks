@@ -102,13 +102,6 @@ def set_custom_client_script_properties():
     make_property_setter(
         "Client Script",
         "view",
-        "set_only_once",
-        "0",
-        "Check",
-    )
-    make_property_setter(
-        "Client Script",
-        "view",
         "in_standard_filter",
         "1",
         "Check",
