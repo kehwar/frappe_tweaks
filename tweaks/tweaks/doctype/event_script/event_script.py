@@ -141,6 +141,7 @@ def get_script_map(cached=True):
             "action",
             "workflow_action",
             "script",
+            "priority",
         ],
     )
 
@@ -186,6 +187,7 @@ def get_script_map(cached=True):
                         "script": script.script,
                         "parameters": parameters,
                         "users": users,
+                        "priority": script.priority,
                     }
                 )
 
@@ -392,6 +394,7 @@ def get_permission_policies(doctype, doc=None, ptype=None, user=None, debug=Fals
     scripts = get_script_map().get(
         get_script_map_key(doctype, "has_permission", ptype or "read"), []
     ) + get_script_map().get(get_script_map_key(doctype, "has_permission", "*"), [])
+    scripts = sorted(scripts, key=lambda x: x["priority"], reverse=True)
 
     policies = []
 
