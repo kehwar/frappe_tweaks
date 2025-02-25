@@ -60,6 +60,18 @@ def get_re_module():
     )
 
 
+def get_cache_module():
+    return NamespaceDict(
+        set_value=frappe.cache.set_value,
+        get_value=frappe.cache.get_value,
+        delete_value=frappe.cache.delete_value,
+        hset=frappe.cache.hset,
+        hget=frappe.cache.hget,
+        hgetall=frappe.cache.hgetall,
+        hdel=frappe.cache.hdel,
+    )
+
+
 def get_safe_globals(get_safe_globals):
 
     def _get_safe_globals():
@@ -77,6 +89,7 @@ def get_safe_globals(get_safe_globals):
             "frappe.utils.setseries": setseries,
             "yaml": NamespaceDict(load=yaml.safe_load, dump=yaml.safe_dump),
             "frappe.utils.to_snake_case": to_snake_case,
+            "frappe.cache": get_cache_module(),
         }
 
         for key, method in overrides.items():
