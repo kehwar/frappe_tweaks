@@ -7,4 +7,4 @@
 
 tweaks.patches.2025.2025_01_17__add_workflow_field_v2
 tweaks.patches.2025.2025_01_20__add_pricing_rule_field
-tweaks.patches.2025.2025_02_07__client_script_patches_v3
+tweaks.patches.2025.2025_02_07__client_script_patches_v4
