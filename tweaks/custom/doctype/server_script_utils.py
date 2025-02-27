@@ -78,14 +78,11 @@ def get_server_script_map():
                 script_map.setdefault(script.reference_doctype, {}).setdefault(
                     script.doctype_event, []
                 ).append(script.name)
-                print(script.name)
             elif script.script_type == "Permission Query":
                 script_map["permission_query"][script.reference_doctype] = script.name
             else:
                 script_map.setdefault("_api", {})[script.api_method] = script.name
 
         frappe.cache.set_value("server_script_map", script_map)
-
-    print(script_map)
 
     return script_map
