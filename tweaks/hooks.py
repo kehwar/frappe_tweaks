@@ -43,7 +43,8 @@ override_whitelisted_methods = {
 }
 
 override_doctype_class = {
-    "Client Script": "tweaks.custom.doctype.client_script.TweaksClientScript"
+    "Client Script": "tweaks.custom.doctype.client_script.TweaksClientScript",
+    "Server Script": "tweaks.custom.doctype.server_script.TweaksServerScript",
 }
 
 # Scheduler
