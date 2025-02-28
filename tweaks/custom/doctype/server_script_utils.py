@@ -18,7 +18,6 @@ EVENT_MAP = {
     "on_update_after_submit": "After Save (Submitted Document)",
     "before_print": "Before Print",
     "on_payment_authorized": "On Payment Authorization",
-    "permission_policy": "Permission Policy",
     "before_transition": "Before Transition",
     "after_transition": "After Transition",
 }

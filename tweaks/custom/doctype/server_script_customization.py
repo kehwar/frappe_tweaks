@@ -91,10 +91,24 @@ def set_custom_server_script_properties():
     )
     make_property_setter(
         "Server Script",
+        "script_type",
+        "options",
+        "DocType Event\nScheduler Event\nPermission Policy\nPermission Query\nAPI",
+        "Small Text",
+    )
+    make_property_setter(
+        "Server Script",
         "doctype_event",
         "options",
         "\n".join(EVENT_MAP.values()),
         "Small Text",
+    )
+    make_property_setter(
+        "Server Script",
+        "reference_doctype",
+        "depends_on",
+        "eval:['DocType Event', 'Permission Policy', 'Permission Query'].includes(doc.script_type)",
+        "Data",
     )
     make_property_setter(
         "Server Script",

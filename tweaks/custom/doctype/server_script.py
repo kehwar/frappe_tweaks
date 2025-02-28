@@ -15,7 +15,11 @@ class TweaksServerScript(ServerScript):
             self.cron_format = ""
         if self.script_type != "API":
             self.api_method = ""
-        if self.script_type not in ("DocType Event", "Permission Query"):
+        if self.script_type not in (
+            "DocType Event",
+            "Permission Policy",
+            "Permission Query",
+        ):
             self.reference_doctype = ""
         if self.script_type != "Scheduler Event":
             self.event_frequency = ""
@@ -28,7 +32,8 @@ class TweaksServerScript(ServerScript):
             frappe.throw(_("DocType Event is required"))
 
         if (
-            self.script_type in ("DocType Event", "Permission Query")
+            self.script_type
+            in ("DocType Event", "Permission Policy", "Permission Query")
             and not self.reference_doctype
         ):
             frappe.throw(_("Reference DocType is required"))
