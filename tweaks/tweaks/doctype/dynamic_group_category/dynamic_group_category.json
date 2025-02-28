@@ -1,26 +1,28 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "prompt",
+ "autoname": "field:category",
  "creation": "2025-02-26 22:27:26.869423",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_1cwv"
+  "category"
  ],
  "fields": [
   {
-   "fieldname": "section_break_1cwv",
-   "fieldtype": "Section Break"
+   "fieldname": "category",
+   "fieldtype": "Data",
+   "label": "Category",
+   "unique": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-26 22:32:06.228567",
+ "modified": "2025-02-27 23:45:41.421604",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Dynamic Group Category",
- "naming_rule": "Set by user",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

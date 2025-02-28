@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "hash",
  "creation": "2025-02-26 22:19:20.552720",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -67,10 +68,11 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-26 22:35:23.385922",
+ "modified": "2025-02-27 23:44:52.917615",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Dynamic Group",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [
   {
@@ -86,7 +88,9 @@
    "write": 1
   }
  ],
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "title"
 }
