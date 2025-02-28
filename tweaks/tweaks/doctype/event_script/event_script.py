@@ -337,46 +337,35 @@ def execute_script(name, script, locals, event, throw=True):
     return locals
 
 
-def run_method(run_method):
+def run_method(self, method, *args, **kwargs):
 
-    def patched(self, method, *args, **kwargs):
+    user = frappe.session.user
 
-        out = run_method(self, method, *args, **kwargs)
+    scripts = get_script_map().get(get_script_map_key(self.doctype, method), [])
 
-        user = frappe.session.user
+    for script in scripts:
 
-        scripts = get_script_map().get(get_script_map_key(self.doctype, method), [])
+        allowed_users = resolve_users(script["users"])
 
-        for script in scripts:
+        if not (user in allowed_users or "*" in allowed_users):
+            continue
 
-            allowed_users = resolve_users(script["users"])
+        locals = {
+            "doc": self,
+            "doctype": self.doctype,
+            "user": user,
+            "parameters": resolve_parameters(script["parameters"]),
+            "event": method,
+            "event_args": (
+                args if method in ["before_rename", "after_rename"] else None
+            ),
+        }
 
-            if not (user in allowed_users or "*" in allowed_users):
-                continue
-
-            locals = {
-                "doc": self,
-                "doctype": self.doctype,
-                "user": user,
-                "parameters": resolve_parameters(script["parameters"]),
-                "event": method,
-                "event_args": (
-                    args if method in ["before_rename", "after_rename"] else None
-                ),
-            }
-
-            execute_script(script["name"], script["script"], locals, script["event"])
-
-        return out
-
-    return patched
+        execute_script(script["name"], script["script"], locals, script["event"])
 
 
 def apply_event_script_patches():
 
-    frappe.model.document.Document.run_method = run_method(
-        frappe.model.document.Document.run_method
-    )
     DatabaseQuery.build_match_conditions = build_match_conditions(
         DatabaseQuery.build_match_conditions
     )
