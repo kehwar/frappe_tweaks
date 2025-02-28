@@ -11,8 +11,9 @@ from tweaks.tweaks.doctype.event_script.event_script import (
 def run_method(self, method, *args, **kwargs):
     """run standard triggers, plus those in hooks"""
 
-    setattr(self, "_run_method_args", args)
-    setattr(self, "_run_method_kwargs", kwargs)
+    self.flags.run_method = method
+    self.flags.run_method_args = args
+    self.flags.run_method_kwargs = kwargs
 
     def fn(self, *args, **kwargs):
         method_object = getattr(self, method, None)
@@ -31,8 +32,9 @@ def run_method(self, method, *args, **kwargs):
 
     run_event_script_method(self, method, *args, **kwargs)  # Deprecated
 
-    delattr(self, "_run_method_args")
-    delattr(self, "_run_method_kwargs")
+    self.flags.pop("run_method", None)
+    self.flags.pop("run_method_args", None)
+    self.flags.pop("run_method_kwargs", None)
 
     return out
 
