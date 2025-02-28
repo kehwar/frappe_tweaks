@@ -52,7 +52,7 @@ def create_custom_server_script_fields():
                     "fieldtype": "Int",
                     "default": "100",
                     "insert_after": "reference_script",
-                    "depends_on": "eval:doc.doctype_event",
+                    "depends_on": "eval:['DocType Event', 'Permission Policy'].includes(doc.script_type)",
                     "in_list_view": 1,
                 },
                 {
