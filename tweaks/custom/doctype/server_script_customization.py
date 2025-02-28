@@ -85,7 +85,7 @@ def set_custom_server_script_properties():
         "Server Script",
         None,
         "search_fields",
-        "reference_doctype, script_type, api_method, doctype_event",
+        "doctype_event, reference_doctype, api_method, script_type",
         "Data",
         for_doctype=True,
     )
@@ -121,13 +121,6 @@ def set_custom_server_script_properties():
         "Server Script",
         "doctype_event",
         "in_standard_filter",
-        1,
-        "Check",
-    )
-    make_property_setter(
-        "Server Script",
-        "api_method",
-        "in_list_view",
         1,
         "Check",
     )
