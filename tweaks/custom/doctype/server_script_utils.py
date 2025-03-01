@@ -77,6 +77,10 @@ def get_server_script_map():
                 script_map.setdefault(script.reference_doctype, {}).setdefault(
                     script.doctype_event, []
                 ).append(script.name)
+            elif script.script_type == "Permission Policy":
+                script_map.setdefault("permission_policy", {}).setdefault(
+                    script.reference_doctype, []
+                ).append(script.name)
             elif script.script_type == "Permission Query":
                 script_map["permission_query"][script.reference_doctype] = script.name
             else:

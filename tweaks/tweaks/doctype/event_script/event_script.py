@@ -210,10 +210,12 @@ def unwrap_doctype_event(event):
 
 event_script_hooks = {
     "permission_query_conditions": {
-        "*": "tweaks.tweaks.doctype.event_script.event_script.get_permission_query_conditions",
+        "*": [
+            "tweaks.tweaks.doctype.event_script.event_script.get_permission_query_conditions"
+        ],
     },
     "has_permission": {
-        "*": "tweaks.tweaks.doctype.event_script.event_script.has_permission"
+        "*": ["tweaks.tweaks.doctype.event_script.event_script.has_permission"]
     },
 }
 

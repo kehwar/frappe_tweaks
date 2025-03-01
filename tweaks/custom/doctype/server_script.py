@@ -3,6 +3,13 @@ from frappe import _
 from frappe.core.doctype.server_script.server_script import ServerScript
 from frappe.desk.form.meta import FormMeta
 from frappe.modules import scrub
+from frappe.utils.safe_exec import (
+    FrappeTransformer,
+    get_keys_for_autocomplete,
+    get_safe_globals,
+    is_safe_exec_enabled,
+    safe_exec,
+)
 
 
 class TweaksServerScript(ServerScript):
@@ -37,3 +44,43 @@ class TweaksServerScript(ServerScript):
             and not self.reference_doctype
         ):
             frappe.throw(_("Reference DocType is required"))
+
+    def get_permission_policy(self, user, ptype=None, doc=None):
+
+        locals = {
+            "user": user,
+            "ptype": ptype or "read",
+            "doc": doc,
+            "allow": None,
+            "filters": None,
+            "or_filters": None,
+            "query": None,
+            "message": None,
+        }
+
+        safe_exec(self.script, None, locals, script_filename=self.name)
+
+        if locals["filters"] or locals["or_filters"]:
+
+            locals["query"] = frappe.db.get_all(
+                self.reference_doctype,
+                filters=locals["filters"],
+                or_filters=locals["or_filters"],
+                run=False,
+                distinct=True,
+                order_by="",
+            )
+
+        if locals["query"] or locals["allow"] is not None:
+
+            return frappe._dict(
+                {
+                    "allow": (
+                        True if locals["allow"] is None or locals["allow"] else False
+                    ),
+                    "filters": locals["filters"],
+                    "or_filters": locals["or_filters"],
+                    "message": locals["message"],
+                    "query": locals["query"],
+                }
+            )

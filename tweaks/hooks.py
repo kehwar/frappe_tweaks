@@ -1,5 +1,6 @@
 from tweaks.custom.doctype.client_script import client_script_hooks
 from tweaks.custom.doctype.workflow import workflow_script_hooks
+from tweaks.custom.utils.permissions import permission_hooks
 from tweaks.custom.utils.pricing_rule import pricing_rule_hooks
 from tweaks.tweaks.doctype.event_script.event_script import event_script_hooks
 
@@ -35,9 +36,19 @@ doc_events = {
     }
 }
 
-has_permission = event_script_hooks["has_permission"]
+has_permission = {
+    "*": (
+        event_script_hooks["has_permission"]["*"]
+        + permission_hooks["has_permission"]["*"]
+    )
+}
 
-permission_query_conditions = event_script_hooks["permission_query_conditions"]
+permission_query_conditions = {
+    "*": (
+        event_script_hooks["permission_query_conditions"]["*"]
+        + permission_hooks["permission_query_conditions"]["*"]
+    )
+}
 
 override_whitelisted_methods = {
     "frappe.desk.form.utils.get_next": f"tweaks.custom.utils.virtual_doctype.get_next"

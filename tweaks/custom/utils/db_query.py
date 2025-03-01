@@ -47,12 +47,16 @@ def get_permission_query_conditions(_get_permission_query_conditions):
 
     def get_permission_query_conditions(self):
 
-        if not self._get_permission_query_conditions:
+        conditions = getattr(self, "_permission_query_conditions", None)
 
-            self._get_permission_query_conditions = _get_permission_query_conditions(
-                self
+        if not conditions:
+
+            setattr(
+                self,
+                "_permission_query_conditions",
+                _get_permission_query_conditions(self),
             )
 
-        return self._get_permission_query_conditions
+        return conditions
 
     return get_permission_query_conditions
