@@ -1,8 +1,6 @@
-from frappe.core.doctype.server_script.server_script_utils import (
-    run_server_script_for_doc_event,
-)
 from frappe.integrations.doctype.webhook import run_webhooks
 from frappe.model.document import Document
+from tweaks.custom.doctype.server_script_utils import run_server_script_for_doc_event
 from tweaks.tweaks.doctype.event_script.event_script import (
     run_method as run_event_script_method,
 )

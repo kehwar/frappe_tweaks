@@ -1,4 +1,5 @@
 from tweaks.custom.doctype.client_script import client_script_hooks
+from tweaks.custom.doctype.workflow import workflow_script_hooks
 from tweaks.custom.utils.pricing_rule import pricing_rule_hooks
 from tweaks.tweaks.doctype.event_script.event_script import event_script_hooks
 
@@ -19,7 +20,7 @@ after_install = (
     [
         "tweaks.tweaks.doctype.server_performance_log.install.after_install",
     ]
-    + event_script_hooks["after_install"]
+    + workflow_script_hooks["after_install"]
     + pricing_rule_hooks["after_install"]
     + client_script_hooks["after_install"]
 )
@@ -30,7 +31,7 @@ before_uninstall = (
 
 doc_events = {
     "*": {
-        "on_change": event_script_hooks["doc_events"]["*"]["on_change"],
+        "on_change": workflow_script_hooks["doc_events"]["*"]["on_change"],
     }
 }
 
