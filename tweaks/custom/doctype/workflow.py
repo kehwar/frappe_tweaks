@@ -172,23 +172,13 @@ def apply_workflow_transition(doc, transition, update=True, workflow=None, user=
     # Save document changes and apply scripts based on events
     if update:
 
-        doc.run_method(
-            "before_transition",
-            transition.action,
-            transition.state,
-            transition.next_state,
-        )
+        doc.run_method("before_transition", transition)
 
         doc.save(ignore_permissions=True)
         if starting_state == doc.get(f"{workflow.workflow_state_field}_starting"):
             doc.add_comment("Workflow", _(doc.get(workflow.workflow_state_field)))
 
-        doc.run_method(
-            "after_transition",
-            transition.action,
-            transition.state,
-            transition.next_state,
-        )
+        doc.run_method("after_transition", transition)
 
     return doc
 
