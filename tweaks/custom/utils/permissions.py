@@ -83,6 +83,9 @@ def has_permission_policy(doc=None, ptype=None, user=None, debug=False, policies
 
         else:
 
+            if not policy.allow and policy.message:
+                frappe.msgprint(_(policy.message))
+
             return policy.allow
 
     return False
