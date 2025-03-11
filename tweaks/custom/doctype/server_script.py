@@ -49,7 +49,7 @@ class TweaksServerScript(ServerScript):
 
         locals = {
             "user": user,
-            "ptype": ptype or "read",
+            "ptype": ptype or "select",
             "doc": doc,
             "allow": None,
             "filters": None,
