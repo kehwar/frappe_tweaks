@@ -79,17 +79,17 @@ def get_safe_globals(get_safe_globals):
         globals = get_safe_globals()
 
         overrides = {
+            "frappe.cache": get_cache_module(),
             "frappe.db.unsafe_sql": admin_sql,
+            "frappe.get_roles": frappe.get_roles,
             "frappe.has_permission": frappe.has_permission,
-            "has_permission": frappe.has_permission,
-            "re": get_re_module(),
-            "traceback.format_stack": traceback.format_stack,
-            "safe_exec": safe_exec.safe_exec,
             "frappe.utils.getseries": getseries,
             "frappe.utils.setseries": setseries,
-            "yaml": NamespaceDict(load=yaml.safe_load, dump=yaml.safe_dump),
             "frappe.utils.to_snake_case": to_snake_case,
-            "frappe.cache": get_cache_module(),
+            "re": get_re_module(),
+            "safe_exec": safe_exec.safe_exec,
+            "traceback.format_stack": traceback.format_stack,
+            "yaml": NamespaceDict(load=yaml.safe_load, dump=yaml.safe_dump),
         }
 
         for key, method in overrides.items():
