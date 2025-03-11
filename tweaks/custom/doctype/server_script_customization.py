@@ -144,7 +144,7 @@ def set_custom_server_script_properties():
 
 server_script_hooks = {
     "after_install": [
-        "tweaks.custom.doctype.server_script.create_custom_server_script_fields",
-        "tweaks.custom.doctype.server_script.set_custom_server_script_properties",
+        "tweaks.custom.doctype.server_script_customization.create_custom_server_script_fields",
+        "tweaks.custom.doctype.server_script_customization.set_custom_server_script_properties",
     ],
 }

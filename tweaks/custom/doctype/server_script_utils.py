@@ -57,6 +57,12 @@ def get_server_script_map():
     if frappe.flags.in_patch and not frappe.db.table_exists("Server Script"):
         return {}
 
+    if frappe.flags.in_install:
+        return {}
+
+    if frappe.flags.in_migrate:
+        return {}
+
     script_map = frappe.cache.get_value("server_script_map")
     if script_map is None:
         script_map = {"permission_query": {}}
