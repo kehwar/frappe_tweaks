@@ -4,6 +4,9 @@ import traceback
 import frappe
 import yaml
 from frappe import _
+from frappe.desk.doctype.notification_log.notification_log import (
+    send_notification_email,
+)
 from frappe.model.naming import getseries
 from frappe.utils import safe_exec
 from frappe.utils.safe_exec import NamespaceDict
@@ -80,6 +83,7 @@ def get_safe_globals(get_safe_globals):
 
         overrides = {
             "frappe.cache": get_cache_module(),
+            "frappe.desk.notification_log.send_notification_email": send_notification_email,
             "frappe.db.unsafe_sql": admin_sql,
             "frappe.get_roles": frappe.get_roles,
             "frappe.has_permission": frappe.has_permission,
