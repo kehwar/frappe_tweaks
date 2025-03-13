@@ -1,9 +1,8 @@
 from tweaks.custom.doctype.client_script import client_script_hooks
+from tweaks.custom.doctype.server_script_customization import server_script_hooks
 from tweaks.custom.doctype.workflow import workflow_script_hooks
 from tweaks.custom.utils.permissions import permission_hooks
-from tweaks.custom.utils.pricing_rule import pricing_rule_hooks
 from tweaks.tweaks.doctype.event_script.event_script import event_script_hooks
-from tweaks.custom.doctype.server_script_customization import server_script_hooks
 
 # App data
 
@@ -23,7 +22,6 @@ after_install = (
         "tweaks.tweaks.doctype.server_performance_log.install.after_install",
     ]
     + workflow_script_hooks["after_install"]
-    + pricing_rule_hooks["after_install"]
     + client_script_hooks["after_install"]
     + server_script_hooks["after_install"]
 )
