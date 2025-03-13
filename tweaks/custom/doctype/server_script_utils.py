@@ -20,6 +20,8 @@ EVENT_MAP = {
     "on_payment_authorized": "On Payment Authorization",
     "before_transition": "Before Transition",
     "after_transition": "After Transition",
+    "before_change": "Before Change",
+    "on_change": "After Change",
 }
 
 
