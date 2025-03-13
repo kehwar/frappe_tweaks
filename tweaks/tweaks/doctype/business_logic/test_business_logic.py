@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestDynamicGroupCategory(FrappeTestCase):
+class TestBusinessLogic(FrappeTestCase):
 	pass

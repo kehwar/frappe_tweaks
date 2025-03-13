@@ -6,22 +6,34 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "category"
+  "category",
+  "naming_series"
  ],
  "fields": [
   {
+   "allow_in_quick_entry": 1,
    "fieldname": "category",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Category",
+   "reqd": 1,
+   "translatable": 1,
+   "unique": 1
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "naming_series",
+   "fieldtype": "Data",
+   "label": "Series",
    "unique": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-27 23:45:41.421604",
+ "modified": "2025-03-12 22:40:37.319415",
  "modified_by": "Administrator",
  "module": "Tweaks",
- "name": "Dynamic Group Category",
+ "name": "Business Logic Category",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
@@ -38,6 +50,8 @@
    "write": 1
   }
  ],
+ "quick_entry": 1,
+ "search_fields": "naming_series",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": []

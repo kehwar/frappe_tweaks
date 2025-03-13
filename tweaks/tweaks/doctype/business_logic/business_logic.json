@@ -1,0 +1,139 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "naming_series:naming_series",
+ "creation": "2025-02-26 22:19:20.552720",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "column_break_zxep",
+  "category",
+  "naming_series",
+  "section_break_qhhh",
+  "valid_from",
+  "column_break_rnmo",
+  "valid_to",
+  "section_break_zyxe",
+  "description",
+  "section_break_yehg",
+  "links",
+  "section_break_xrnv",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_zxep",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Category",
+   "options": "Business Logic Category",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_yehg",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "links",
+   "fieldtype": "Table",
+   "label": "Links",
+   "options": "Business Logic Link"
+  },
+  {
+   "fieldname": "section_break_zyxe",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text Editor",
+   "label": "Description"
+  },
+  {
+   "fetch_from": "category.naming_series",
+   "fetch_if_empty": 1,
+   "fieldname": "naming_series",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Naming Series",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Business Logic",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "section_break_qhhh",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "valid_from",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Valid From"
+  },
+  {
+   "fieldname": "column_break_rnmo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "valid_to",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Valid To"
+  },
+  {
+   "fieldname": "section_break_xrnv",
+   "fieldtype": "Section Break"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-03-12 22:33:39.874256",
+ "modified_by": "Administrator",
+ "module": "Tweaks",
+ "name": "Business Logic",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

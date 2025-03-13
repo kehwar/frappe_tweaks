@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestDynamicGroup(FrappeTestCase):
+class TestBusinessLogicLinkAction(FrappeTestCase):
 	pass

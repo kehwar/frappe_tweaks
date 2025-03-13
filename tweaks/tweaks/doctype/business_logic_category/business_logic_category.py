@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class DynamicGroupCategory(Document):
+class BusinessLogicCategory(Document):
 	pass

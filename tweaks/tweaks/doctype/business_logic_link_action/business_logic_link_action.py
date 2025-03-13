@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class DynamicGroup(Document):
+class BusinessLogicLinkAction(Document):
 	pass
