@@ -66,7 +66,7 @@ def has_permission_policy(doc=None, ptype=None, user=None, debug=False, policies
     policies = policies or get_permission_policies(user, ptype=ptype, doc=doc)
 
     if not policies:
-        return True
+        return None
 
     for policy in policies:
 
