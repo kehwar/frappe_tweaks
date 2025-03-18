@@ -25,12 +25,13 @@
    "fieldname": "naming_series",
    "fieldtype": "Data",
    "label": "Series",
+   "reqd": 1,
    "unique": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-03-12 22:40:37.319415",
+ "modified": "2025-03-17 21:15:17.865943",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Business Logic Category",
