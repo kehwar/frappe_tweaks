@@ -7,9 +7,11 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
-  "column_break_zxep",
   "category",
   "naming_series",
+  "column_break_zxep",
+  "status",
+  "based_on",
   "section_break_qhhh",
   "valid_from",
   "column_break_rnmo",
@@ -17,9 +19,7 @@
   "section_break_zyxe",
   "description",
   "section_break_yehg",
-  "links",
-  "section_break_xrnv",
-  "amended_from"
+  "links"
  ],
  "fields": [
   {
@@ -71,16 +71,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Business Logic",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
-  },
-  {
    "fieldname": "section_break_qhhh",
    "fieldtype": "Section Break"
   },
@@ -103,14 +93,28 @@
    "label": "Valid To"
   },
   {
-   "fieldname": "section_break_xrnv",
-   "fieldtype": "Section Break"
+   "fieldname": "based_on",
+   "fieldtype": "Link",
+   "label": "Based on",
+   "options": "Business Logic",
+   "search_index": 1
+  },
+  {
+   "default": "Open",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nPending Review\nImplemented\nOutdated"
   }
  ],
  "index_web_pages_for_search": 1,
- "is_submittable": 1,
- "links": [],
- "modified": "2025-03-12 22:33:39.874256",
+ "links": [
+  {
+   "link_doctype": "Business Logic",
+   "link_fieldname": "based_on"
+  }
+ ],
+ "modified": "2025-03-17 21:26:53.954197",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Business Logic",
@@ -122,6 +126,7 @@
    "delete": 1,
    "email": 1,
    "export": 1,
+   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
@@ -133,7 +138,24 @@
  "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
+ "states": [
+  {
+   "color": "Blue",
+   "title": "Open"
+  },
+  {
+   "color": "Yellow",
+   "title": "Pending Review"
+  },
+  {
+   "color": "Green",
+   "title": "Implemented"
+  },
+  {
+   "color": "Gray",
+   "title": "Outdated"
+  }
+ ],
  "title_field": "title",
  "track_changes": 1
 }
