@@ -12,6 +12,7 @@ from frappe.utils import safe_exec
 from frappe.utils.safe_exec import NamespaceDict
 from tweaks.custom.utils.formatter import to_snake_case
 from tweaks.custom.utils.naming import setseries
+from frappe.utils.xlsxutils import read_xlsx_file_from_attached_file, read_xls_file_from_attached_file
 
 
 def log_traceback():
@@ -95,6 +96,8 @@ def get_safe_globals(get_safe_globals):
             "re": get_re_module(),
             "safe_exec": safe_exec.safe_exec,
             "traceback.format_stack": traceback.format_stack,
+            "xlsxutils.read_xlsx_file_from_attached_file": read_xlsx_file_from_attached_file,
+            "xlsxutils.read_xls_file_from_attached_file": read_xls_file_from_attached_file,
             "yaml": NamespaceDict(load=yaml.safe_load, dump=yaml.safe_dump),
         }
 
