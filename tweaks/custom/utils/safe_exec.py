@@ -3,7 +3,7 @@ import traceback
 
 import frappe
 import yaml
-from frappe import _
+from frappe import (_, debug_log)
 from frappe.desk.doctype.notification_log.notification_log import (
     send_notification_email,
 )
@@ -13,12 +13,6 @@ from frappe.utils.safe_exec import NamespaceDict
 from tweaks.custom.utils.formatter import to_snake_case
 from tweaks.custom.utils.naming import setseries
 from frappe.utils.xlsxutils import read_xlsx_file_from_attached_file, read_xls_file_from_attached_file
-
-
-def log_traceback():
-
-    stack_trace = "".join(traceback.format_stack())
-    frappe.log_error("stack", stack_trace)
 
 
 def set_nested_dict(d, key, value):
@@ -86,7 +80,9 @@ def get_safe_globals(get_safe_globals):
             "frappe.cache": get_cache_module(),
             "frappe.desk.notification_log.send_notification_email": send_notification_email,
             "frappe.db.unsafe_sql": admin_sql,
+            "frappe.debug_log": frappe.debug_log,
             "frappe.get_roles": frappe.get_roles,
+            "frappe.get_traceback": frappe.get_traceback,
             "frappe.has_permission": frappe.has_permission,
             "frappe.only_for": frappe.only_for,
             "frappe.set_user": frappe.set_user,
