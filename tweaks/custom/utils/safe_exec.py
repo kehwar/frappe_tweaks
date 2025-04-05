@@ -13,6 +13,7 @@ from frappe.utils.safe_exec import NamespaceDict
 from tweaks.custom.utils.formatter import to_snake_case
 from tweaks.custom.utils.naming import setseries
 from frappe.utils.xlsxutils import read_xlsx_file_from_attached_file, read_xls_file_from_attached_file
+from frappe.utils.safe_exec import call_whitelisted_function
 
 
 def set_nested_dict(d, key, value):
@@ -115,3 +116,7 @@ def apply_safe_exec_patches():
     safe_exec.get_safe_globals = get_safe_globals(safe_exec.get_safe_globals)
     safe_exec.WHITELISTED_SAFE_EVAL_GLOBALS["len"] = len
     safe_exec.WHITELISTED_SAFE_EVAL_GLOBALS["re"] = get_re_module()
+    safe_exec.WHITELISTED_SAFE_EVAL_GLOBALS["frappe"] = NamespaceDict(
+        call=call_whitelisted_function,
+    )
+    safe_exec.WHITELISTED_SAFE_EVAL_GLOBALS["locals"] = locals
