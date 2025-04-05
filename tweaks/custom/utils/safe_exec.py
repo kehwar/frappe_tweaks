@@ -90,6 +90,7 @@ def get_safe_globals(get_safe_globals):
             "frappe.utils.getseries": getseries,
             "frappe.utils.setseries": setseries,
             "frappe.utils.to_snake_case": to_snake_case,
+            "locals": locals,
             "re": get_re_module(),
             "safe_exec": safe_exec.safe_exec,
             "traceback.format_stack": traceback.format_stack,
@@ -118,5 +119,13 @@ def apply_safe_exec_patches():
     safe_exec.WHITELISTED_SAFE_EVAL_GLOBALS["re"] = get_re_module()
     safe_exec.WHITELISTED_SAFE_EVAL_GLOBALS["frappe"] = NamespaceDict(
         call=call_whitelisted_function,
+        db=NamespaceDict(get_value=frappe.db.get_value, get_list=frappe.db.get_list),
+        session=frappe.session,
+        utils=NamespaceDict(
+            now_datetime=frappe.utils.now_datetime,
+            add_to_date=frappe.utils.add_to_date,
+            get_datetime=frappe.utils.get_datetime,
+            now=frappe.utils.now,
+        ),
     )
     safe_exec.WHITELISTED_SAFE_EVAL_GLOBALS["locals"] = locals
