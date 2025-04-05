@@ -119,7 +119,8 @@ def safe_eval(safe_eval, get_safe_globals):
     def _safe_eval(code, eval_globals=None, eval_locals=None):
 
         _globals = get_safe_globals()
-        _globals.update(eval_globals)
+        if eval_globals:
+            _globals.update(eval_globals)
 
         return safe_eval(code, _globals, eval_locals)
 
