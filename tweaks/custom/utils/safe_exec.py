@@ -79,6 +79,7 @@ def get_safe_globals(get_safe_globals):
 
         overrides = {
             "frappe.cache": get_cache_module(),
+            "frappe.call": call_whitelisted_function,
             "frappe.desk.notification_log.send_notification_email": send_notification_email,
             "frappe.db.unsafe_sql": admin_sql,
             "frappe.debug_log": frappe.debug_log,
@@ -113,7 +114,7 @@ def get_safe_globals(get_safe_globals):
     return _get_safe_globals
 
 
-def safe_eval(safe_eval):
+def safe_eval(safe_eval, get_safe_globals):
 
     def _safe_eval(code, eval_globals=None, eval_locals=None):
 
@@ -127,4 +128,4 @@ def safe_eval(safe_eval):
 
 def apply_safe_exec_patches():
     safe_exec.get_safe_globals = get_safe_globals(safe_exec.get_safe_globals)
-    safe_exec.safe_eval = safe_eval(safe_exec.safe_eval)
+    safe_exec.safe_eval = safe_eval(safe_exec.safe_eval, safe_exec.get_safe_globals)
