@@ -113,19 +113,18 @@ def get_safe_globals(get_safe_globals):
     return _get_safe_globals
 
 
+def safe_eval(safe_eval):
+
+    def _safe_eval(code, eval_globals=None, eval_locals=None):
+
+        _globals = get_safe_globals()
+        _globals.update(eval_globals)
+
+        return safe_eval(code, _globals, eval_locals)
+
+    return _safe_eval
+
+
 def apply_safe_exec_patches():
     safe_exec.get_safe_globals = get_safe_globals(safe_exec.get_safe_globals)
-    safe_exec.WHITELISTED_SAFE_EVAL_GLOBALS["len"] = len
-    safe_exec.WHITELISTED_SAFE_EVAL_GLOBALS["re"] = get_re_module()
-    safe_exec.WHITELISTED_SAFE_EVAL_GLOBALS["frappe"] = NamespaceDict(
-        call=call_whitelisted_function,
-        db=NamespaceDict(get_value=frappe.db.get_value, get_list=frappe.db.get_list),
-        session=frappe.session,
-        utils=NamespaceDict(
-            now_datetime=frappe.utils.now_datetime,
-            add_to_date=frappe.utils.add_to_date,
-            get_datetime=frappe.utils.get_datetime,
-            now=frappe.utils.now,
-        ),
-    )
-    safe_exec.WHITELISTED_SAFE_EVAL_GLOBALS["locals"] = locals
+    safe_exec.safe_eval = safe_eval(safe_exec.safe_eval)
