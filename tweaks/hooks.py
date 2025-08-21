@@ -20,6 +20,7 @@ app_include_js = "frappe_tweaks.bundle.js"
 after_install = (
     [
         "tweaks.tweaks.doctype.server_performance_log.install.after_install",
+        "tweaks.custom.doctype.pricing_rule.install_pricing_rule_customizations",
     ]
     + workflow_script_hooks["after_install"]
     + client_script_hooks["after_install"]
@@ -69,3 +70,12 @@ scheduler_events = {
         ]
     },
 }
+
+
+get_product_discount_rule = [
+    "tweaks.custom.doctype.pricing_rule.get_product_discount_rule"
+]
+
+apply_pricing_rule_on_transaction = [
+    "tweaks.custom.doctype.pricing_rule.apply_pricing_rule_on_transaction"
+]
