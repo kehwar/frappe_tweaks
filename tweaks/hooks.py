@@ -79,3 +79,7 @@ get_product_discount_rule = [
 apply_pricing_rule_on_transaction = [
     "tweaks.custom.doctype.pricing_rule.apply_pricing_rule_on_transaction"
 ]
+
+website_route_rules = [
+    {"from_route": "/spa/<path:app_path>", "to_route": "spa"},
+]

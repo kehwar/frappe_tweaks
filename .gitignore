@@ -197,3 +197,7 @@ cypress/videos
 billing/node_modules
 frappe/public/billing
 frappe/www/billing.html
+
+# spa/
+tweaks/public/spa
+tweaks/www/spa

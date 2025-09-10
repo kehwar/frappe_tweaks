@@ -1,0 +1,7 @@
+{
+    "type": "module",
+    "scripts": {
+        "dev": "cd spa && yarn dev",
+        "build": "cd spa && yarn build"
+    }
+}

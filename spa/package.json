@@ -1,0 +1,18 @@
+{
+  "name": "nuxt-app",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build && yarn copy-html-entry",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "copy-html-entry": "rm -rf ../tweaks/www/spa/ && cp -a ../tweaks/public/spa/ ../tweaks/www/spa/"
+  },
+  "dependencies": {
+    "nuxt": "^4.1.0",
+    "vue": "^3.5.20",
+    "vue-router": "^4.5.1"
+  }
+}
