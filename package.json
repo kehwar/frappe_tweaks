@@ -1,6 +1,7 @@
 {
     "type": "module",
     "scripts": {
+        "postinstall": "cd spa && yarn install",
         "dev": "cd spa && yarn dev",
         "build": "cd spa && yarn build"
     }
