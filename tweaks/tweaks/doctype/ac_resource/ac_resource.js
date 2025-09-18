@@ -53,8 +53,8 @@ frappe.ui.form.on("AC Resource", {
             frm.get_field('condition_script').set_language();
     },
     show_api_warning(frm) {
+        frm.dashboard.clear_headline();
         if (["DocType", "Report", "Custom"].includes(frm.doc.type))
-            frm.dashboard.clear_headline();
             frm.set_intro(_(`
                 The API doesn't manage pemission automatically for <code>${frm.doc.type}</code> resources.
                 You must get the filter query using <code>tweaks.tweaks.doctype.ac_rule.ac_rule_utils.get_resource_filter_query</code> function and apply it manually.
