@@ -7,6 +7,8 @@ from frappe.model.document import Document
 from frappe.permissions import _pop_debug_log
 from frappe.utils import safe_exec
 
+from tweaks.utils.access_control import allow_value
+
 
 class EventScript(Document):
 
@@ -433,6 +435,13 @@ def inspect_permissions(doctype, doc=None, ptype=None, user=None):
 
 
 def has_permission(doc=None, ptype=None, user=None, debug=False, policies=None):
+
+    return (
+        allow_value() if _has_permission(doc, ptype, user, debug, policies) else False
+    )
+
+
+def _has_permission(doc=None, ptype=None, user=None, debug=False, policies=None):
 
     if user == "Administrator":
         return True

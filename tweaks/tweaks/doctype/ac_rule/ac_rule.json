@@ -1,0 +1,152 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "ACL.-.YYYY.-.####",
+ "creation": "2025-09-16 23:38:23.672699",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "type",
+  "type_html",
+  "disabled",
+  "column_break_ehru",
+  "actions",
+  "resource",
+  "section_break_hrhd",
+  "column_break_ndoq",
+  "principals",
+  "principals_html",
+  "column_break_gtkr",
+  "resources",
+  "resources_html",
+  "section_break_snaf",
+  "valid_from",
+  "valid_upto"
+ ],
+ "fields": [
+  {
+   "fieldname": "principals",
+   "fieldtype": "Table",
+   "label": "Principals",
+   "options": "AC Rule Principal",
+   "reqd": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_hrhd",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_gtkr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "resources",
+   "fieldtype": "Table",
+   "label": "Resources",
+   "options": "AC Rule Resource",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_ehru",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Type",
+   "options": "Permit\nForbid",
+   "reqd": 1
+  },
+  {
+   "fieldname": "actions",
+   "fieldtype": "Table MultiSelect",
+   "label": "Actions",
+   "options": "AC Rule Action",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "fieldname": "section_break_snaf",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "valid_from",
+   "fieldtype": "Date",
+   "label": "Valid From"
+  },
+  {
+   "fieldname": "valid_upto",
+   "fieldtype": "Date",
+   "label": "Valid Upto"
+  },
+  {
+   "fieldname": "column_break_ndoq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "principals_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "resources_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "type_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "resource",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Resource",
+   "options": "AC Resource",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-09-18 16:32:45.330624",
+ "modified_by": "Administrator",
+ "module": "Tweaks",
+ "name": "AC Rule",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title"
+}

@@ -1,0 +1,168 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "ACP.-.######",
+ "creation": "2025-09-16 22:48:42.996206",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "type",
+  "user",
+  "user_group",
+  "role",
+  "column_break_xeul",
+  "parent_ac_principal",
+  "is_group",
+  "lft",
+  "rgt",
+  "old_parent",
+  "disabled",
+  "section_break_cfzx",
+  "user_script",
+  "script_html",
+  "script_type"
+ ],
+ "fields": [
+  {
+   "fieldname": "type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Type",
+   "options": "\nUser\nUser Group\nRole\nUser Script",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.type==='User'",
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "mandatory_depends_on": "eval:doc.type==='User'",
+   "options": "User"
+  },
+  {
+   "depends_on": "eval:doc.type==='User Group'",
+   "fieldname": "user_group",
+   "fieldtype": "Link",
+   "label": "User Group",
+   "mandatory_depends_on": "eval:doc.type==='User Group'",
+   "options": "User Group"
+  },
+  {
+   "depends_on": "eval:doc.type==='Role'",
+   "fieldname": "role",
+   "fieldtype": "Link",
+   "label": "Role",
+   "mandatory_depends_on": "eval:doc.type==='Role'",
+   "options": "Role"
+  },
+  {
+   "fieldname": "user_script",
+   "fieldtype": "Code",
+   "label": "Conditions Script",
+   "mandatory_depends_on": "eval:doc.type==='User Script'"
+  },
+  {
+   "fieldname": "lft",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "Left",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "rgt",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "Right",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_group",
+   "fieldtype": "Check",
+   "label": "Is Group"
+  },
+  {
+   "fieldname": "old_parent",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Old Parent",
+   "options": "AC Principal"
+  },
+  {
+   "fieldname": "parent_ac_principal",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Parent",
+   "link_filters": "[[\"AC Principal\",\"is_group\",\"=\",1]]",
+   "options": "AC Principal"
+  },
+  {
+   "fieldname": "column_break_xeul",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.type==='User Script'",
+   "fieldname": "section_break_cfzx",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title"
+  },
+  {
+   "default": "0",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "default": "Python",
+   "depends_on": "eval:doc.user_script",
+   "fieldname": "script_type",
+   "fieldtype": "Select",
+   "label": "Script Type",
+   "options": "Python\nSQL"
+  },
+  {
+   "fieldname": "script_html",
+   "fieldtype": "HTML"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_tree": 1,
+ "links": [],
+ "modified": "2025-09-18 11:21:58.331086",
+ "modified_by": "Administrator",
+ "module": "Tweaks",
+ "name": "AC Principal",
+ "naming_rule": "Expression (old style)",
+ "nsm_parent_field": "parent_ac_principal",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title"
+}

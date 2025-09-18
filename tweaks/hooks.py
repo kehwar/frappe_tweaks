@@ -21,6 +21,9 @@ after_install = (
     [
         "tweaks.tweaks.doctype.server_performance_log.install.after_install",
         "tweaks.custom.doctype.pricing_rule.install_pricing_rule_customizations",
+        "tweaks.custom.doctype.user_group.apply_user_group_patches",
+        "tweaks.custom.doctype.role.apply_role_patches",
+        "tweaks.tweaks.doctype.ac_rule.ac_rule_utils.after_install",
     ]
     + workflow_script_hooks["after_install"]
     + client_script_hooks["after_install"]

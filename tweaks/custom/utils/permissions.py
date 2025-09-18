@@ -1,7 +1,9 @@
 import frappe
 from frappe import _
 from frappe.permissions import _pop_debug_log
+
 from tweaks.custom.doctype.server_script_utils import get_server_script_map
+from tweaks.utils.access_control import allow_value
 
 
 def get_permission_policies(user, ptype=None, doc=None, doctype=None):
@@ -59,6 +61,15 @@ def get_permission_policy_query_conditions(user=None, doctype=None, policies=Non
 
 
 def has_permission_policy(doc=None, ptype=None, user=None, debug=False, policies=None):
+
+    return (
+        allow_value()
+        if _has_permission_policy(doc, ptype, user, debug, policies)
+        else False
+    )
+
+
+def _has_permission_policy(doc=None, ptype=None, user=None, debug=False, policies=None):
 
     if user == "Administrator":
         return True

@@ -1,0 +1,89 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"VRrkoIbtQh\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Tweaks</span>\",\"col\":12}},{\"id\":\"rik17VGgin\",\"type\":\"card\",\"data\":{\"card_name\":\"Acces Control\",\"col\":4}}]",
+ "creation": "2025-09-17 09:43:33.763393",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "customization",
+ "idx": 0,
+ "indicator_color": "",
+ "is_hidden": 0,
+ "label": "Tweaks",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Acces Control",
+   "link_count": 5,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AC Rule",
+   "link_count": 0,
+   "link_to": "AC Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AC Principal",
+   "link_count": 0,
+   "link_to": "AC Principal",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AC Resource",
+   "link_count": 0,
+   "link_to": "AC Resource",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AC Action",
+   "link_count": 0,
+   "link_to": "AC Action",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AC Settings",
+   "link_count": 0,
+   "link_to": "AC Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2025-09-17 09:46:21.061037",
+ "modified_by": "Administrator",
+ "module": "Tweaks",
+ "name": "Tweaks",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 33.0,
+ "shortcuts": [],
+ "title": "Tweaks"
+}
