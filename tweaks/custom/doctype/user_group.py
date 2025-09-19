@@ -4,10 +4,10 @@ from frappe.custom.doctype.property_setter.property_setter import make_property_
 def apply_user_group_patches():
 
     make_property_setter(
-        doctype="User Group",
-        fieldname=None,
-        property="allow_rename",
-        value="1",
-        property_type="Check",
-        for_doctype=True,
+        "User Group",  # doctype
+        None,  # fieldname
+        "allow_rename",  # property
+        "1",  # value
+        "Check",  # property_type
+        True,  # for_doctype
     )
