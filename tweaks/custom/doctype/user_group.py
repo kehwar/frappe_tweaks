@@ -5,8 +5,9 @@ def apply_user_group_patches():
 
     make_property_setter(
         doctype="User Group",
+        fieldname=None,
         property="allow_rename",
-        property_type="Check",
         value="1",
+        property_type="Check",
         for_doctype=True,
     )

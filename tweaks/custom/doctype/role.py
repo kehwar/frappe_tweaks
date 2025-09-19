@@ -5,8 +5,9 @@ def apply_role_patches():
 
     make_property_setter(
         doctype="Role",
+        fieldname=None,
         property="allow_rename",
-        property_type="Check",
         value="1",
+        property_type="Check",
         for_doctype=True,
     )
