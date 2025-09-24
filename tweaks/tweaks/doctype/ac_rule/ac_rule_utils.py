@@ -371,6 +371,13 @@ def get_resource_filter_query(
     else:
         resource_filter_query = "1=0"
 
+    if resource_filter_query == "1=1":
+        access = "total"
+    elif resource_filter_query == "1=0":
+        access = "none"
+    else:
+        access = "partial"
+
     if debug:
 
         return frappe._dict(
@@ -386,4 +393,50 @@ def get_resource_filter_query(
             }
         )
 
-    return frappe._dict({"query": resource_filter_query})
+    return frappe._dict({"query": resource_filter_query, "access": access})
+
+
+@frappe.whitelist()
+def has_resource_access(
+    resource="",
+    doctype="",
+    report="",
+    custom="",
+    type="",
+    key="",
+    fieldname="",
+    action="",
+    user="",
+    debug=False,
+):
+
+    type, key, fieldname, action, user = get_params(
+        resource, doctype, report, custom, type, key, fieldname, action, user
+    )
+
+    rule_map = get_resource_rules(
+        resource, doctype, report, custom, type, key, fieldname, action, user, debug
+    )
+
+    if rule_map.get("unmanaged"):
+        return {"access": True, "unmanaged": True}
+
+    folder = rule_map.get("rules", [])
+
+    access = len(folder) > 0
+
+    if debug:
+
+        return frappe._dict(
+            {
+                "type": type,
+                "key": key,
+                "fieldname": fieldname,
+                "action": action,
+                "user": user,
+                "folder": folder,
+                "access": access,
+            }
+        )
+
+    return frappe._dict({"access": access})
