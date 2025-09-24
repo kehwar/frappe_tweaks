@@ -310,7 +310,7 @@ def get_resource_filter_query(
     )
 
     if rule_map.get("unmanaged"):
-        return {"query": "", "unmanaged": True}
+        return {"query": "", "unmanaged": True, "access": "total"}
 
     folder = rule_map.get("rules", [])
 
@@ -388,6 +388,7 @@ def get_resource_filter_query(
                 "action": action,
                 "user": user,
                 "query": resource_filter_query,
+                "access": access,
                 "parts": resource_filter_queries,
                 "folder": folder,
             }
