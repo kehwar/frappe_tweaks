@@ -284,7 +284,7 @@ def get_resource_rules(
 def get_resource_condition(condition):
     if condition.get("script"):
         return run_resource_script(condition.get("script"), condition.get("name"))
-    return condition.get("sql", "")
+    return condition.get("sql", "") or "1=1"
 
 
 @frappe.whitelist()
