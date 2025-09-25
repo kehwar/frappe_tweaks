@@ -19,7 +19,6 @@ app_include_js = "frappe_tweaks.bundle.js"
 
 after_install = (
     [
-        "tweaks.tweaks.doctype.server_performance_log.install.after_install",
         "tweaks.custom.doctype.pricing_rule.install_pricing_rule_customizations",
         "tweaks.custom.doctype.user_group.apply_user_group_patches",
         "tweaks.custom.doctype.role.apply_role_patches",
@@ -28,10 +27,6 @@ after_install = (
     + workflow_script_hooks["after_install"]
     + client_script_hooks["after_install"]
     + server_script_hooks["after_install"]
-)
-
-before_uninstall = (
-    "tweaks.tweaks.doctype.server_performance_log.install.before_uninstall"
 )
 
 doc_events = {
@@ -63,17 +58,6 @@ override_doctype_class = {
     "Reminder": "tweaks.custom.doctype.reminder.TweaksReminder",
     "Server Script": "tweaks.custom.doctype.server_script.TweaksServerScript",
 }
-
-# Scheduler
-
-scheduler_events = {
-    "cron": {
-        "* * * * *": [
-            "tweaks.tweaks.doctype.server_performance_log.server_performance_log_task.execute"
-        ]
-    },
-}
-
 
 get_product_discount_rule = [
     "tweaks.custom.doctype.pricing_rule.get_product_discount_rule"
