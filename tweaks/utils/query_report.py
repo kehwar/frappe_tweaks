@@ -116,17 +116,17 @@ def run_export_query_job(
             }
         ).insert(ignore_permissions=True)
 
-        frappe.publish_realtime(
-            "export_query_file_ready",
-            {
-                "url": _file.file_url,
-                "report_name": report_name,
-                "jobid": jobid,
-                "external_url": external_url,
-            },
-            after_commit=True,
-            user=user,
-        )
+    frappe.publish_realtime(
+        "export_query_file_ready",
+        {
+            "url": _file.file_url,
+            "report_name": report_name,
+            "jobid": jobid,
+            "external_url": external_url,
+        },
+        after_commit=True,
+        user=user,
+    )
 
 
 def create_report_file(
