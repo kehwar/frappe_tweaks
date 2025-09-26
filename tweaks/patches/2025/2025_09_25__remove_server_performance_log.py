@@ -1,8 +1,4 @@
 import frappe
-from frappe.model.document import Document
-from frappe.query_builder import Interval
-from frappe.query_builder.functions import Now
-from sqlalchemy import table
 
 
 def execute():
