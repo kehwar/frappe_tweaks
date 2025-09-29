@@ -1,7 +1,8 @@
+import os
+
 import frappe
 from frappe import _
-from frappe.desk.query_report import build_xlsx_data, format_fields, valid_report_name
-from frappe.desk.utils import EXPORTED_REPORT_FOLDER_PATH
+from frappe.desk.query_report import build_xlsx_data, format_fields, get_report_doc
 
 
 @frappe.whitelist()
@@ -159,3 +160,50 @@ def create_report_file(
     _file.save(ignore_permissions=True)
 
     return _file
+
+
+def report_to_pdf(report_name, data):
+    meta = get_report_to_pdf_meta(report_name)
+    context = {"data": data}
+    if meta.get("before_print"):
+        meta.get("before_print")(data)
+    if meta.get("get_print_utils"):
+        context.update(meta.get("get_print_utils")())
+    html = frappe.render_template(meta.get("html_format"), context)
+    content = frappe.utils.pdf.get_pdf(html)
+
+    return content
+
+
+def get_report_to_pdf_meta(report_name):
+    from frappe.core.doctype.report.report import get_report_module_dotted_path
+    from frappe.modules import get_module_path, scrub
+    from frappe.utils import get_html_format
+
+    report = get_report_doc(report_name)
+    module = report.module or frappe.db.get_value(
+        "DocType", report.ref_doctype, "module"
+    )
+
+    # Report HTML Format
+    module_path = get_module_path(module)
+    report_folder = module_path and os.path.join(
+        module_path, "report", scrub(report.name)
+    )
+    print_path = report_folder and os.path.join(
+        report_folder, scrub(report.name) + ".jinja-html"
+    )
+    html_format = get_html_format(print_path)
+
+    # Report Module
+    report_module_dotted_path = get_report_module_dotted_path(module, report_name)
+    report_module = frappe.get_module(report_module_dotted_path)
+    before_print = getattr(report_module, "before_print", "")
+    get_print_utils = getattr(report_module, "get_print_utils", "")
+
+    # Return
+    return {
+        "html_format": html_format,
+        "before_print": before_print if callable(before_print) else None,
+        "get_print_utils": get_print_utils if callable(get_print_utils) else None,
+    }
