@@ -13,7 +13,7 @@ def export_query(report_name, extension, data, file_name=None):
     provide_binary_file(file_name or report_name, extension, content)
 
 
-def _export_query(report_name, data):
+def get_xlxs_report_content(report_name, data):
     from frappe.utils.xlsxutils import make_xlsx
 
     data = frappe._dict(data)
@@ -39,9 +39,9 @@ def _export_query(report_name, data):
 
 def get_export_content(report_name, extension, data):
     if extension == "pdf":
-        return _report_to_pdf(report_name, data)
+        return get_pdf_report_content(report_name, data)
     else:
-        return _export_query(report_name, data)
+        return get_xlxs_report_content(report_name, data)
 
 
 @frappe.whitelist()
@@ -181,10 +181,10 @@ def create_report_file(
     return _file
 
 
-def _report_to_pdf(report_name, data):
+def get_pdf_report_content(report_name, data):
     from frappe.utils.pdf import get_pdf
 
-    meta = get_report_to_pdf_meta(report_name)
+    meta = get_pdf_report_meta(report_name)
     context = {"data": data}
     if meta.get("before_print"):
         meta.get("before_print")(data)
@@ -196,7 +196,7 @@ def _report_to_pdf(report_name, data):
     return content
 
 
-def get_report_to_pdf_meta(report_name):
+def get_pdf_report_meta(report_name):
     from frappe.core.doctype.report.report import get_report_module_dotted_path
     from frappe.modules import get_module_path, scrub
     from frappe.utils import get_html_format
