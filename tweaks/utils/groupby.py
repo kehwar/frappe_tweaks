@@ -6,6 +6,26 @@ import frappe
 Number = (int, float)
 
 
+def get_nested_value(obj: Dict[str, Any], path: str) -> Any:
+    """
+    Get nested value from dict using dot notation.
+    Example: get_nested_value({"user": {"name": "John"}}, "user.name") -> "John"
+    """
+    if "." not in path:
+        return obj.get(path)
+
+    keys = path.split(".")
+    current = obj
+
+    for key in keys:
+        if isinstance(current, dict) and key in current:
+            current = current[key]
+        else:
+            return None
+
+    return current
+
+
 @frappe.whitelist()
 def group_aggregate(
     rows: List[Dict[str, Any]],
@@ -17,10 +37,12 @@ def group_aggregate(
 
     Params:
       rows: list of dicts
-      group_fields: ordered list of fields to group by (e.g., ["country", "city"])
-      aggregations: list of { "op": "sum|count|avg", "field": <str or None>, "name": <optional str> }
+      group_fields: ordered list of fields to group by (e.g., ["country", "city", "user.name"])
+        - Supports dot notation for nested fields (e.g., "user.profile.name")
+      aggregations: list of { "op": "sum|count|average", "field": <str or None>, "name": <optional str> }
         - For "count", "field" may be None. Count is number of rows in the group.
-        - "name" optional; default generated as "<op>(<field>)" or "count(*)".
+        - "name" optional; default uses the field name.
+        - Fields support dot notation for nested properties (e.g., "sales.amount")
 
     Returns:
       A dict with:
@@ -54,7 +76,7 @@ def group_aggregate(
                     raise ValueError("sum requires 'field'")
                 total = 0.0
                 for r in group_rows:
-                    v = r.get(field)
+                    v = get_nested_value(r, field)
                     if isinstance(v, Number):
                         total += float(v)
                 value = total
@@ -64,7 +86,7 @@ def group_aggregate(
                 total = 0.0
                 count = 0
                 for r in group_rows:
-                    v = r.get(field)
+                    v = get_nested_value(r, field)
                     if isinstance(v, Number):
                         total += float(v)
                         count += 1
@@ -89,7 +111,7 @@ def group_aggregate(
         key = group_fields[level]
         buckets: Dict[Any, List[Dict[str, Any]]] = defaultdict(list)
         for r in subset:
-            buckets[r.get(key)].append(r)
+            buckets[get_nested_value(r, key)].append(r)
 
         # Keep stable order by sorting on the key if it’s sortable; otherwise leave insertion order
         try:
