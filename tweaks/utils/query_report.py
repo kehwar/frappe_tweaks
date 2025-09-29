@@ -8,7 +8,7 @@ from frappe.desk.query_report import build_xlsx_data, format_fields, get_report_
 @frappe.whitelist()
 def export_query(report_name, extension, data, file_name=None):
 
-    content = _export_query(report_name, data)
+    content = get_export_content(report_name, extension, data)
 
     provide_binary_file(file_name or report_name, extension, content)
 
@@ -35,6 +35,13 @@ def _export_query(report_name, data):
     ).getvalue()
 
     return content
+
+
+def get_export_content(report_name, extension, data):
+    if extension == "pdf":
+        return _report_to_pdf(report_name, data)
+    else:
+        return _export_query(report_name, data)
 
 
 @frappe.whitelist()
@@ -83,7 +90,7 @@ def run_export_query_job(
 ):
     from rq import get_current_job
 
-    content = _export_query(report_name, data)
+    content = get_export_content(report_name, extension, data)
     jobid = get_current_job().id
 
     _file = create_report_file(
@@ -174,7 +181,9 @@ def create_report_file(
     return _file
 
 
-def report_to_pdf(report_name, data):
+def _report_to_pdf(report_name, data):
+    from frappe.utils.pdf import get_pdf
+
     meta = get_report_to_pdf_meta(report_name)
     context = {"data": data}
     if meta.get("before_print"):
@@ -182,7 +191,7 @@ def report_to_pdf(report_name, data):
     if meta.get("get_print_utils"):
         context.update(meta.get("get_print_utils")())
     html = frappe.render_template(meta.get("html_format"), context)
-    content = frappe.utils.pdf.get_pdf(html)
+    content = get_pdf(html)
 
     return content
 
