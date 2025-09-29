@@ -6,12 +6,11 @@ from frappe.desk.query_report import build_xlsx_data, format_fields, get_report_
 
 
 @frappe.whitelist()
-def export_query(report_name, data):
-    from frappe.desk.utils import provide_binary_file
+def export_query(report_name, extension, data, file_name=None):
 
-    report_name, file_extension, content = _export_query(report_name, data)
+    content = _export_query(report_name, data)
 
-    provide_binary_file(report_name, file_extension, content)
+    provide_binary_file(file_name or report_name, extension, content)
 
 
 def _export_query(report_name, data):
@@ -31,17 +30,22 @@ def _export_query(report_name, data):
         data, visible_idx=[], include_indentation=0
     )
 
-    file_extension = "xlsx"
     content = make_xlsx(
         xlsx_data, "Query Report", column_widths=column_widths
     ).getvalue()
 
-    return report_name, file_extension, content
+    return content
 
 
 @frappe.whitelist()
 def export_query_in_background(
-    report_name, data, send_email=True, send_notification=True, user=None
+    report_name,
+    extension,
+    data,
+    file_name=None,
+    send_email=True,
+    send_notification=True,
+    user=None,
 ):
 
     if user:
@@ -52,7 +56,9 @@ def export_query_in_background(
     job = frappe.enqueue(
         "tweaks.utils.query_report.run_export_query_job",
         report_name=report_name,
+        extension=extension,
         data=data,
+        file_name=file_name,
         send_email=send_email,
         send_notification=send_notification,
         queue="long",
@@ -67,16 +73,22 @@ def get_user_email(user):
 
 
 def run_export_query_job(
-    report_name, data, send_email=True, send_notification=True, user=None
+    report_name,
+    extension,
+    data,
+    file_name=None,
+    send_email=True,
+    send_notification=True,
+    user=None,
 ):
     from rq import get_current_job
 
-    report_name, file_extension, content = _export_query(report_name, data)
+    content = _export_query(report_name, data)
     jobid = get_current_job().id
 
     _file = create_report_file(
-        report_name,
-        file_extension,
+        file_name or report_name,
+        extension,
         content,
         attached_to_name=report_name,
         user=user,
@@ -207,3 +219,12 @@ def get_report_to_pdf_meta(report_name):
         "before_print": before_print if callable(before_print) else None,
         "get_print_utils": get_print_utils if callable(get_print_utils) else None,
     }
+
+
+def provide_binary_file(filename: str, extension: str, content: bytes) -> None:
+    """Provide a binary file to the client."""
+    from frappe import _
+
+    frappe.response["type"] = "pdf" if extension == "pdf" else "binary"
+    frappe.response["filecontent"] = content
+    frappe.response["filename"] = f"{_(filename)}.{extension}"
