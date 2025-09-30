@@ -49,6 +49,9 @@ def group_aggregate(
         {
           "group": [],  # root level has empty group
           "aggregations": [ [name, value], ... ],
+          "level": int,  # depth level in the grouping hierarchy (0 = root)
+          "index_in_parent": int,  # 0-based index of this node among its siblings
+          "count_in_parent": int,  # total count of siblings at this level
           "groups": [ ... ] or "rows": [...]
         }
     """
@@ -97,11 +100,18 @@ def group_aggregate(
         return out
 
     def recurse(
-        level: int, parent_group_vals: List[Any], subset: List[Dict[str, Any]]
+        level: int,
+        parent_group_vals: List[Any],
+        subset: List[Dict[str, Any]],
+        index_in_parent: int = 0,
+        count_in_parent: int = 1,
     ) -> Dict[str, Any]:
         node = {
             "group": parent_group_vals,
             "aggregations": compute_aggrs(subset),
+            "level": level,
+            "index_in_parent": index_in_parent,
+            "count_in_parent": count_in_parent,
         }
 
         if level >= len(group_fields):
@@ -120,8 +130,10 @@ def group_aggregate(
             # Mixed incomparable types; fallback to insertion order
             keys_sorted = list(buckets.keys())
 
+        child_count = len(keys_sorted)
         node["groups"] = [
-            recurse(level + 1, parent_group_vals + [k], buckets[k]) for k in keys_sorted
+            recurse(level + 1, parent_group_vals + [k], buckets[k], idx, child_count)
+            for idx, k in enumerate(keys_sorted)
         ]
         return node
 
