@@ -4,6 +4,8 @@ import frappe
 from frappe import _
 from frappe.desk.query_report import build_xlsx_data, format_fields, get_report_doc
 
+from tweaks.utils.preflight import get_preflight_css
+
 
 @frappe.whitelist()
 def export_query(report_name, extension, data, file_name=None):
@@ -190,7 +192,13 @@ def get_pdf_report_content(report_name, data):
         meta.get("before_print")(data)
     if meta.get("get_print_utils"):
         context.update(meta.get("get_print_utils")())
+    context.update(
+        {
+            "preflight_css": get_preflight_css(),
+        }
+    )
     html = frappe.render_template(meta.get("html_format"), context)
+
     content = get_pdf(html)
 
     return content
