@@ -50,6 +50,7 @@ def group_aggregate(
           "group": [],  # root level has empty group
           "aggregations": [ [name, value], ... ],
           "level": int,  # depth level in the grouping hierarchy (0 = root)
+          "levels": int,  # total number of grouping levels
           "index_in_parent": int,  # 0-based index of this node among its siblings
           "count_in_parent": int,  # total count of siblings at this level
           "groups": [ ... ] or "rows": [...]
@@ -110,6 +111,7 @@ def group_aggregate(
             "group": parent_group_vals,
             "aggregations": compute_aggrs(subset),
             "level": level,
+            "levels": len(group_fields),
             "index_in_parent": index_in_parent,
             "count_in_parent": count_in_parent,
         }
