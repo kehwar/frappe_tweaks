@@ -139,4 +139,57 @@ def group_aggregate(
         ]
         return node
 
-    return recurse(0, [], rows)
+    def build_summary(result: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Build a recursive summary that's one level shallower than the main groups.
+        The summary stops at the second-to-last level, converting the deepest groups into rows.
+        """
+
+        def summary_recurse(node: Dict[str, Any], target_levels: int) -> Dict[str, Any]:
+            summary_node = {
+                "group": node["group"],
+                "aggregations": node["aggregations"],
+                "level": node["level"],
+                "levels": target_levels,
+                "index_in_parent": node["index_in_parent"],
+                "count_in_parent": node["count_in_parent"],
+            }
+
+            # If we're at the target depth or this is a leaf node, convert groups to rows
+            if node["level"] >= target_levels - 1 or "rows" in node:
+                if "groups" in node:
+                    # Convert sub-groups to simple row format
+                    summary_node["rows"] = [
+                        {
+                            "group": sub_group["group"][-1],
+                            "aggregations": sub_group["aggregations"],
+                        }
+                        for sub_group in node["groups"]
+                    ]
+                else:
+                    # This is already a leaf node, keep it as is
+                    summary_node["rows"] = node.get("rows", [])
+            else:
+                # Continue recursion for deeper levels
+                if "groups" in node:
+                    summary_node["groups"] = [
+                        summary_recurse(sub_group, target_levels)
+                        for sub_group in node["groups"]
+                    ]
+
+            return summary_node
+
+        if "groups" not in result or len(group_fields) <= 1:
+            return []
+
+        # Summary levels should be one less than the main structure
+        target_levels = len(group_fields)
+
+        return [
+            summary_recurse(group_node, target_levels)
+            for group_node in result["groups"]
+        ]
+
+    result = recurse(0, [], rows)
+    result["summary"] = build_summary(result)
+    return result
