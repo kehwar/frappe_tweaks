@@ -72,11 +72,13 @@ def get_cache_module():
 
 
 def get_safe_globals(get_safe_globals):
+    # TODO: Consider lazy loading modules instead of creating all overrides upfront for better memory usage
 
     def _get_safe_globals():
 
         globals = get_safe_globals()
 
+        # TODO: Cache these module namespaces at site level to avoid rebuilding on every execution
         overrides = {
             "frappe.cache": get_cache_module(),
             "frappe.call": call_whitelisted_function,

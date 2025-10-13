@@ -27,6 +27,8 @@ EVENT_MAP = {
 
 def run_server_script_for_doc_event(doc, event):
     # run document event method
+    # TODO: Add error handling to prevent one failing script from blocking subsequent scripts
+    # TODO: Consider parallel execution for independent scripts to improve performance
     if event not in EVENT_MAP:
         return
 
@@ -39,6 +41,7 @@ def run_server_script_for_doc_event(doc, event):
     scripts = get_server_script_map().get(doc.doctype, {}).get(EVENT_MAP[event], None)
     if scripts:
         # run all scripts for this doctype + event
+        # TODO: Batch load all server script docs instead of loading one at a time
         for script_name in scripts:
             frappe.get_doc("Server Script", script_name).execute_doc(doc)
 
@@ -56,6 +59,8 @@ def get_server_script_map():
     # 		'DocType': '[server script]'
     # 	}
     # }
+    # TODO: Add cache expiry time to prevent stale cache in long-running processes
+    # TODO: Consider invalidating specific cache keys on server script update instead of clearing entire map
     if frappe.flags.in_patch and not frappe.db.table_exists("Server Script"):
         return {}
 

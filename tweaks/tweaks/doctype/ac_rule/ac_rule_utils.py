@@ -25,6 +25,8 @@ def after_install():
 
 @frappe.whitelist()
 def get_rule_map(debug=False):
+    # TODO: Cache the rule_map at site level to avoid rebuilding trees on every call
+    # TODO: Consider incremental tree updates instead of full rebuild for better performance
 
     rebuild_tree("AC Principal")
     rebuild_tree("AC Resource")
@@ -75,6 +77,7 @@ def get_rule_map(debug=False):
         for action in actions:
             folder.setdefault(scrub(action), [])
 
+    # TODO: Optimize by batch loading all rules and resources in single queries to avoid N+1 problem
     for r in rules:
 
         rule = frappe.get_doc("AC Rule", r.name)
@@ -248,6 +251,7 @@ def get_resource_rules(
         else:
             frappe.log_error(f"AC Rule {rule_name} has no valid principals")
 
+    # TODO: Optimize SQL query generation - could use query builder for better readability and maintainability
     user_filter_query = " UNION ".join(
         [
             f"""SELECT {frappe.db.escape(q.get('rule'))} AS "rule" FROM `tabUser` WHERE `tabUser`.`name` = {frappe.db.escape(user)} AND ({q.get("sql")})"""

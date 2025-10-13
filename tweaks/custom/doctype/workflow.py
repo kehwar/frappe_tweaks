@@ -56,6 +56,7 @@ def get_transitions(
     user=None,
 ) -> list[dict]:
     """Return list of possible transitions for the given doc"""
+    # TODO: Cache workflow transitions at request level to avoid repeated queries
     from frappe.model.document import Document
 
     if not isinstance(doc, Document):
@@ -196,6 +197,7 @@ def apply_auto_workflow_transition(doc, update=True, workflow=None, user=None):
     Returns:
         Updated document if an auto transition is applied; else, the original document.
     """
+    # TODO: Consider caching auto-apply transition rules to reduce database queries on every document change
     # Prepare the document and workflow context
     doc = get_doc(doc)
     workflow = workflow or get_workflow(doc.doctype)

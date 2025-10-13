@@ -90,6 +90,8 @@ def run_export_query_job(
     send_notification=True,
     user=None,
 ):
+    # TODO: Add progress tracking for large report exports
+    # TODO: Implement chunked processing for very large datasets to avoid memory issues
     from rq import get_current_job
 
     content = get_export_content(report_name, extension, data)
@@ -205,6 +207,7 @@ def get_pdf_report_content(report_name, data):
 
 
 def get_pdf_report_meta(report_name):
+    # TODO: Cache report metadata at site level since it rarely changes
     from frappe.core.doctype.report.report import get_report_module_dotted_path
     from frappe.modules import get_module_path, scrub
     from frappe.utils import get_html_format

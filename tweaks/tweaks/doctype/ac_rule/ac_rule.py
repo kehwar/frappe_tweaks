@@ -39,6 +39,8 @@ class ACRule(Document):
         )
 
     def resolve_principals(self, debug=False):
+        # TODO: Cache principal resolution results at rule level since they rarely change
+        # TODO: Consider batch loading all principal details to avoid N+1 queries
 
         allowed = set()
         denied = set()
@@ -128,6 +130,8 @@ class ACRule(Document):
         return principals
 
     def resolve_resources(self, debug=False):
+        # TODO: Cache resource resolution results at rule level since they rarely change
+        # TODO: Consider batch loading all resource details to avoid N+1 queries
 
         allowed = set()
         denied = set()

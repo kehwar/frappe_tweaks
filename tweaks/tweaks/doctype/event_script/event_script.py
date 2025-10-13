@@ -97,6 +97,8 @@ def get_script_map(cached=True):
     """
     Fetch or create the script map.
     """
+    # TODO: Add cache expiry time to prevent stale cache in long-running processes
+    # TODO: Consider using Redis hash instead of single cache value for better granularity
     if frappe.flags.in_patch:
         return {}
     if not frappe.db.table_exists("Event Script") or not frappe.db.table_exists(
@@ -135,6 +137,7 @@ def get_script_map(cached=True):
     )
 
     # Process each script and build the script map
+    # TODO: Batch load all DocType Group Members and Event Script Parameters to avoid N+1 queries
     for script in enabled_scripts:
         resolved_doctypes = []
         if script.document_type:
@@ -223,6 +226,7 @@ event_script_hooks = {
 
 
 def resolve_parameters(parameters):
+    # TODO: Cache resolved parameters at request level to avoid repeated DB queries for same parameters
     resolved_parameters = []
     for parameter in parameters:
         doctype = parameter.document_type or parameter.single_doctype
@@ -237,6 +241,7 @@ def resolve_parameters(parameters):
 
 
 def resolve_users(user_filters):
+    # TODO: Cache user resolution results at site level since user group/role memberships don't change frequently
 
     user = user_filters.get("user", None)
     user_group = user_filters.get("user_group", None)
@@ -376,6 +381,7 @@ def get_permission_policies(doctype, doc=None, ptype=None, user=None, debug=Fals
 
 
 def get_permission_query_conditions(user=None, doctype=None, policies=None):
+    # TODO: Consider query result caching for frequently accessed doctypes to reduce DB load
 
     if user == "Administrator":
         return ""
@@ -390,7 +396,7 @@ def get_permission_query_conditions(user=None, doctype=None, policies=None):
     for policy in policies:
 
         if policy["filters"] or policy["or_filters"]:
-
+            # TODO: Optimize subquery generation - consider using JOINs instead of IN clauses for better performance
             query = frappe.db.get_all(
                 doctype,
                 filters=policy["filters"],
