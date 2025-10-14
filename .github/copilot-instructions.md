@@ -8,7 +8,7 @@ This is a Frappe application that provides various tweaks and enhancements for t
 - Access Control (AC) rules and permissions
 - Workflow enhancements
 - Query report customizations
-- Event scripts
+- Event scripts (**Note**: Event scripts will be deprecated soon)
 
 ## Technology Stack
 
@@ -121,6 +121,8 @@ This app customizes several core Frappe doctypes:
 
 These customizations are registered in `hooks.py` under `override_doctype_class`.
 
+**Note**: The app will soon move away from monkey patches (`override_doctype_class`). Custom hooks from a forked Frappe/ERPNext version will be used instead.
+
 ## Important Notes
 
 - Always test changes in a development site before production
@@ -132,7 +134,7 @@ These customizations are registered in `hooks.py` under `override_doctype_class`
 ## API and Integration Points
 
 - **Permission Hooks**: Custom permission logic in `permission_hooks`
-- **Event Scripts**: Dynamic event handling system
+- **Event Scripts**: Dynamic event handling system (**Note**: Will be deprecated soon)
 - **Pricing Rules**: Custom discount and pricing logic
 - **Workflow Scripts**: Custom workflow state change handlers
 - **Query Reports**: PDF and Excel export customizations
