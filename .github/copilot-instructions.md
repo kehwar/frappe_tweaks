@@ -119,9 +119,9 @@ This app customizes several core Frappe doctypes:
 - **Server Script**: Extended via `TweaksServerScript` class  
 - **Reminder**: Extended via `TweaksReminder` class
 
-These customizations are registered in `hooks.py` under `override_doctype_class`.
+These customizations are registered in `hooks.py` under `override_doctype_class` hook.
 
-**Note**: The app will soon move away from monkey patches (`override_doctype_class`). Custom hooks from a forked Frappe/ERPNext version will be used instead.
+**Note**: The app uses some monkey patches (e.g., `Document.run_method` in `tweaks/custom/doctype/document.py`, `FormMeta.add_custom_script` in `tweaks/custom/doctype/client_script.py`) that directly modify framework classes. The app will soon move away from these monkey patches to use custom hooks from a forked Frappe/ERPNext version instead.
 
 ## Important Notes
 
