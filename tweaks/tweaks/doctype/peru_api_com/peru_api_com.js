@@ -3,7 +3,10 @@
 
 frappe.ui.form.on("PERU API COM", {
 	refresh(frm) {
-        frm.add_custom_button(__('Logs'), function() {
+        frm.add_custom_button(__('Console'), function() {
+            frappe.set_route('Form', 'PERU API COM Console');
+        });
+        frm.page.add_menu_item(__('Logs'), function() {
             frappe.set_route("List", "PERU API COM Log");
         });
         frm.page.add_menu_item(__('See Website'), function() {
