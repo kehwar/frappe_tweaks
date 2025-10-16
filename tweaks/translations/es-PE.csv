@@ -1,0 +1,113 @@
+AC Action,Acción AC
+AC Principal,Principal AC
+AC Resource,Recurso AC
+AC Resource Action,Acción de Recurso AC
+AC Rule,Regla AC
+AC Rule Action,Acción de Regla AC
+AC Rule Principal,Principal de Regla AC
+AC Rule Resource,Recurso de Regla AC
+AC Settings,Configuraciones AC
+API Error,Error de API
+All resources must belong to the same root resource.,Todos los recursos deben pertenecer al mismo recurso raíz.
+At least one Action is required,Se requiere al menos una Acción
+At least one action must be enabled.,Al menos una acción debe estar habilitada.
+At least one principal must not be an exception.,Al menos un principal no debe ser una excepción.
+At least one resource must not be an exception.,Al menos un recurso no debe ser una excepción.
+Auth Header,Encabezado de Autenticación
+Based on,Basado en
+Business Logic,Lógica de Negocio
+Business Logic Category,Categoría de Lógica de Negocio
+Business Logic Link,Enlace de Lógica de Negocio
+Business Logic Link Action,Acción de Enlace de Lógica de Negocio
+Child,Hijo
+Clear API Logs,Limpiar Registros de API
+Conditions Script,Script de Condiciones
+Custom Resource ID,ID de Recurso Personalizado
+Custom is required,Se requiere personalización
+DNI,DNI
+DNI URL,URL para DNI
+DocType Event is required,Se requiere Evento de DocType
+DocType Filter,Filtro de DocType
+DocType Group,Grupo de DocType
+DocType Group Member,Miembro del Grupo de DocType
+DocType Group Members,Miembros del Grupo de DocType
+DocType is required,Se requiere DocType
+Doctype Event '{}' is not implemented yet,El Evento de Doctype '{}' aún no está implementado
+Document Type Group,Grupo de Tipo de Documento
+Document Type is required,Se requiere Tipo de Documento
+Documentation,Documentación
+Error in Global Client Script,Error en el Script Global del Cliente
+Error searching {0}: {1},Error buscando {0}: {1}
+Event Script,Script de Evento
+Event Script Parameter,Parámetro de Script de Evento
+Fecha,Fecha
+Field to pluck, if ommited 'name' will be used. Use commas to retrieve an array of fields instead.,Campo a extraer, si se omite se usará 'name'. Use comas para obtener un array de campos en su lugar.
+Forbid,Prohibir
+Frappe School,Escuela Frappe
+Implemented,Implementado
+Inherit from parent,Heredar del padre
+Managed Actions,Acciones Administradas
+Must be Administrator to run this query,Debe ser Administrador para ejecutar esta consulta
+Outdated,Desactualizado
+PERU API COM,PERU API COM
+PERU API COM Console,Consola PERU API COM
+PERU API COM Log,Registro PERU API COM
+Parent AC Resource is required for Child type,Se requiere Recurso AC Padre para el tipo Hijo
+Parent AC Resource is required for Inherit from parent,Se requiere Recurso AC Padre para Heredar del padre
+Permit,Permitir
+Principal,Principal
+Principals,Principales
+RUC,RUC
+RUC URL,URL para RUC
+Recursive,Recursivo
+Reference DocType is required,Se requiere DocType de Referencia
+Report an Issue,Reportar un Problema
+Report is required,Se requiere Reporte
+Resource,Recurso
+Resource or (Type and Document Type/Report/Custom) is required,Se requiere Recurso o (Tipo y Tipo de Documento/Reporte/Personalizado)
+Resources,Recursos
+Restore Defaults,Restaurar Valores Predeterminados
+Role is required,Se requiere Rol
+Searching...,Buscando...
+See Website,Ver Sitio Web
+TC,TC
+TC URL,URL para TC
+The report you requested has been generated.<br><br>Click here to download:<br><a href='{0}'>{0}</a><br><br>This link will expire in {1} hours.,El reporte que solicitaste ha sido generado.<br><br>Haz clic aquí para descargar:<br><a href='{0}'>{0}</a><br><br>Este enlace expirará en {1} horas.
+Tweaks,Ajustes
+Type is required,Se requiere Tipo
+Type, Document Type, Report or API Name cannot be changed for a standard AC Resource,El Tipo, Tipo de Documento, Reporte o Nombre de API no se puede cambiar para un Recurso AC estándar
+User Filter,Filtro de Usuario
+User Forum,Foro de Usuario
+User Group is required,Se requiere Grupo de Usuario
+User Script,Script de Usuario
+User Script is required,Se requiere Script de Usuario
+User is required,Se requiere Usuario
+Valid To,Válido Hasta
+Workflow Action is required,Se requiere Acción de Flujo de Trabajo
+You are not allowed to create standard AC Resource,No tienes permisos para crear un Recurso AC estándar
+You are not allowed to delete standard AC Resource,No tienes permisos para eliminar un Recurso AC estándar
+Your exported report: {0},Tu reporte exportado: {0}
+after_delete,después_de_eliminar
+after_rename,después_de_renombrar
+after_transition,después_de_transición
+autoname,autonombre
+before_cancel,antes_de_cancelar
+before_insert,antes_de_insertar
+before_naming,antes_de_nombrar
+before_rename,antes_de_renombrar
+before_save,antes_de_guardar
+before_submit,antes_de_enviar
+before_transition,antes_de_transición
+before_update_after_submit,antes_de_actualizar_después_de_enviar
+before_validate,antes_de_validar
+db_insert,insertar_bd
+db_update,actualizar_bd
+dni,dni
+has_field_permission,tiene_permiso_de_campo
+has_permission,tiene_permiso
+message,mensaje
+on_change_or_rename,al_cambiar_o_renombrar
+ruc,ruc
+tc,tc
+transition_condition,condición_de_transición
+validate,validar
