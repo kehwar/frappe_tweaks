@@ -11,7 +11,8 @@
   "section_break_zibr",
   "data",
   "error",
-  "status"
+  "status",
+  "cache"
  ],
  "fields": [
   {
@@ -59,12 +60,19 @@
    "label": "Status",
    "options": "Success\nError",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "cache",
+   "fieldtype": "Check",
+   "label": "Cache",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-16 10:35:42.380073",
+ "modified": "2025-10-16 11:22:13.914441",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "PERU API COM Log",

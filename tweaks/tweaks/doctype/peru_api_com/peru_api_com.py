@@ -191,6 +191,7 @@ def _make_api_call(
         if cache and use_cache():
             data = get_data_from_log(endpoint, key)
             if data:
+                log_api_call(endpoint, key, data=data, cache=True)
                 return data
 
         # Build the request parameters (URL, headers, auth tokens)
@@ -206,24 +207,17 @@ def _make_api_call(
         # Return the API response data
         return data
     except Exception as e:
-        reason = ""
-
-        # Extract meaningful error message from HTTP errors
-        if isinstance(e, HTTPError) and e.response is not None and e.response.reason:
-            reason = e.response.reason
-        else:
-            # Fall back to string representation of the exception
-            reason = str(e)
+        traceback = frappe.get_traceback()
 
         # Log the failed API call with error details
-        log_api_call(endpoint, key, error=reason)
+        log_api_call(endpoint, key, error=traceback)
 
         # Raise a user-friendly error with context about what failed
         frappe.throw(
             [
                 frappe._("Error searching {0}: {1}").format(endpoint.upper(), key),
                 "---",
-                *frappe.get_traceback().split("\n"),
+                *traceback.split("\n"),
             ],
             exc=e,
             title=frappe._("API Error"),

@@ -61,6 +61,7 @@ def log_api_call(
     key: str,
     data: Optional[Dict[str, Any]] = None,
     error: Optional[str] = None,
+    cache: bool = False,
 ) -> None:
     """
     Log an API call result to the database.
@@ -79,6 +80,7 @@ def log_api_call(
             "status": "Success" if data else "Error",
             "data": json.dumps(data) if data else None,
             "error": error,
+            "cache": cache,
         }
     )
     log.insert(ignore_permissions=True)
