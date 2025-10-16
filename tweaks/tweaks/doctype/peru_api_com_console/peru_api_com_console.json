@@ -13,6 +13,7 @@
  "engine": "InnoDB",
  "field_order": [
   "search",
+  "column_break_jhid",
   "search_ruc",
   "search_dni",
   "search_tc",
@@ -60,13 +61,17 @@
    "fieldname": "search_tc",
    "fieldtype": "Date",
    "label": "Fecha"
+  },
+  {
+   "fieldname": "column_break_jhid",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-10-16 10:29:22.925880",
+ "modified": "2025-10-16 11:26:16.285947",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "PERU API COM Console",
