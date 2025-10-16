@@ -219,7 +219,17 @@ def _make_api_call(
         log_api_call(endpoint, key, error=reason)
 
         # Raise a user-friendly error with context about what failed
-        frappe.throw(reason, exc=e, title=f"Error al buscar {endpoint.upper()}: {key}")
+        frappe.throw(
+            [
+                frappe._("Error searching {0}: {1}").format(endpoint.upper(), key),
+                "---",
+                *frappe.get_traceback().split("\n"),
+            ],
+            exc=e,
+            title=frappe._("API Error"),
+            wide=1,
+            as_list=1,
+        )
 
 
 @frappe.whitelist()
