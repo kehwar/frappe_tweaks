@@ -1,0 +1,79 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-10-15 21:47:18.975022",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "ruc_url",
+  "dni_url",
+  "tc_url",
+  "column_break_jxkg",
+  "auth_header",
+  "token",
+  "cache"
+ ],
+ "fields": [
+  {
+   "fieldname": "token",
+   "fieldtype": "Password",
+   "label": "Token"
+  },
+  {
+   "fieldname": "ruc_url",
+   "fieldtype": "Data",
+   "label": "RUC URL"
+  },
+  {
+   "fieldname": "dni_url",
+   "fieldtype": "Data",
+   "label": "DNI URL"
+  },
+  {
+   "fieldname": "tc_url",
+   "fieldtype": "Data",
+   "label": "TC URL"
+  },
+  {
+   "fieldname": "column_break_jxkg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "auth_header",
+   "fieldtype": "Data",
+   "label": "Auth Header"
+  },
+  {
+   "default": "1",
+   "fieldname": "cache",
+   "fieldtype": "Check",
+   "label": "Cache"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-10-15 23:09:38.191751",
+ "modified_by": "Administrator",
+ "module": "Tweaks",
+ "name": "PERU API COM",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
