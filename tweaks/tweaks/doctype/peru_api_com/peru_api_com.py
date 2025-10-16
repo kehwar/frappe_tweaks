@@ -78,6 +78,40 @@ class PERUAPICOM(Document):
         """
         return get_tc(date, cache)
 
+    def restore_defaults(self, only_if_missing: bool = False):
+
+        if not self.website_url or (not only_if_missing):
+            self.website_url = self.meta.get_field("website_url").default
+        if not self.ruc_url or (not only_if_missing):
+            self.ruc_url = self.meta.get_field("ruc_url").default
+        if not self.dni_url or (not only_if_missing):
+            self.dni_url = self.meta.get_field("dni_url").default
+        if not self.tc_url or (not only_if_missing):
+            self.tc_url = self.meta.get_field("tc_url").default
+        if not self.auth_header or (not only_if_missing):
+            self.auth_header = self.meta.get_field("auth_header").default
+        self.cache = self.meta.get_field("cache").default
+
+    def validate_setup(self):
+
+        if not self.token:
+            frappe.throw("El token de autenticación es obligatorio.")
+
+        if not self.auth_header:
+            frappe.throw("El encabezado de autenticación es obligatorio.")
+
+        if not self.website_url:
+            frappe.throw("La URL del sitio web es obligatoria.")
+
+        if not self.ruc_url:
+            frappe.throw("La URL del servicio RUC es obligatoria.")
+
+        if not self.dni_url:
+            frappe.throw("La URL del servicio DNI es obligatoria.")
+
+        if not self.tc_url:
+            frappe.throw("La URL del servicio TC es obligatoria.")
+
 
 def use_cache() -> bool:
     """
@@ -105,6 +139,9 @@ def get_kwargs(
     """
 
     doc = frappe.get_cached_doc("PERU API COM")
+    doc.restore_defaults(only_if_missing=True)
+    doc.validate_setup()
+
     doc.token = doc.get_password("token")
 
     url = doc.get(f"{endpoint}_url")
@@ -251,3 +288,26 @@ def get_tc(
     date = format_date(date, "yyyy-mm-dd")
 
     return _make_api_call("tc", key=date, param="fecha", cache=cache)
+
+
+@frappe.whitelist()
+def restore_defaults(only_if_missing: bool = False):
+
+    frappe.only_for("System Manager")
+
+    doc = frappe.get_doc("PERU API COM")
+
+    doc.restore_defaults(only_if_missing)
+
+    doc.save()
+
+
+@frappe.whitelist()
+def get_default_settings():
+
+    frappe.only_for("System Manager")
+
+    doc = frappe.get_doc("PERU API COM")
+    doc.restore_defaults()
+
+    return doc.as_dict()
