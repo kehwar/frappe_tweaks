@@ -5,6 +5,9 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "website_url",
+  "column_break_qpwo",
+  "section_break_hdbw",
   "ruc_url",
   "dni_url",
   "tc_url",
@@ -20,16 +23,19 @@
    "label": "Token"
   },
   {
+   "default": "https://peruapi.com/api/ruc",
    "fieldname": "ruc_url",
    "fieldtype": "Data",
    "label": "RUC URL"
   },
   {
+   "default": "https://peruapi.com/api/dni",
    "fieldname": "dni_url",
    "fieldtype": "Data",
    "label": "DNI URL"
   },
   {
+   "default": "https://peruapi.com/api/tipo_cambio",
    "fieldname": "tc_url",
    "fieldtype": "Data",
    "label": "TC URL"
@@ -39,6 +45,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "default": "X-API-KEY",
    "fieldname": "auth_header",
    "fieldtype": "Data",
    "label": "Auth Header"
@@ -48,13 +55,28 @@
    "fieldname": "cache",
    "fieldtype": "Check",
    "label": "Cache"
+  },
+  {
+   "default": "https://peruapi.com",
+   "fieldname": "website_url",
+   "fieldtype": "Data",
+   "label": "Website URL"
+  },
+  {
+   "fieldname": "section_break_hdbw",
+   "fieldtype": "Section Break",
+   "label": "API"
+  },
+  {
+   "fieldname": "column_break_qpwo",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-10-15 23:09:38.191751",
+ "modified": "2025-10-16 09:26:54.258568",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "PERU API COM",
@@ -75,5 +97,6 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }
