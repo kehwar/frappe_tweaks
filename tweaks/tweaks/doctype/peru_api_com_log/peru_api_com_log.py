@@ -71,6 +71,7 @@ def log_api_call(
             key: The key that was used in the API call
             data: Response data from successful API call (optional)
             error: Error message from failed API call (optional)
+            cache: Whether this call used cached data (optional)
     """
     log = frappe.new_doc("PERU API COM Log")
     log.update(

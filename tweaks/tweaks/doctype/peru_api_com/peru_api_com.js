@@ -1,11 +1,23 @@
 // Copyright (c) 2025, Erick W.R. and contributors
 // For license information, please see license.txt
 
+/**
+ * Form script for PERU API COM doctype.
+ * Provides UI interactions and configuration management for Peru API services.
+ */
 frappe.ui.form.on("PERU API COM", {
+	/**
+	 * Refresh event handler for PERU API COM form.
+	 * Sets up custom buttons, menu items, and initializes form with default values.
+	 * @param {Object} frm - The form object
+	 */
 	refresh(frm) {
+        // Add Console button to navigate to testing interface
         frm.add_custom_button(__('Console'), function() {
             frappe.set_route('Form', 'PERU API COM Console');
         });
+        
+        // Add menu items for navigation and actions
         frm.page.add_menu_item(__('Logs'), function() {
             frappe.set_route("List", "PERU API COM Log");
         });
@@ -13,6 +25,7 @@ frappe.ui.form.on("PERU API COM", {
             window.open(frm.doc.website_url, "_blank");
         });
         frm.page.add_menu_item(__('Restore Defaults'), function() {
+            // Restore default configuration values
             frappe.call({
                 method: "tweaks.tweaks.doctype.peru_api_com.peru_api_com.restore_defaults",
                 args: {
@@ -25,6 +38,8 @@ frappe.ui.form.on("PERU API COM", {
                 }
             });
         });
+        
+        // Auto-populate empty fields with default values on form load
         frappe.call({
             "method": "tweaks.tweaks.doctype.peru_api_com.peru_api_com.get_default_settings",
             callback: function(r) {

@@ -78,8 +78,13 @@ class PERUAPICOM(Document):
         """
         return get_tc(date, cache)
 
-    def restore_defaults(self, only_if_missing: bool = False):
+    def restore_defaults(self, only_if_missing: bool = False) -> None:
+        """
+        Restore default values for API configuration fields.
 
+        Args:
+            only_if_missing: If True, only restore fields that are empty
+        """
         if not self.website_url or (not only_if_missing):
             self.website_url = self.meta.get_field("website_url").default
         if not self.ruc_url or (not only_if_missing):
@@ -92,8 +97,13 @@ class PERUAPICOM(Document):
             self.auth_header = self.meta.get_field("auth_header").default
         self.cache = self.meta.get_field("cache").default
 
-    def validate_setup(self):
+    def validate_setup(self) -> None:
+        """
+        Validate that all required configuration fields are set.
 
+        Raises:
+            frappe.ValidationError: If any required field is missing
+        """
         if not self.token:
             frappe.throw("El token de autenticación es obligatorio.")
 
@@ -295,8 +305,15 @@ def get_tc(
 
 
 @frappe.whitelist()
-def restore_defaults(only_if_missing: bool = False):
+def restore_defaults(only_if_missing: bool = False) -> None:
+    """
+    Restore default configuration values for PERU API COM.
 
+    This is a whitelisted function that can only be called by System Managers.
+
+    Args:
+        only_if_missing: If True, only restore fields that are empty
+    """
     frappe.only_for("System Manager")
 
     doc = frappe.get_doc("PERU API COM")
@@ -307,8 +324,15 @@ def restore_defaults(only_if_missing: bool = False):
 
 
 @frappe.whitelist()
-def get_default_settings():
+def get_default_settings() -> Dict[str, Any]:
+    """
+    Get default configuration settings for PERU API COM.
 
+    This is a whitelisted function that can only be called by System Managers.
+
+    Returns:
+        Dictionary containing default configuration values
+    """
     frappe.only_for("System Manager")
 
     doc = frappe.get_doc("PERU API COM")
