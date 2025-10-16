@@ -185,6 +185,7 @@ def _make_api_call(
         frappe.throw(reason, exc=e, title=f"Error al buscar {endpoint.upper()}: {key}")
 
 
+@frappe.whitelist()
 def get_rut(rut: str, cache: bool = True) -> Dict[str, Any]:
     """
     Get RUT information. Routes to DNI or RUC based on length.
@@ -202,6 +203,7 @@ def get_rut(rut: str, cache: bool = True) -> Dict[str, Any]:
         return get_ruc(rut, cache)
 
 
+@frappe.whitelist()
 def get_ruc(ruc: str, cache: bool = True) -> Dict[str, Any]:
     """
     Get RUC (company registration) information from Peru API.
@@ -216,6 +218,7 @@ def get_ruc(ruc: str, cache: bool = True) -> Dict[str, Any]:
     return _make_api_call("ruc", key=ruc, cache=cache)
 
 
+@frappe.whitelist()
 def get_dni(dni: str, cache: bool = True) -> Dict[str, Any]:
     """
     Get DNI (national ID) information from Peru API.
@@ -230,6 +233,7 @@ def get_dni(dni: str, cache: bool = True) -> Dict[str, Any]:
     return _make_api_call("dni", key=dni, cache=cache)
 
 
+@frappe.whitelist()
 def get_tc(
     date: Optional[Union[str, date]] = None, cache: bool = True
 ) -> Dict[str, Any]:
