@@ -13,6 +13,7 @@
  "engine": "InnoDB",
  "field_order": [
   "search",
+  "ignore_cache",
   "column_break_jhid",
   "search_ruc",
   "search_dni",
@@ -65,13 +66,19 @@
   {
    "fieldname": "column_break_jhid",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "ignore_cache",
+   "fieldtype": "Check",
+   "label": "Ignore Cache"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-10-16 11:26:16.285947",
+ "modified": "2025-10-16 11:29:45.577202",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "PERU API COM Console",
