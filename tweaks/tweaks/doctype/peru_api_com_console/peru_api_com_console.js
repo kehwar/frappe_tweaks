@@ -12,7 +12,25 @@ frappe.ui.form.on("PERU API COM Console", {
      * @param {Object} frm - The form object
      */
     onload: function (frm) {
-		// Add Ctrl+Enter keyboard shortcut for quick search
+		frm.trigger("setup_keyboard_shortcuts");
+	},
+	
+	/**
+	 * Refresh event handler for PERU API COM Console form.
+	 * Orchestrates the setup of console interface components.
+	 * @param {Object} frm - The form object
+	 */
+	refresh(frm) {
+		frm.trigger("configure_form_behavior");
+        frm.trigger("setup_primary_actions");
+        frm.trigger("setup_navigation_buttons");
+	},
+
+	/**
+	 * Sets up keyboard shortcuts for enhanced user experience.
+	 * @param {Object} frm - The form object
+	 */
+	setup_keyboard_shortcuts(frm) {
 		frappe.ui.keys.add_shortcut({
 			shortcut: "ctrl+enter",
 			action: () => frm.page.btn_primary.trigger("click"),
@@ -21,27 +39,42 @@ frappe.ui.form.on("PERU API COM Console", {
 			ignore_inputs: true,
 		});
 	},
-	
+
 	/**
-	 * Refresh event handler for PERU API COM Console form.
-	 * Sets up primary search action button and navigation links.
+	 * Configures form behavior and settings.
 	 * @param {Object} frm - The form object
 	 */
-	refresh(frm) {
+	configure_form_behavior(frm) {
 		// Disable save since this is a testing console
 		frm.disable_save();
-		
-		// Set up primary search action with loading state
+	},
+
+	/**
+	 * Sets up primary action buttons with loading states.
+	 * @param {Object} frm - The form object
+	 */
+	setup_primary_actions(frm) {
 		frm.page.set_primary_action(__("Search"), ($btn) => {
 			$btn.text(__("Searching..."));
 			return frm
 				.execute_action("Search")
 				.finally(() => $btn.text(__("Search")));
 		});
-		
-		// Add navigation button to view logs
+	},
+
+	/**
+	 * Sets up navigation buttons for related functionality.
+	 * @param {Object} frm - The form object
+	 */
+	setup_navigation_buttons(frm) {
+        // Add navigation to logs
         frm.add_custom_button(__('Logs'), function() {
             frappe.set_route('List', 'PERU API COM Log');
         });
-	},
+
+        // Add Settings menu item for configuration
+        frm.page.add_menu_item(__('Settings'), function() {
+            frappe.set_route("List", "PERU API COM");
+        });
+	}
 });
