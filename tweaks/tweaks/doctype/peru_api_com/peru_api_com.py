@@ -118,6 +118,7 @@ def get_kwargs(
             },
             "params": {param: key},
         }
+
     return {
         "url": f"{url}/{key}",
         "headers": {
@@ -149,25 +150,38 @@ def _make_api_call(
             Exception: If the API call fails, with appropriate error message
     """
     try:
+        # Use caching is enabled and requested by the caller
         if cache and use_cache():
             data = get_data_from_log(endpoint, key)
             if data:
                 return data
 
+        # Build the request parameters (URL, headers, auth tokens)
         kwargs = get_kwargs(endpoint, key, param)
 
+        # Make the actual HTTP GET request to the Peru API
         data = make_get_request(**kwargs)
 
+        # Log successful API response if caching is enabled
         if use_cache():
             log_api_call(endpoint, key, data=data)
+
+        # Return the API response data
         return data
     except Exception as e:
         reason = ""
+
+        # Extract meaningful error message from HTTP errors
         if isinstance(e, HTTPError) and e.response is not None and e.response.reason:
             reason = e.response.reason
         else:
+            # Fall back to string representation of the exception
             reason = str(e)
+
+        # Log the failed API call with error details
         log_api_call(endpoint, key, error=reason)
+
+        # Raise a user-friendly error with context about what failed
         frappe.throw(reason, exc=e, title=f"Error al buscar {endpoint.upper()}: {key}")
 
 
