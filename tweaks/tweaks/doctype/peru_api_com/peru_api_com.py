@@ -284,10 +284,28 @@ def get_ruc(ruc: str, cache: bool = True, sucursales: bool = False) -> Dict[str,
     Returns:
             Dictionary containing RUC information
     """
-    ruc_data = _make_api_call("ruc", key=ruc, cache=cache)
     if sucursales:
-        sucursales_data = get_ruc_suc(ruc, cache=cache)
-        ruc_data["sucursales"] = sucursales_data.get("sucursales", [])
+        return get_ruc_async(ruc, cache, sucursales)
+
+    return _make_api_call("ruc", key=ruc, cache=cache)
+
+
+@frappe.whitelist()
+def get_ruc_async(
+    ruc: str, cache: bool = True, sucursales: bool = False
+) -> Dict[str, Any]:
+
+    from tweaks.custom.utils.concurrent import ThreadPoolExecutorWithContext
+
+    with ThreadPoolExecutorWithContext(max_workers=2) as executor:
+        ruc_data_future = executor.submit(get_ruc, ruc, cache)
+        if sucursales:
+            ruc_suc_data_future = executor.submit(get_ruc_suc, ruc, cache)
+        ruc_data = ruc_data_future.result()
+        if sucursales:
+            ruc_suc_data = ruc_suc_data_future.result()
+            ruc_data["sucursales"] = ruc_suc_data.get("sucursales", [])
+
     return ruc_data
 
 
