@@ -1,4 +1,3 @@
-from tweaks.custom.doctype.client_script import client_script_hooks
 from tweaks.custom.doctype.server_script_customization import server_script_hooks
 from tweaks.custom.doctype.workflow import workflow_script_hooks
 from tweaks.custom.utils.permissions import permission_hooks
@@ -25,7 +24,6 @@ after_install = (
         "tweaks.tweaks.doctype.ac_rule.ac_rule_utils.after_install",
     ]
     + workflow_script_hooks["after_install"]
-    + client_script_hooks["after_install"]
     + server_script_hooks["after_install"]
 )
 
@@ -54,7 +52,6 @@ override_whitelisted_methods = {
 }
 
 override_doctype_class = {
-    "Client Script": "tweaks.custom.doctype.client_script.TweaksClientScript",
     "Reminder": "tweaks.custom.doctype.reminder.TweaksReminder",
     "Server Script": "tweaks.custom.doctype.server_script.TweaksServerScript",
 }

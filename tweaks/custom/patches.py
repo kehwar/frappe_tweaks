@@ -1,4 +1,3 @@
-from tweaks.custom.doctype.client_script import apply_client_script_patches
 from tweaks.custom.doctype.document import apply_document_patches
 from tweaks.custom.doctype.server_script_customization import (
     apply_server_script_patches,
@@ -12,7 +11,6 @@ from tweaks.custom.utils.safe_exec import apply_safe_exec_patches
 def apply_patches():
 
     apply_authentication_patches()
-    apply_client_script_patches()
     apply_db_query_patches()
     apply_document_patches()
     apply_safe_exec_patches()
