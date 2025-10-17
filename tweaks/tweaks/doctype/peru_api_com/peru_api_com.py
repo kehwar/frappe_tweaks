@@ -379,7 +379,6 @@ def get_ruc(ruc: str, cache: bool = True, sucursales: bool = False) -> Dict[str,
     return _make_api_call("ruc", key=ruc, cache=cache)
 
 
-@frappe.whitelist()
 def get_ruc_async(
     ruc: str, cache: bool = True, sucursales: bool = False
 ) -> Dict[str, Any]:
