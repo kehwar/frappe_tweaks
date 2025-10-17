@@ -21,7 +21,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Endpoint",
-   "options": "ruc\ndni\ntc",
+   "options": "ruc\nruc_suc\ndni\ntc",
    "read_only": 1
   },
   {
@@ -72,7 +72,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-16 11:22:13.914441",
+ "modified": "2025-10-17 12:09:37.956096",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "PERU API COM Log",

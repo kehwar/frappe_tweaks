@@ -89,6 +89,8 @@ class PERUAPICOM(Document):
             self.website_url = self.meta.get_field("website_url").default
         if not self.ruc_url or (not only_if_missing):
             self.ruc_url = self.meta.get_field("ruc_url").default
+        if not self.ruc_suc_url or (not only_if_missing):
+            self.ruc_suc_url = self.meta.get_field("ruc_suc_url").default
         if not self.dni_url or (not only_if_missing):
             self.dni_url = self.meta.get_field("dni_url").default
         if not self.tc_url or (not only_if_missing):
@@ -255,7 +257,7 @@ def get_rut(rut: str, cache: bool = True) -> Dict[str, Any]:
 
 
 @frappe.whitelist()
-def get_ruc(ruc: str, cache: bool = True) -> Dict[str, Any]:
+def get_ruc(ruc: str, cache: bool = True, sucursales: bool = False) -> Dict[str, Any]:
     """
     Get RUC (company registration) information from Peru API.
 
@@ -266,7 +268,26 @@ def get_ruc(ruc: str, cache: bool = True) -> Dict[str, Any]:
     Returns:
             Dictionary containing RUC information
     """
-    return _make_api_call("ruc", key=ruc, cache=cache)
+    ruc_data = _make_api_call("ruc", key=ruc, cache=cache)
+    if sucursales:
+        sucursales_data = get_ruc_suc(ruc, cache=cache)
+        ruc_data["sucursales"] = sucursales_data.get("sucursales", [])
+    return ruc_data
+
+
+@frappe.whitelist()
+def get_ruc_suc(ruc: str, cache: bool = True) -> Dict[str, Any]:
+    """
+    Get RUC branch (sucursal) information from Peru API.
+
+    Args:
+            ruc: The RUC number to look up branches for
+            cache: Whether to use cached data if available
+
+    Returns:
+            Dictionary containing RUC branch information
+    """
+    return _make_api_call("ruc_suc", key=ruc, cache=cache)
 
 
 @frappe.whitelist()

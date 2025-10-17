@@ -9,6 +9,7 @@
   "column_break_qpwo",
   "section_break_hdbw",
   "ruc_url",
+  "ruc_suc_url",
   "dni_url",
   "tc_url",
   "column_break_jxkg",
@@ -70,13 +71,19 @@
   {
    "fieldname": "column_break_qpwo",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "https://peruapi.com/api/ruc_suc",
+   "fieldname": "ruc_suc_url",
+   "fieldtype": "Data",
+   "label": "RUC Sucursales URL"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-10-16 09:26:54.258568",
+ "modified": "2025-10-17 12:08:33.574886",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "PERU API COM",

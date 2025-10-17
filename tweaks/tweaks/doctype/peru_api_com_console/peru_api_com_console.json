@@ -43,10 +43,10 @@
    "fieldname": "search",
    "fieldtype": "Select",
    "label": "Search",
-   "options": "RUC\nDNI\nTC"
+   "options": "RUC\nRUC (Cabecera)\nRUC (Sucursales)\nDNI\nTC"
   },
   {
-   "depends_on": "eval:doc.search == 'RUC'",
+   "depends_on": "eval:doc.search.startsWith('RUC')",
    "fieldname": "search_ruc",
    "fieldtype": "Data",
    "label": "RUC"
@@ -78,7 +78,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-10-16 11:29:45.577202",
+ "modified": "2025-10-17 12:39:43.168702",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "PERU API COM Console",

@@ -8,7 +8,12 @@ import frappe
 import yaml
 from frappe.model.document import Document
 
-from tweaks.tweaks.doctype.peru_api_com.peru_api_com import get_dni, get_ruc, get_tc
+from tweaks.tweaks.doctype.peru_api_com.peru_api_com import (
+    get_dni,
+    get_ruc,
+    get_ruc_suc,
+    get_tc,
+)
 
 
 class PERUAPICOMConsole(Document):
@@ -55,7 +60,11 @@ def search(doc: str) -> Document:
 
     try:
         if doc.search == "RUC" and doc.search_ruc:
+            doc.data = get_ruc(doc.search_ruc.strip(), sucursales=True, cache=cache)
+        elif doc.search == "RUC (Cabecera)" and doc.search_ruc:
             doc.data = get_ruc(doc.search_ruc.strip(), cache=cache)
+        elif doc.search == "RUC (Sucursales)" and doc.search_ruc:
+            doc.data = get_ruc_suc(doc.search_ruc.strip(), cache=cache)
         elif doc.search == "DNI" and doc.search_dni:
             doc.data = get_dni(doc.search_dni.strip(), cache=cache)
         elif doc.search == "TC":
