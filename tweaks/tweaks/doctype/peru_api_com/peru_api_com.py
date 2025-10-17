@@ -37,7 +37,9 @@ class PERUAPICOM(Document):
         """
         return get_rut(rut, cache)
 
-    def get_ruc(self, ruc: str, cache: bool = True) -> Dict[str, Any]:
+    def get_ruc(
+        self, ruc: str, cache: bool = True, sucursales: bool = False
+    ) -> Dict[str, Any]:
         """
         Get RUC information from Peru API.
 
@@ -48,7 +50,20 @@ class PERUAPICOM(Document):
         Returns:
                 Dictionary containing RUC information
         """
-        return get_ruc(ruc, cache)
+        return get_ruc(ruc, cache=cache, sucursales=sucursales)
+
+    def get_ruc_suc(self, ruc: str, cache: bool = True) -> Dict[str, Any]:
+        """
+        Get RUC Sucursal information from Peru API.
+
+        Args:
+                ruc: The RUC number to look up
+                cache: Whether to use cached data if available
+
+        Returns:
+                Dictionary containing RUC Sucursal information
+        """
+        return get_ruc_suc(ruc, cache)
 
     def get_dni(self, dni: str, cache: bool = True) -> Dict[str, Any]:
         """
@@ -264,6 +279,7 @@ def get_ruc(ruc: str, cache: bool = True, sucursales: bool = False) -> Dict[str,
     Args:
             ruc: The RUC number to look up
             cache: Whether to use cached data if available
+            sucursales: Whether to include branch (sucursal) information
 
     Returns:
             Dictionary containing RUC information
