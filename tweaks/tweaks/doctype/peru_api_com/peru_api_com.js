@@ -91,7 +91,7 @@ frappe.ui.form.on("PERU API COM", {
 		let changed = false;
 		
 		const fields = [
-			'website_url', 'ruc_url', 'dni_url', 'tc_url', 'auth_header'
+			'website_url', 'ruc_url', 'ruc_suc_url', 'dni_url', 'tc_url', 'auth_header'
 		];
 		
 		fields.forEach(field => {
