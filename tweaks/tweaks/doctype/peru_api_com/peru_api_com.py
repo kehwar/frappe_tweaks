@@ -299,7 +299,7 @@ def _make_api_call(
 
 
 @frappe.whitelist()
-def get_rut(rut: str, cache: bool = True) -> Dict[str, Any]:
+def get_rut(rut: str, cache: bool = True, sucursales: bool = False) -> Dict[str, Any]:
     """
     Get RUT information by routing to appropriate service based on number length.
 
@@ -310,6 +310,7 @@ def get_rut(rut: str, cache: bool = True) -> Dict[str, Any]:
     Args:
         rut: The RUT number (8 digits for DNI, 11 digits for RUC)
         cache: Whether to use cached data if available (default: True)
+        sucursales: Whether to include branch information (default: False)
 
     Returns:
         Dictionary containing RUT information. Structure varies based on type:
@@ -327,9 +328,9 @@ def get_rut(rut: str, cache: bool = True) -> Dict[str, Any]:
         >>> print(company_data['razon_social'])  # Company name
     """
     if len(rut) == 8:
-        return get_dni(rut, cache)
+        return get_dni(rut, cache=cache)
     else:
-        return get_ruc(rut, cache)
+        return get_ruc(rut, cache=cache, sucursales=sucursales)
 
 
 @frappe.whitelist()
@@ -344,7 +345,6 @@ def get_ruc(ruc: str, cache: bool = True, sucursales: bool = False) -> Dict[str,
         ruc: The 11-digit RUC number to look up
         cache: Whether to use cached data if available (default: True)
         sucursales: Whether to include branch/subsidiary information (default: False)
-                   When True, makes concurrent API calls for better performance
 
     Returns:
         Dictionary containing RUC information with keys:
@@ -374,47 +374,9 @@ def get_ruc(ruc: str, cache: bool = True, sucursales: bool = False) -> Dict[str,
         ...     print(f"Branch: {branch['direccion']}")
     """
     if sucursales:
-        return get_ruc_async(ruc, cache, sucursales)
+        return get_ruc_suc(ruc, cache=cache)
 
     return _make_api_call("ruc", key=ruc, cache=cache)
-
-
-def get_ruc_async(
-    ruc: str, cache: bool = True, sucursales: bool = False
-) -> Dict[str, Any]:
-    """
-    Get RUC information asynchronously with optional branch data.
-
-    This function uses ThreadPoolExecutor to fetch RUC and branch information
-    concurrently when sucursales=True, improving performance for requests
-    that need both datasets.
-
-    Args:
-        ruc: The RUC number to look up
-        cache: Whether to use cached data if available (default: True)
-        sucursales: Whether to include branch information (default: False)
-
-    Returns:
-        Dictionary containing RUC information. If sucursales=True, includes
-        'sucursales' key with branch information fetched concurrently.
-
-    Note:
-        This function is automatically called by get_ruc() when sucursales=True
-        to optimize performance through concurrent API calls.
-    """
-
-    from tweaks.utils.concurrent import ThreadPoolExecutorWithContext
-
-    with ThreadPoolExecutorWithContext(max_workers=2) as executor:
-        ruc_data_future = executor.submit(get_ruc, ruc, cache)
-        if sucursales:
-            ruc_suc_data_future = executor.submit(get_ruc_suc, ruc, cache)
-        ruc_data = ruc_data_future.result()
-        if sucursales:
-            ruc_suc_data = ruc_suc_data_future.result()
-            ruc_data["sucursales"] = ruc_suc_data.get("sucursales", [])
-
-    return ruc_data
 
 
 @frappe.whitelist()
@@ -431,8 +393,16 @@ def get_ruc_suc(ruc: str, cache: bool = True) -> Dict[str, Any]:
 
     Returns:
         Dictionary containing branch information with structure:
-        - ruc: The parent company RUC number
+        - ruc: The RUC number
         - razon_social: Company legal name
+        - estado: Tax status (ACTIVO, etc.)
+        - condicion: Tax condition (HABIDO, etc.)
+        - direccion: Registered address
+        - ubigeo: Geographic location code (6-digit)
+        - departamento: Department/state name
+        - provincia: Province name
+        - distrito: District name
+        - fecha_actualizacion: Last update timestamp
         - total_sucursales: Total number of branches
         - has_sucursales: Boolean indicating if company has branches
         - ultima_actualizacion_sucursales: Last update timestamp for branch data
