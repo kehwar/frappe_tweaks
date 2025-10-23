@@ -41,7 +41,7 @@ Error searching {0}: {1},Error buscando {0}: {1}
 Event Script,Script de Evento
 Event Script Parameter,Parámetro de Script de Evento
 Fecha,Fecha
-Field to pluck, if ommited 'name' will be used. Use commas to retrieve an array of fields instead.,Campo a extraer, si se omite se usará 'name'. Use comas para obtener un array de campos en su lugar.
+"Field to pluck, if ommited 'name' will be used. Use commas to retrieve an array of fields instead.","Campo a extraer, si se omite se usará 'name'. Use comas para obtener un array de campos en su lugar."
 Forbid,Prohibir
 Frappe School,Escuela Frappe
 Implemented,Implementado
@@ -75,7 +75,7 @@ TC URL,URL para TC
 The report you requested has been generated.<br><br>Click here to download:<br><a href='{0}'>{0}</a><br><br>This link will expire in {1} hours.,El reporte que solicitaste ha sido generado.<br><br>Haz clic aquí para descargar:<br><a href='{0}'>{0}</a><br><br>Este enlace expirará en {1} horas.
 Tweaks,Ajustes
 Type is required,Se requiere Tipo
-Type, Document Type, Report or API Name cannot be changed for a standard AC Resource,El Tipo, Tipo de Documento, Reporte o Nombre de API no se puede cambiar para un Recurso AC estándar
+"Type, Document Type, Report or API Name cannot be changed for a standard AC Resource","El Tipo, Tipo de Documento, Reporte o Nombre de API no se puede cambiar para un Recurso AC estándar"
 User Filter,Filtro de Usuario
 User Forum,Foro de Usuario
 User Group is required,Se requiere Grupo de Usuario

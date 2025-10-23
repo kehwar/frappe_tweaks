@@ -1,1 +1,1 @@
-//
+import "../../custom/doctype/customer"
