@@ -1,6 +1,6 @@
 frappe.provide("frappe.ui.form");
 
-frappe.ui.form.ContactAddressQuickEntryForm = class SUNATCustomerQuickEntryForm extends (frappe.ui.form.QuickEntryForm) {
+frappe.ui.form.SUNATCustomerQuickEntryForm = class SUNATCustomerQuickEntryForm extends (frappe.ui.form.QuickEntryForm) {
     /**
      * Set up the form, initializing with a term if coming from a link.
      */
@@ -87,8 +87,8 @@ frappe.ui.form.ContactAddressQuickEntryForm = class SUNATCustomerQuickEntryForm 
     validateCustomerId(resolve) {
         const me = this
         frappe.call({
-            method: 'ruigushop.ruigushop.doctype.factura_peru_api.factura_peru_api.validate_id',
-            args: { id: me.dialog.doc.tax_id },
+            method: 'tweaks.tweaks.doctype.peru_api_com.peru_api_com.get_rut',
+            args: { rut: me.dialog.doc.tax_id },
             error: (exc) => me.displayError(__('Error while searching RUC/DNI on SUNAT'), exc),
             always() {
                 // Reset the dialog working state and resolve the promise with doc
@@ -99,8 +99,8 @@ frappe.ui.form.ContactAddressQuickEntryForm = class SUNATCustomerQuickEntryForm 
             freeze_message: __('Searching RUC/DNI on SUNAT...'),
             callback({ message }) {
                 frappe.confirm(
-                    __('Create customer {0} ?', [message.name]),
-                    () => me.createCustomer(message.id),
+                    __('Create customer {0} ?', [message.razon_social || message.cliente]),
+                    () => me.createCustomer(message.ruc || message.dni),
                 )
             },
         })
@@ -113,8 +113,8 @@ frappe.ui.form.ContactAddressQuickEntryForm = class SUNATCustomerQuickEntryForm 
     createCustomer(customerId) {
         const me = this
         frappe.call({
-            method: 'ruigushop.ruigushop.doctype.factura_peru_api.factura_peru_api.create_customer',
-            args: { id: customerId },
+            method: 'tweaks.tweaks.doctype.peru_api_com.peru_api_com.create_customer',
+            args: { rut: customerId },
             freeze: true,
             freeze_message: __('Creating customer...'),
             error: (exc) => me.displayError(__('Error while searching RUC/DNI on SUNAT'), exc),
@@ -131,6 +131,10 @@ frappe.ui.form.ContactAddressQuickEntryForm = class SUNATCustomerQuickEntryForm 
                 else if (me.after_insert) {
                     me.after_insert(me.dialog.doc)
                 }
+                else if (frappe.get_route()?.[0] === 'List') {
+                    cur_list.refresh()
+                    frappe.show_alert({ message: __("{0} created successfully", [__('Customer')]), indicator: 'green' })
+                }
                 else {
                     me.open_form_if_not_list()
                 }
@@ -138,3 +142,5 @@ frappe.ui.form.ContactAddressQuickEntryForm = class SUNATCustomerQuickEntryForm 
         })
     }
 }
+
+frappe.ui.form.CustomerQuickEntryForm = frappe.ui.form.SUNATCustomerQuickEntryForm
