@@ -34,6 +34,7 @@ doc_events = {
     "Customer": {
         "before_validate": "tweaks.custom.doctype.customer.before_validate",
         "validate": "tweaks.custom.doctype.customer.validate",
+        "on_update": "tweaks.custom.doctype.customer.on_update",
     },
 }
 

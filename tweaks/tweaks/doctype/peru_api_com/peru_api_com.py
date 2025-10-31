@@ -39,11 +39,13 @@ from datetime import date
 from typing import Any, Dict, Optional, Union
 
 import frappe
+from frappe.contacts.doctype.address.address import Address
 from frappe.integrations.utils import make_get_request
 from frappe.model.document import Document
 from frappe.utils import format_date, getdate
 from requests.exceptions import HTTPError
 
+from tweaks.custom.doctype.customer import make_address
 from tweaks.tweaks.doctype.peru_api_com_log.peru_api_com_log import (
     get_data_from_log,
     log_api_call,
@@ -587,3 +589,127 @@ def get_default_settings() -> Dict[str, Any]:
     doc.restore_defaults()
 
     return doc.as_dict()
+
+
+@frappe.whitelist()
+def create_customer(rut: str) -> Dict[str, Any]:
+    """
+    Create or sync a customer in the system using a provided tax ID.
+
+    Args:
+        rut (str): The customer's tax ID (RUC/DNI).
+
+    Returns:
+        dict: Customer details as a dictionary.
+    """
+    # Check if customer already exists
+    customer_exists = frappe.db.exists("Customer", {"tax_id": rut})
+
+    if customer_exists:
+        # Fetch existing customer and sync with Sunat
+        customer = frappe.get_doc("Customer", customer_exists)
+        sync_customer_with_sunat(customer)
+        return customer.as_dict()
+
+    else:
+        # Create a new customer if not existing
+        customer = get_customer(rut)
+        customer.save()
+        return customer.as_dict()
+
+
+@frappe.whitelist()
+def get_customer(rut: str, customer=None):
+    """
+    Fetch and update customer details with data fetched from API.
+
+    Args:
+        rut (str): The customer's tax ID (RUC/DNI).
+        customer (Document, optional): Existing customer document to update.
+
+    Returns:
+        Document: Updated customer document.
+    """
+    # Fetch data of the customer
+    result = get_rut(rut)
+
+    # Create a new customer document if not provided
+    if not customer:
+        customer = frappe.get_doc({"doctype": "Customer"})
+
+    # Update customer name
+    if "razon_social" in result:
+        customer.set("customer_name", result["razon_social"])
+    elif "cliente" in result:
+        customer.set("customer_name", result["cliente"])
+
+    # Set customer tax ID
+    customer.set("tax_id", rut)
+
+    # Update address details if available
+    if (
+        "direccion" in result
+        and result["direccion"]
+        and "distrito" in result
+        and result["distrito"]
+        and result["distrito"] != "-"
+        and "provincia" in result
+        and result["provincia"]
+        and result["provincia"] != "-"
+        and "departamento" in result
+        and result["departamento"]
+        and result["departamento"] != "-"
+    ):
+        customer.set(
+            "quick_primary_address",
+            {
+                "address_line1": result["direccion"],
+                "county": result["distrito"],
+                "city": result["provincia"],
+                "state": result["departamento"],
+                "country": "Peru",
+            },
+        )
+
+    return customer
+
+
+def sync_customer_with_sunat(customer):
+    """
+    Sync customer details with Sunat API, including address creation if not existing.
+
+    Args:
+        customer (Document): Customer document to sync.
+    """
+
+    # Fetch and update customer details
+    get_customer(customer.tax_id, customer)
+    customer.save()
+
+    # Return if address is not set
+    if not customer.get("address_line1", ""):
+        return
+
+    # Create and validate new address
+    new_address = make_address(customer, insert=0)
+    new_address.validate_address_parts()
+
+    # Check if a similar address already exists
+    customer_addresses = frappe.db.get_all(
+        "Address",
+        pluck="name",
+        filters=[["Dynamic Link", "link_name", "=", customer.name]],
+    )
+    for address_name in customer_addresses:
+        address: Address = frappe.get_doc("Address", address_name)
+        if address.get_display() == new_address.get_display():
+            return
+
+    # Insert new address and update customer primary address details
+    new_address.insert()
+    customer.db_set(
+        {
+            "customer_primary_address": new_address.name,
+            "primary_address": new_address.get_display(),
+        }
+    )
