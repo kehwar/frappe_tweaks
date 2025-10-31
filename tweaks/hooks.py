@@ -30,7 +30,11 @@ after_install = (
 doc_events = {
     "*": {
         "on_change": workflow_script_hooks["doc_events"]["*"]["on_change"],
-    }
+    },
+    "Customer": {
+        "before_validate": "tweaks.custom.doctype.customer.before_validate",
+        "validate": "tweaks.custom.doctype.customer.validate",
+    },
 }
 
 has_permission = {

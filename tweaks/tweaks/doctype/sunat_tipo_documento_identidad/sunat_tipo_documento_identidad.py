@@ -6,6 +6,7 @@ from frappe.model.document import Document
 
 
 class SUNATTipoDocumentoIdentidad(Document):
+
     pass
 
 
