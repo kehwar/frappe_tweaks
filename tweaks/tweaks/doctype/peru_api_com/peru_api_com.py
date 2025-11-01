@@ -752,7 +752,7 @@ def update_currency_exchange(
 
     # Calculate inverse rate using 'compra' (purchase rate) with zero division protection
     compra_rate = float(tc_data["compra"])
-    from_pen_to_usd = round(1 / compra_rate, 3) if compra_rate != 0 else 0
+    from_pen_to_usd = round(1 / compra_rate, 6) if compra_rate != 0 else 0
 
     # Create/update exchange rate records
     if from_usd_to_pen > 0:
