@@ -822,3 +822,11 @@ def set_currency_exchange(
         doc.insert(ignore_permissions=True)
 
     return doc
+
+
+def autoupdate_currency_exchange():
+
+    if frappe.get_cached_value(
+        "PERU API COM", "PERU API COM", "auto_update_currency_exchange"
+    ):
+        update_currency_exchange()

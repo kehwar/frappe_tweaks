@@ -68,3 +68,10 @@ get_product_discount_rule = [
 apply_pricing_rule_on_transaction = [
     "tweaks.custom.doctype.pricing_rule.apply_pricing_rule_on_transaction"
 ]
+
+# Scheduled Tasks
+scheduler_events = {
+    "hourly": [
+        "tweaks.tweaks.doctype.peru_api_com.peru_api_com.autoupdate_currency_exchange"
+    ]
+}
