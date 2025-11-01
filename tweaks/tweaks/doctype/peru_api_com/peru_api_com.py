@@ -39,6 +39,7 @@ from datetime import date
 from typing import Any, Dict, Optional, Union
 
 import frappe
+from erpnext.setup.doctype.currency_exchange.currency_exchange import CurrencyExchange
 from frappe.contacts.doctype.address.address import Address
 from frappe.integrations.utils import make_get_request
 from frappe.model.document import Document
@@ -713,3 +714,111 @@ def sync_customer_with_sunat(customer):
             "primary_address": new_address.get_display(),
         }
     )
+
+
+@frappe.whitelist()
+def update_currency_exchange(
+    date: Optional[Union[str, date]] = None, cache: bool = False
+) -> Dict[str, Any]:
+    """
+    Update currency exchange rates in the system using PERU API COM service.
+
+    This function fetches exchange rate data from PERU API COM and creates or updates
+    Currency Exchange records in the system for both USD->PEN and PEN->USD conversions.
+
+    Args:
+        date: The date for which to update exchange rates. If None, uses current date.
+        cache: Whether to use cached data if available (default: False for fresh rates).
+
+    Returns:
+        Dictionary containing the exchange rate data that was processed.
+
+    Raises:
+        Exception: If API call fails or exchange rate data is invalid.
+
+    Example:
+        >>> # Update today's rates
+        >>> tc_data = update_currency_exchange()
+        >>> print(f"Updated rates for {tc_data['fecha']}")
+
+        >>> # Update specific date rates
+        >>> tc_data = update_currency_exchange("2025-01-15")
+    """
+    tc_data = get_tc(date=date, cache=cache)
+    date = getdate(tc_data["fecha"])
+
+    # Use 'venta' (sale rate) for USD to PEN conversion
+    from_usd_to_pen = float(tc_data["venta"])
+
+    # Calculate inverse rate using 'compra' (purchase rate) with zero division protection
+    compra_rate = float(tc_data["compra"])
+    from_pen_to_usd = round(1 / compra_rate, 6) if compra_rate != 0 else 0
+
+    # Create/update exchange rate records
+    if from_usd_to_pen > 0:
+        set_currency_exchange(
+            date=date,
+            from_currency="USD",
+            to_currency="PEN",
+            exchange_rate=from_usd_to_pen,
+        )
+
+    if from_pen_to_usd > 0:
+        set_currency_exchange(
+            date=date,
+            from_currency="PEN",
+            to_currency="USD",
+            exchange_rate=from_pen_to_usd,
+        )
+
+    return tc_data
+
+
+def set_currency_exchange(
+    date: Union[str, date], from_currency: str, to_currency: str, exchange_rate: float
+) -> CurrencyExchange:
+    """
+    Create or update a currency exchange rate record for a specific date and currency pair.
+
+    Args:
+        date: The date for the exchange rate
+        from_currency: The source currency code (e.g., 'USD')
+        to_currency: The target currency code (e.g., 'PEN')
+        exchange_rate: The exchange rate value
+
+    Returns:
+        The created or updated CurrencyExchange document
+
+    Note:
+        Uses ignore_permissions=True to allow system-level rate updates
+    """
+    existing_name = frappe.db.get_value(
+        "Currency Exchange",
+        {
+            "date": date,
+            "from_currency": from_currency,
+            "to_currency": to_currency,
+        },
+    )
+
+    if existing_name:
+        doc = frappe.get_doc("Currency Exchange", existing_name)
+        # Only update if rate has changed to avoid unnecessary saves
+        if (
+            abs(float(doc.exchange_rate) - exchange_rate) > 0.000001
+        ):  # Use epsilon comparison for floats
+            doc.exchange_rate = exchange_rate
+            doc.save(ignore_permissions=True)
+    else:
+        doc = frappe.get_doc(
+            {
+                "doctype": "Currency Exchange",
+                "date": date,
+                "from_currency": from_currency,
+                "to_currency": to_currency,
+                "exchange_rate": exchange_rate,
+            }
+        )
+        doc.insert(ignore_permissions=True)
+
+    return doc
