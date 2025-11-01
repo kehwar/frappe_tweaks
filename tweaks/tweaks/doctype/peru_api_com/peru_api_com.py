@@ -92,6 +92,26 @@ class PERUAPICOM(Document):
         """
         return get_tc(date, cache)
 
+    def update_currency_exchange(
+        self, date: Optional[Union[str, date]] = None, cache: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Update currency exchange rates.
+        """
+        return update_currency_exchange(date, cache)
+
+    def set_currency_exchange(
+        self,
+        date: Union[str, date],
+        from_currency: str,
+        to_currency: str,
+        exchange_rate: float,
+    ) -> CurrencyExchange:
+        """
+        Create or update a currency exchange rate record.
+        """
+        return set_currency_exchange(date, from_currency, to_currency, exchange_rate)
+
     def restore_defaults(self, only_if_missing: bool = False) -> None:
         """
         Restore default values for API configuration fields.
