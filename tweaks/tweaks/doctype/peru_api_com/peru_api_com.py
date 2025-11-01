@@ -774,6 +774,7 @@ def update_currency_exchange(
     return tc_data
 
 
+@frappe.whitelist()
 def set_currency_exchange(
     date: Union[str, date], from_currency: str, to_currency: str, exchange_rate: float
 ) -> CurrencyExchange:
@@ -788,9 +789,6 @@ def set_currency_exchange(
 
     Returns:
         The created or updated CurrencyExchange document
-
-    Note:
-        Uses ignore_permissions=True to allow system-level rate updates
     """
     existing_name = frappe.db.get_value(
         "Currency Exchange",
@@ -808,7 +806,7 @@ def set_currency_exchange(
             abs(float(doc.exchange_rate) - exchange_rate) > 0.000001
         ):  # Use epsilon comparison for floats
             doc.exchange_rate = exchange_rate
-            doc.save(ignore_permissions=True)
+            doc.save()
     else:
         doc = frappe.get_doc(
             {
@@ -819,7 +817,7 @@ def set_currency_exchange(
                 "exchange_rate": exchange_rate,
             }
         )
-        doc.insert(ignore_permissions=True)
+        doc.insert()
 
     return doc
 
