@@ -825,7 +825,20 @@ def set_currency_exchange(
 
 
 def autoupdate_currency_exchange():
+    """
+    Automatically update currency exchange rates if auto-update is enabled.
 
+    This function checks the PERU API COM configuration to see if automatic
+    currency exchange updates are enabled, and if so, updates the rates using
+    the current date.
+
+    This function is called by scheduled jobs to ensure
+    exchange rates are kept current without manual intervention.
+
+    Example:
+        >>> # Called by scheduler
+        >>> autoupdate_currency_exchange()
+    """
     if frappe.get_cached_value(
         "PERU API COM", "PERU API COM", "auto_update_currency_exchange"
     ):
