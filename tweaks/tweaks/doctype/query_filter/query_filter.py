@@ -6,7 +6,7 @@ from frappe.model.document import Document
 from frappe.utils.safe_exec import safe_exec
 
 
-class ResourceFilter(Document):
+class QueryFilter(Document):
 
     def before_validate(self):
 
@@ -25,17 +25,17 @@ class ResourceFilter(Document):
 
 
 @frappe.request_cache
-def get_sql(resource_filter: str | ResourceFilter | dict):
+def get_sql(query_filter: str | QueryFilter | dict):
 
-    if isinstance(resource_filter, str):
-        resource_filter = frappe.get_doc("Resource Filter", resource_filter).as_dict()
-    elif isinstance(resource_filter, ResourceFilter):
-        resource_filter = resource_filter.as_dict()
+    if isinstance(query_filter, str):
+        query_filter = frappe.get_doc("Resource Filter", query_filter).as_dict()
+    elif isinstance(query_filter, QueryFilter):
+        query_filter = query_filter.as_dict()
 
-    filters = resource_filter.get("filters", "")
-    filters_type = resource_filter.get("filters_type", "JSON")
-    reference_doctype = resource_filter.get("reference_doctype", "")
-    reference_docname = resource_filter.get("reference_docname", "")
+    filters = query_filter.get("filters", "")
+    filters_type = query_filter.get("filters_type", "JSON")
+    reference_doctype = query_filter.get("reference_doctype", "")
+    reference_docname = query_filter.get("reference_docname", "")
 
     if not filters:
         return ""
@@ -44,12 +44,12 @@ def get_sql(resource_filter: str | ResourceFilter | dict):
         return filters
 
     if filters_type == "Python":
-        loc = {"resource": resource_filter, "conditions": ""}
+        loc = {"resource": query_filter, "conditions": ""}
         safe_exec(
             filters,
             None,
             loc,
-            script_filename=f"Resource Filter {resource_filter.get('name')}",
+            script_filename=f"Resource Filter {query_filter.get('name')}",
         )
         if loc["filters_sql"]:
             return loc["filters_sql"]

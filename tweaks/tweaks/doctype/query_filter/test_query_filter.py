@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestResourceFilter(FrappeTestCase):
+class TestQueryFilter(FrappeTestCase):
 	pass

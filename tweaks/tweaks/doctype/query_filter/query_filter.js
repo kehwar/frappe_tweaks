@@ -1,7 +1,7 @@
 // Copyright (c) 2025, Erick W.R. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on("Resource Filter", {
+frappe.ui.form.on("Query Filter", {
     refresh(frm) {
         frm.trigger("filters_type");
         frm.trigger("show_api_warning");

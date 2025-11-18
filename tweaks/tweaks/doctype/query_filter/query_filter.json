@@ -86,7 +86,7 @@
  "modified": "2025-11-18 15:11:16.604016",
  "modified_by": "Administrator",
  "module": "Tweaks",
- "name": "Resource Filter",
+ "name": "Query Filter",
  "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [
