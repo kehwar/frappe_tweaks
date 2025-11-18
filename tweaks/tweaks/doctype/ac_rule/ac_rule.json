@@ -28,7 +28,7 @@
   {
    "fieldname": "principals",
    "fieldtype": "Table",
-   "label": "Principals",
+   "label": "Principal Filters",
    "options": "AC Rule Principal",
    "reqd": 1
   },
@@ -50,9 +50,8 @@
   {
    "fieldname": "resources",
    "fieldtype": "Table",
-   "label": "Resources",
-   "options": "AC Rule Resource",
-   "reqd": 1
+   "label": "Resource Filters",
+   "options": "AC Rule Resource"
   },
   {
    "fieldname": "column_break_ehru",
@@ -117,13 +116,13 @@
    "in_standard_filter": 1,
    "label": "Resource",
    "options": "AC Resource",
-   "read_only": 1
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-18 16:32:45.330624",
+ "modified": "2025-11-18 16:25:25.811765",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "AC Rule",
