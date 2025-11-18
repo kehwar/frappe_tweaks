@@ -8,6 +8,7 @@ from tweaks.tweaks.doctype.ac_principal.ac_principal import (
 from tweaks.tweaks.doctype.ac_resource.ac_resource import (
     run_script as run_resource_script,
 )
+from tweaks.tweaks.doctype.query_filter.query_filter import get_sql
 from tweaks.utils.access_control import allow_value
 
 
@@ -25,9 +26,6 @@ def after_install():
 
 @frappe.whitelist()
 def get_rule_map(debug=False):
-
-    rebuild_tree("AC Principal")
-    rebuild_tree("AC Resource")
 
     rules = frappe.get_all(
         "AC Rule",
@@ -47,22 +45,24 @@ def get_rule_map(debug=False):
         "AC Resource",
         fields=[
             "name",
-            "type",
             "document_type",
             "report",
-            "custom",
             "fieldname",
             "managed_actions",
         ],
-        filters=[["disabled", "=", 0], ["type", "in", ("DocType", "Report", "Custom")]],
+        filters=[["disabled", "=", 0]],
     )
     all_actions = frappe.get_all(
         "AC Action", filters=[["disabled", "=", 0]], pluck="name"
     )
     for r in resources:
+        if r.document_type:
+            r.type = "DocType"
+        elif r.report:
+            r.type = "Report"
         folder = (
             rule_map.setdefault(scrub(r.type), {})
-            .setdefault(r.document_type or r.report or r.custom, {})
+            .setdefault(r.document_type or r.report, {})
             .setdefault(r.fieldname or "", {})
         )
         if r.managed_actions == "Select":
@@ -83,12 +83,12 @@ def get_rule_map(debug=False):
 
         folder = (
             rule_map.get(scrub(resource.type), {})
-            .get(resource.document_type or resource.report or resource.custom, {})
+            .get(resource.document_type or resource.report, {})
             .get(resource.fieldname or "", None)
         )
         if folder is None:
             frappe.log_error(
-                f"AC Rule {rule.name} has invalid root resource {resource.name}"
+                f"AC Rule {rule.name} has invalid resource {resource.name}"
             )
             continue
 
@@ -134,7 +134,6 @@ def get_params(
     resource="",
     doctype="",
     report="",
-    custom="",
     type="",
     key="",
     fieldname="",
@@ -148,7 +147,7 @@ def get_params(
             if isinstance(resource, str):
                 resource = frappe.get_doc("AC Resource", resource)
             type = scrub(resource.type)
-            key = resource.document_type or resource.report or resource.custom
+            key = resource.document_type or resource.report
             fieldname = resource.fieldname or ""
         elif report:
             type = "report"
@@ -156,17 +155,12 @@ def get_params(
         elif doctype:
             type = "doctype"
             key = doctype
-        elif custom:
-            type = "custom"
-            key = custom
         else:
             type = scrub(type)
-            key = doctype or report or custom
+            key = doctype or report
 
     if not key or not type:
-        frappe.throw(
-            _("Resource or (Type and Document Type/Report/Custom) is required")
-        )
+        frappe.throw(_("Resource or (Type and Document Type/Report) is required"))
 
     action = scrub(action) or "read"
 
@@ -175,10 +169,43 @@ def get_params(
     return type, key, fieldname, action, user
 
 
-def get_principal_condition(condition):
-    if condition.get("script"):
-        return run_principal_script(condition.get("script"), condition.get("name"))
-    return condition.get("sql", "")
+def get_principal_filter_sql(condition):
+    sql = get_sql(condition)
+    if condition.get("reference_doctype") == "User":
+        return sql
+    if condition.get("reference_doctype") == "User Group":
+        user_groups = frappe.db.sql(
+            f"SELECT `name`FROM `tabUser Group` WHERE {sql}", pluck="name"
+        )
+        sql = frappe.get_all(
+            "User Group Member",
+            filters={"parent": ["in", user_groups]},
+            fields=["user"],
+            distinct=True,
+            order_by="",
+            run=0,
+        )
+        return f"`tabUser`.`name` in ({sql})"
+    if condition.get("reference_doctype") == "Role":
+        roles = frappe.db.sql(f"SELECT `name`FROM `tabRole` WHERE {sql}", pluck="name")
+        if "All" in roles:
+            sql = frappe.get_all(
+                "User",
+                distinct=True,
+                order_by="",
+                run=0,
+            )
+        else:
+            sql = frappe.get_all(
+                "Has Role",
+                filters={"role": ["in", roles]},
+                fields=["parent"],
+                distinct=True,
+                order_by="",
+                run=0,
+            )
+        return f"`tabUser`.`name` in ({sql})"
+    return ""
 
 
 @frappe.whitelist()
@@ -186,7 +213,6 @@ def get_resource_rules(
     resource="",
     doctype="",
     report="",
-    custom="",
     type="",
     key="",
     fieldname="",
@@ -196,7 +222,7 @@ def get_resource_rules(
 ):
 
     type, key, fieldname, action, user = get_params(
-        resource, doctype, report, custom, type, key, fieldname, action, user
+        resource, doctype, report, type, key, fieldname, action, user
     )
 
     if debug or user != frappe.session.user:
@@ -217,12 +243,12 @@ def get_resource_rules(
         rule_name = rule.get("name")
 
         allowed = [
-            get_principal_condition(r)
+            get_principal_filter_sql(r)
             for r in rule.get("principals", [])
             if r.get("exception", 0) == 0
         ]
         denied = [
-            get_principal_condition(r)
+            get_principal_filter_sql(r)
             for r in rule.get("principals", [])
             if r.get("exception", 0) == 1
         ]
@@ -281,10 +307,8 @@ def get_resource_rules(
     return frappe._dict({"rules": rules})
 
 
-def get_resource_condition(condition):
-    if condition.get("script"):
-        return run_resource_script(condition.get("script"), condition.get("name"))
-    return condition.get("sql", "") or "1=1"
+def get_resource_filter_sql(condition):
+    return get_sql(condition)
 
 
 @frappe.whitelist()
@@ -292,7 +316,6 @@ def get_resource_filter_query(
     resource="",
     doctype="",
     report="",
-    custom="",
     type="",
     key="",
     fieldname="",
@@ -302,11 +325,11 @@ def get_resource_filter_query(
 ):
 
     type, key, fieldname, action, user = get_params(
-        resource, doctype, report, custom, type, key, fieldname, action, user
+        resource, doctype, report, type, key, fieldname, action, user
     )
 
     rule_map = get_resource_rules(
-        resource, doctype, report, custom, type, key, fieldname, action, user, debug
+        resource, doctype, report, type, key, fieldname, action, user, debug
     )
 
     if rule_map.get("unmanaged"):
@@ -318,12 +341,12 @@ def get_resource_filter_query(
     for rule in folder:
 
         allowed = [
-            get_resource_condition(r)
+            get_resource_filter_sql(r)
             for r in rule.get("resources")
             if r.get("exception", 0) == 0
         ]
         denied = [
-            get_resource_condition(r)
+            get_resource_filter_sql(r)
             for r in rule.get("resources")
             if r.get("exception", 0) == 1
         ]
@@ -387,6 +410,7 @@ def get_resource_filter_query(
                 "fieldname": fieldname,
                 "action": action,
                 "user": user,
+                "user_filter_query": rule_map.get("query"),
                 "query": resource_filter_query,
                 "access": access,
                 "parts": resource_filter_queries,
@@ -402,7 +426,6 @@ def has_resource_access(
     resource="",
     doctype="",
     report="",
-    custom="",
     type="",
     key="",
     fieldname="",
@@ -412,11 +435,11 @@ def has_resource_access(
 ):
 
     type, key, fieldname, action, user = get_params(
-        resource, doctype, report, custom, type, key, fieldname, action, user
+        resource, doctype, report, type, key, fieldname, action, user
     )
 
     rule_map = get_resource_rules(
-        resource, doctype, report, custom, type, key, fieldname, action, user, debug
+        resource, doctype, report, type, key, fieldname, action, user, debug
     )
 
     if rule_map.get("unmanaged"):
