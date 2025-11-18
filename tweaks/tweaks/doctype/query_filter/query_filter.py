@@ -60,11 +60,11 @@ def get_sql(query_filter: str | QueryFilter | dict):
             f"`tab{reference_doctype}`.`name` = {frappe.db.escape(reference_docname)}"
         )
 
-    if filters_type == "JSON" and reference_doctype:
+    if reference_doctype and filters_type == "JSON":
         sql = frappe.get_all(
             reference_doctype, filters=filters, order_by="", distinct=1, run=0
         )
         flat_sql = sql.strip().replace("\n", " ").replace("\r", " ")
         return f"`tab{reference_doctype}`.`name` IN ({flat_sql})"
 
-    return ""
+    return "1=1"
