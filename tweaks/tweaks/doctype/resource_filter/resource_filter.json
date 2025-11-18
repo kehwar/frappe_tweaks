@@ -10,9 +10,8 @@
   "reference_doctype",
   "reference_docname",
   "reference_report",
-  "disabled",
   "column_break_sqov",
-  "reference_context",
+  "disabled",
   "section_break_lerj",
   "filters",
   "filters_help",
@@ -67,12 +66,6 @@
    "fieldtype": "HTML"
   },
   {
-   "fieldname": "reference_context",
-   "fieldtype": "Small Text",
-   "label": "Reference Context",
-   "length": 512
-  },
-  {
    "default": "JSON",
    "fieldname": "filters_type",
    "fieldtype": "Select",
@@ -90,7 +83,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-18 14:48:00.370691",
+ "modified": "2025-11-18 15:11:16.604016",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Resource Filter",
@@ -112,6 +105,7 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "search_fields": "reference_doctype, reference_report",
  "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
