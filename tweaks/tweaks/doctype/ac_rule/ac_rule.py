@@ -9,36 +9,83 @@ from frappe.utils.nestedset import NestedSet, get_ancestors_of, get_descendants_
 
 class ACRule(Document):
 
-    def before_validate(self):
-
-        self.resource = self.get_root_resource()
-
     def validate(self):
 
         if len([p for p in self.principals if not p.exception]) == 0:
-            frappe.throw(_("At least one principal must not be an exception."))
-        if len([r for r in self.resources if not r.exception]) == 0:
-            frappe.throw(_("At least one resource must not be an exception."))
-        self.validate_resources_root()
+            frappe.throw(_("At least one principal filter must not be an exception."))
+        self.validate_resource_filters()
 
-    def validate_resources_root(self):
+    def validate_resource_filters(self):
 
-        root = self.resource
+        resource = frappe.get_doc("AC Resource", self.resource)
 
-        for r in self.resources:
+        for filter in self.resources:
 
-            if root != get_resource_ancestor(r.resource):
-                frappe.throw(_("All resources must belong to the same root resource."))
+            query_filter = frappe.get_doc("Query Filter", filter.filter)
 
-    def get_root_resource(self):
+            if (
+                resource.document_type
+                and resource.document_type != query_filter.reference_doctype
+            ):
+                frappe.throw(
+                    _(
+                        "Resource Filter '{0}' is not valid for resource '{1}' because the resource's document type is '{2}' but the filter's reference doctype is '{3}'."
+                    ).format(
+                        query_filter.get_title(),
+                        resource.get_title(),
+                        resource.document_type,
+                        query_filter.reference_doctype,
+                    )
+                )
 
-        return (
-            get_resource_ancestor(self.resources[0].resource)
-            if self.resources
-            else None
-        )
+            if resource.report and resource.report != query_filter.reference_report:
+                frappe.throw(
+                    _(
+                        "Resource Filter '{0}' is not valid for resource '{1}' because the resource's report is '{2}' but the filter's reference report is '{3}'."
+                    ).format(
+                        query_filter.get_title(),
+                        resource.get_title(),
+                        resource.report,
+                        query_filter.reference_report,
+                    )
+                )
 
     def resolve_principals(self, debug=False):
+
+        filters = []
+
+        for row in self.principals:
+
+            query_filter = frappe.get_doc("Query Filter", row.filter)
+
+            r = frappe._dict(
+                {
+                    "name": query_filter.name,
+                    "doctype": query_filter.reference_doctype,
+                }
+            )
+
+            if debug:
+                r["title"] = query_filter.get_title()
+                if query_filter.reference_doctype:
+                    r["reference_doctype"] = query_filter.reference_doctype
+                if query_filter.reference_report:
+                    r["reference_report"] = query_filter.reference_report
+                if query_filter.reference_docname:
+                    r["reference_docname"] = query_filter.reference_docname
+                if query_filter.filters_type:
+                    r["filters_type"] = query_filter.filters_type
+                if query_filter.filters:
+                    r["filters"] = query_filter.filters
+
+            if row.exception:
+                r["exception"] = 1
+
+            filters.append(r)
+
+        return filters
+
+    def resolve_principals_deprecated(self, debug=False):
 
         allowed = set()
         denied = set()
@@ -129,47 +176,34 @@ class ACRule(Document):
 
     def resolve_resources(self, debug=False):
 
-        allowed = set()
-        denied = set()
+        filters = []
 
-        for r in self.resources:
+        for row in self.resources:
 
-            resources = [r.resource]
-            if r.recursive:
-                resources += get_descendants_of(
-                    "AC Resource", r.resource, ignore_permissions=1
-                )
+            query_filter = frappe.get_doc("Query Filter", row.filter)
 
-            if r.exception:
-                denied.update(resources)
-            else:
-                allowed.update(resources)
-
-        allowed = allowed - denied
-
-        resources = []
-
-        for resource in allowed | denied:
-            resource = frappe.get_doc("AC Resource", resource)
-
-            r = frappe._dict({"name": resource.name})
+            r = frappe._dict({"name": query_filter.name})
 
             if debug:
-                r["title"] = resource.get_title()
+                r["title"] = query_filter.get_title()
+                if query_filter.reference_doctype:
+                    r["reference_doctype"] = query_filter.reference_doctype
+                if query_filter.reference_report:
+                    r["reference_report"] = query_filter.reference_report
+                if query_filter.reference_docname:
+                    r["reference_docname"] = query_filter.reference_docname
+                if query_filter.filters_type:
+                    r["filters_type"] = query_filter.filters_type
+                if query_filter.filters:
+                    r["filters"] = query_filter.filters
 
-            if resource.script_type == "SQL" or not resource.condition_script:
-                r["sql"] = resource.condition_script or ""
-            else:
-                r["script"] = resource.condition_script
-
-            if r.name in denied:
+            if row.exception:
                 r["exception"] = 1
 
-            resources.append(r)
+            filters.append(r)
 
-        return resources
+        if not filters:
 
+            filters.append({"all": 1})
 
-def get_resource_ancestor(resource):
-    ancestors = get_ancestors_of("AC Resource", resource, order_by="lft asc", limit=1)
-    return ancestors[0] if ancestors else resource
+        return filters
