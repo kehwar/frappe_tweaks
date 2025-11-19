@@ -38,7 +38,7 @@ def get_sql(query_filter: str | QueryFilter | dict):
     reference_docname = query_filter.get("reference_docname", "")
 
     if not filters:
-        return ""
+        return "1=1"
 
     if filters_type == "SQL":
         return filters
@@ -51,9 +51,9 @@ def get_sql(query_filter: str | QueryFilter | dict):
             loc,
             script_filename=f"Resource Filter {query_filter.get('name')}",
         )
-        if loc["filters_sql"]:
-            return loc["filters_sql"]
-        return ""
+        if loc["conditions"]:
+            return loc["conditions"]
+        return "1=0"
 
     if reference_doctype and reference_docname:
         return (
