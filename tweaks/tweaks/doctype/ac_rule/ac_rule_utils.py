@@ -169,11 +169,15 @@ def get_params(
     return type, key, fieldname, action, user
 
 
-def get_principal_filter_sql(condition):
-    sql = get_sql(condition)
-    if condition.get("reference_doctype") == "User":
+def get_principal_filter_sql(filter):
+
+    if filter.get("name"):
+        filter = frappe.get_cached_doc("Query Filter", filter.get("name"))
+
+    sql = filter.get_sql()
+    if filter.get("reference_doctype") == "User":
         return sql
-    if condition.get("reference_doctype") == "User Group":
+    if filter.get("reference_doctype") == "User Group":
         user_groups = frappe.db.sql(
             f"SELECT `name`FROM `tabUser Group` WHERE {sql}", pluck="name"
         )
@@ -186,7 +190,7 @@ def get_principal_filter_sql(condition):
             run=0,
         )
         return f"`tabUser`.`name` in ({sql})"
-    if condition.get("reference_doctype") == "Role":
+    if filter.get("reference_doctype") == "Role":
         roles = frappe.db.sql(f"SELECT `name`FROM `tabRole` WHERE {sql}", pluck="name")
         if "All" in roles:
             sql = frappe.get_all(
@@ -307,8 +311,16 @@ def get_resource_rules(
     return frappe._dict({"rules": rules})
 
 
-def get_resource_filter_sql(condition):
-    return get_sql(condition)
+def get_resource_filter_sql(filter):
+
+    if filter.get("all"):
+        return "1=1"
+
+    if filter.get("name"):
+        filter = frappe.get_cached_doc("Query Filter", filter.get("name"))
+        return filter.get_sql()
+
+    return "1=0"
 
 
 @frappe.whitelist()
