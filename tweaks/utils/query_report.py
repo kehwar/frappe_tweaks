@@ -235,7 +235,6 @@ def get_pdf_report_content(report_name, data, pdf_generator=None):
             output=None,
             pdf_generator="chrome",
         )
-        frappe.log_error("Generated PDF using Chrome PDF Generator", html)
 
     else:
         content = wkhtmltopdf_get_pdf(html)
