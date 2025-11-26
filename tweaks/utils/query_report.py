@@ -2,15 +2,19 @@ import os
 
 import frappe
 from frappe import _
-from frappe.desk.query_report import build_xlsx_data, format_fields, get_report_doc
+from frappe.desk.query_report import build_xlsx_data, format_fields, get_report_doc, run
 
 from tweaks.utils.preflight import get_preflight_css
 
 
 @frappe.whitelist()
-def export_query(report_name, extension, data, file_name=None):
+def export_query(
+    report_name, extension, data=None, filters=None, file_name=None, pdf_generator=None
+):
 
-    content = get_export_content(report_name, extension, data)
+    content = get_export_content(
+        report_name, extension, data, filters, pdf_generator=pdf_generator
+    )
 
     provide_binary_file(file_name or report_name, extension, content)
 
@@ -39,9 +43,24 @@ def get_xlxs_report_content(report_name, data):
     return content
 
 
-def get_export_content(report_name, extension, data):
+def get_export_content(
+    report_name, extension, data=None, filters=None, pdf_generator=None
+):
+    # If filters provided instead of data, run the report to get data
+    if filters:
+        run_data = run(
+            report_name,
+            filters=filters,
+            ignore_prepared_report=1,
+        )
+        data = data or {}
+        data.update(run_data)
+
+    if not data:
+        frappe.throw(_("Either 'data' or 'filters' must be provided"))
+
     if extension == "pdf":
-        return get_pdf_report_content(report_name, data)
+        return get_pdf_report_content(report_name, data, pdf_generator=pdf_generator)
     else:
         return get_xlxs_report_content(report_name, data)
 
@@ -50,11 +69,13 @@ def get_export_content(report_name, extension, data):
 def export_query_in_background(
     report_name,
     extension,
-    data,
+    data=None,
+    filters=None,
     file_name=None,
     send_email=True,
     send_notification=True,
     user=None,
+    pdf_generator=None,
 ):
 
     if user:
@@ -67,11 +88,13 @@ def export_query_in_background(
         report_name=report_name,
         extension=extension,
         data=data,
+        filters=filters,
         file_name=file_name,
         send_email=send_email,
         send_notification=send_notification,
         queue="long",
         now=frappe.flags.in_test,
+        pdf_generator=pdf_generator,
     )
 
     return job.id
@@ -84,15 +107,19 @@ def get_user_email(user):
 def run_export_query_job(
     report_name,
     extension,
-    data,
+    data=None,
+    filters=None,
     file_name=None,
     send_email=True,
     send_notification=True,
     user=None,
+    pdf_generator=None,
 ):
     from rq import get_current_job
 
-    content = get_export_content(report_name, extension, data)
+    content = get_export_content(
+        report_name, extension, data, filters, pdf_generator=pdf_generator
+    )
     jobid = get_current_job().id
 
     _file = create_report_file(
@@ -183,8 +210,9 @@ def create_report_file(
     return _file
 
 
-def get_pdf_report_content(report_name, data):
-    from frappe.utils.pdf import get_pdf
+def get_pdf_report_content(report_name, data, pdf_generator=None):
+    from frappe.utils.pdf import get_pdf as wkhtmltopdf_get_pdf
+    from print_designer.pdf_generator.pdf import get_pdf as chrome_get_pdf
 
     meta = get_pdf_report_meta(report_name)
     context = {"data": data}
@@ -199,7 +227,18 @@ def get_pdf_report_content(report_name, data):
     )
     html = frappe.render_template(meta.get("html_format"), context)
 
-    content = get_pdf(html)
+    if pdf_generator == "chrome":
+        content = chrome_get_pdf(
+            print_format=report_name,
+            html=html,
+            options={},
+            output=None,
+            pdf_generator="chrome",
+        )
+        frappe.log_error("Generated PDF using Chrome PDF Generator", html)
+
+    else:
+        content = wkhtmltopdf_get_pdf(html)
 
     return content
 
