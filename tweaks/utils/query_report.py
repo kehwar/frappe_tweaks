@@ -68,6 +68,8 @@ def get_export_content(
             data["aggregate_by"],
         )
 
+    data["columns_dict"] = {col["fieldname"]: col for col in data["columns"]}
+
     if extension == "pdf":
         return get_pdf_report_content(report_name, data, pdf_generator=pdf_generator)
     else:
