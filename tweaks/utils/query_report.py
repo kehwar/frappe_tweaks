@@ -60,7 +60,12 @@ def get_export_content(
     if not data:
         frappe.throw(_("Either 'data' or 'filters' must be provided"))
 
-    if "group_by" in data and "aggregate_by" in data:
+    if (
+        "group_by" in data
+        and "aggregate_by" in data
+        and data["group_by"]
+        and data["aggregate_by"]
+    ):
         # Perform grouping and aggregation
         data["grouped"] = group_aggregate(
             data["result"],
