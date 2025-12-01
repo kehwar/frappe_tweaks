@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from frappe.desk.query_report import build_xlsx_data, format_fields, get_report_doc, run
 
+from tweaks.utils.groupby import group_aggregate
 from tweaks.utils.preflight import get_preflight_css
 
 
@@ -58,6 +59,14 @@ def get_export_content(
 
     if not data:
         frappe.throw(_("Either 'data' or 'filters' must be provided"))
+
+    if "group_by" in data and "aggregate_by" in data:
+        # Perform grouping and aggregation
+        data["grouped"] = group_aggregate(
+            data["result"],
+            data["group_by"],
+            data["aggregate_by"],
+        )
 
     if extension == "pdf":
         return get_pdf_report_content(report_name, data, pdf_generator=pdf_generator)
