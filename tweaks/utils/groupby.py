@@ -62,8 +62,11 @@ def group_aggregate(
             return spec["name"]
         return spec.get("field")
 
-    def compute_aggrs(group_rows: List[Dict[str, Any]]) -> List[Tuple[str, Any]]:
-        out: List[Tuple[str, Any]] = []
+    def compute_aggrs(
+        group_rows: List[Dict[str, Any]],
+    ) -> Tuple[List[Tuple[str, Any]], Dict[str, Any]]:
+        out_list: List[Tuple[str, Any]] = []
+        out_dict: Dict[str, Any] = {}
         # Precompute counts to support avg
         n = len(group_rows)
         for spec in aggregations:
@@ -97,8 +100,9 @@ def group_aggregate(
                 value = (total / count) if count > 0 else None
             else:
                 raise ValueError(f"Unsupported op: {op}")
-            out.append((name, value))
-        return out
+            out_list.append((name, value))
+            out_dict[name] = value
+        return out_list, out_dict
 
     def recurse(
         level: int,
@@ -107,9 +111,11 @@ def group_aggregate(
         index_in_parent: int = 0,
         count_in_parent: int = 1,
     ) -> Dict[str, Any]:
+        aggr_list, aggr_dict = compute_aggrs(subset)
         node = {
             "group": parent_group_vals,
-            "aggregations": compute_aggrs(subset),
+            "aggregations": aggr_list,
+            "aggregations_dict": aggr_dict,
             "level": level,
             "levels": len(group_fields),
             "index_in_parent": index_in_parent,
@@ -149,6 +155,7 @@ def group_aggregate(
             summary_node = {
                 "group": node["group"],
                 "aggregations": node["aggregations"],
+                "aggregations_dict": node["aggregations_dict"],
                 "level": node["level"],
                 "levels": target_levels,
                 "index_in_parent": node["index_in_parent"],
@@ -163,6 +170,7 @@ def group_aggregate(
                         {
                             "group": sub_group["group"][-1],
                             "aggregations": sub_group["aggregations"],
+                            "aggregations_dict": sub_group["aggregations_dict"],
                         }
                         for sub_group in node["groups"]
                     ]
