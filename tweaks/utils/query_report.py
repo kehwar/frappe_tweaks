@@ -258,7 +258,7 @@ def get_pdf_report_meta(report_name):
         module_path, "report", scrub(report.name)
     )
     print_path = report_folder and os.path.join(
-        report_folder, scrub(report.name) + ".jinja-html"
+        report_folder, scrub(report.name) + ".jinja"
     )
     html_format = get_html_format(print_path)
 
