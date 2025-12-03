@@ -152,19 +152,21 @@ def group_aggregate(
         """
 
         def summary_recurse(node: Dict[str, Any], target_levels: int) -> Dict[str, Any]:
-            summary_node = {
-                "group": node["group"],
-                "aggregations": node["aggregations"],
-                "aggregations_dict": node["aggregations_dict"],
-                "level": node["level"],
-                "levels": target_levels,
-                "index_in_parent": node["index_in_parent"],
-                "count_in_parent": node["count_in_parent"],
-            }
 
-            # If we're at the target depth or this is a leaf node, convert groups to rows
-            if node["level"] >= target_levels - 1 or "rows" in node:
-                if "groups" in node:
+            if "groups" in node:
+
+                summary_node = {
+                    "group": node["group"],
+                    "aggregations": node["aggregations"],
+                    "aggregations_dict": node["aggregations_dict"],
+                    "level": node["level"],
+                    "levels": target_levels,
+                    "index_in_parent": node["index_in_parent"],
+                    "count_in_parent": node["count_in_parent"],
+                }
+
+                # If we're at the target depth or this is a leaf node, convert groups to rows
+                if node["level"] >= target_levels - 1:
                     # Convert sub-groups to simple row format
                     summary_node["rows"] = [
                         {
@@ -175,19 +177,21 @@ def group_aggregate(
                         for sub_group in node["groups"]
                     ]
                 else:
-                    # This is already a leaf node, keep it as is
-                    summary_node["rows"] = node.get("rows", [])
-            else:
-                # Continue recursion for deeper levels
-                if "groups" in node:
+                    # Continue recursion for deeper levels
                     summary_node["groups"] = [
                         summary_recurse(sub_group, target_levels)
                         for sub_group in node["groups"]
                     ]
 
-            return summary_node
+                return summary_node
 
-        if "groups" not in result or len(group_fields) <= 1:
+            return {
+                "group": node["group"][-1],
+                "aggregations": node["aggregations"],
+                "aggregations_dict": node["aggregations_dict"],
+            }
+
+        if "groups" not in result or len(group_fields) < 1:
             return []
 
         # Summary levels should be one less than the main structure
@@ -200,4 +204,7 @@ def group_aggregate(
 
     result = recurse(0, [], rows)
     result["summary"] = build_summary(result)
+
+    frappe.log_error("result", frappe.as_json(result))
+
     return result
