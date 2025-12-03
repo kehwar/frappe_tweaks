@@ -112,3 +112,4 @@ tc,tc
 transition_condition,condición_de_transición
 validate,validar
 Ignore Cache,Ignorar Caché
+RUC/DNI '{0}' not found on SUNAT,RUC/DNI '{0}' no encontrado en SUNAT

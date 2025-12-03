@@ -61,44 +61,62 @@ class PERUAPICOM(Document):
     for retrieving RUT, RUC, DNI, and exchange rate (TC) information for Peru.
     """
 
-    def get_rut(self, rut: str, cache: bool = True) -> Dict[str, Any]:
+    def get_rut(
+        self, rut: str, cache: bool = True, raise_exception: bool = True
+    ) -> Dict[str, Any]:
         """
         Get RUC or DNI information.
         """
-        return get_rut(rut, cache)
+        return get_rut(rut, cache, raise_exception=raise_exception)
 
     def get_ruc(
-        self, ruc: str, cache: bool = True, sucursales: bool = False
+        self,
+        ruc: str,
+        cache: bool = True,
+        sucursales: bool = False,
+        raise_exception: bool = True,
     ) -> Dict[str, Any]:
         """
         Get RUC information.
         """
-        return get_ruc(ruc, cache=cache, sucursales=sucursales)
+        return get_ruc(
+            ruc, cache=cache, sucursales=sucursales, raise_exception=raise_exception
+        )
 
-    def get_ruc_suc(self, ruc: str, cache: bool = True) -> Dict[str, Any]:
-        return get_ruc_suc(ruc, cache)
+    def get_ruc_suc(
+        self, ruc: str, cache: bool = True, raise_exception: bool = True
+    ) -> Dict[str, Any]:
+        return get_ruc_suc(ruc, cache, raise_exception=raise_exception)
 
-    def get_dni(self, dni: str, cache: bool = True) -> Dict[str, Any]:
+    def get_dni(
+        self, dni: str, cache: bool = True, raise_exception: bool = True
+    ) -> Dict[str, Any]:
         """
         Get DNI information.
         """
-        return get_dni(dni, cache)
+        return get_dni(dni, cache, raise_exception=raise_exception)
 
     def get_tc(
-        self, date: Optional[Union[str, date]] = None, cache: bool = True
+        self,
+        date: Optional[Union[str, date]] = None,
+        cache: bool = True,
+        raise_exception: bool = True,
     ) -> Dict[str, Any]:
         """
         Get exchange rate information.
         """
-        return get_tc(date, cache)
+        return get_tc(date, cache, raise_exception=raise_exception)
 
     def update_currency_exchange(
-        self, date: Optional[Union[str, date]] = None, cache: bool = False
+        self,
+        date: Optional[Union[str, date]] = None,
+        cache: bool = False,
+        raise_exception: bool = True,
     ) -> Dict[str, Any]:
         """
         Update currency exchange rates.
         """
-        return update_currency_exchange(date, cache)
+        return update_currency_exchange(date, cache, raise_exception=raise_exception)
 
     def set_currency_exchange(
         self,
@@ -244,6 +262,7 @@ def _make_api_call(
     key: Optional[str] = None,
     cache: bool = True,
     param: Optional[str] = None,
+    raise_exception: bool = True,
 ) -> Dict[str, Any]:
     """
     Generic function to make API calls with caching and logging support.
@@ -262,6 +281,7 @@ def _make_api_call(
         key: The key value for the request (RUC, DNI, date, etc.)
         cache: Whether to use cached data if available (default: True)
         param: The parameter name for query-based requests (e.g., 'fecha')
+        raise_exception: Whether to raise exceptions on API errors (default: True)
 
     Returns:
         Dictionary containing API response data with the structure dependent
@@ -308,21 +328,25 @@ def _make_api_call(
         log_api_call(endpoint, key, error=traceback)
 
         # Raise a user-friendly error with context about what failed
-        frappe.throw(
-            [
-                frappe._("Error searching {0}: {1}").format(endpoint.upper(), key),
-                "---",
-                *traceback.split("\n"),
-            ],
-            exc=e,
-            title=frappe._("API Error"),
-            wide=1,
-            as_list=1,
-        )
+        if raise_exception:
+            frappe.throw(
+                [
+                    frappe._("Error searching {0}: {1}").format(endpoint.upper(), key),
+                    "---",
+                    *traceback.split("\n"),
+                ],
+                exc=e,
+                title=frappe._("API Error"),
+                wide=1,
+                as_list=1,
+            )
+        return None
 
 
 @frappe.whitelist()
-def get_rut(rut: str, cache: bool = True, sucursales: bool = False) -> Dict[str, Any]:
+def get_rut(
+    rut: str, cache: bool = True, sucursales: bool = False, raise_exception: bool = True
+) -> Dict[str, Any]:
     """
     Get RUT information by routing to appropriate service based on number length.
 
@@ -334,6 +358,7 @@ def get_rut(rut: str, cache: bool = True, sucursales: bool = False) -> Dict[str,
         rut: The RUT number (8 digits for DNI, 11 digits for RUC)
         cache: Whether to use cached data if available (default: True)
         sucursales: Whether to include branch information (default: False)
+        raise_exception: Whether to raise exceptions on API errors (default: True)
 
     Returns:
         Dictionary containing RUT information. Structure varies based on type:
@@ -351,13 +376,17 @@ def get_rut(rut: str, cache: bool = True, sucursales: bool = False) -> Dict[str,
         >>> print(company_data['razon_social'])  # Company name
     """
     if len(rut) == 8:
-        return get_dni(rut, cache=cache)
+        return get_dni(rut, cache=cache, raise_exception=raise_exception)
     else:
-        return get_ruc(rut, cache=cache, sucursales=sucursales)
+        return get_ruc(
+            rut, cache=cache, sucursales=sucursales, raise_exception=raise_exception
+        )
 
 
 @frappe.whitelist()
-def get_ruc(ruc: str, cache: bool = True, sucursales: bool = False) -> Dict[str, Any]:
+def get_ruc(
+    ruc: str, cache: bool = True, sucursales: bool = False, raise_exception: bool = True
+) -> Dict[str, Any]:
     """
     Get RUC (company registration) information from PERU API COM service.
 
@@ -368,6 +397,7 @@ def get_ruc(ruc: str, cache: bool = True, sucursales: bool = False) -> Dict[str,
         ruc: The 11-digit RUC number to look up
         cache: Whether to use cached data if available (default: True)
         sucursales: Whether to include branch/subsidiary information (default: False)
+        raise_exception: Whether to raise exceptions on API errors (default: True)
 
     Returns:
         Dictionary containing RUC information with keys:
@@ -397,13 +427,15 @@ def get_ruc(ruc: str, cache: bool = True, sucursales: bool = False) -> Dict[str,
         ...     print(f"Branch: {branch['direccion']}")
     """
     if sucursales:
-        return get_ruc_suc(ruc, cache=cache)
+        return get_ruc_suc(ruc, cache=cache, raise_exception=raise_exception)
 
-    return _make_api_call("ruc", key=ruc, cache=cache)
+    return _make_api_call("ruc", key=ruc, cache=cache, raise_exception=raise_exception)
 
 
 @frappe.whitelist()
-def get_ruc_suc(ruc: str, cache: bool = True) -> Dict[str, Any]:
+def get_ruc_suc(
+    ruc: str, cache: bool = True, raise_exception: bool = True
+) -> Dict[str, Any]:
     """
     Get RUC branch/subsidiary (sucursal) information from PERU API COM service.
 
@@ -413,6 +445,7 @@ def get_ruc_suc(ruc: str, cache: bool = True) -> Dict[str, Any]:
     Args:
         ruc: The 11-digit RUC number to look up branches for
         cache: Whether to use cached data if available (default: True)
+        raise_exception: Whether to raise exceptions on API errors (default: True)
 
     Returns:
         Dictionary containing branch information with structure:
@@ -447,11 +480,15 @@ def get_ruc_suc(ruc: str, cache: bool = True) -> Dict[str, Any]:
         ...     print(f"Branch: {branch['direccion']}")
         ...     print(f"Location: {branch['distrito']}, {branch['provincia']}")
     """
-    return _make_api_call("ruc_suc", key=ruc, cache=cache)
+    return _make_api_call(
+        "ruc_suc", key=ruc, cache=cache, raise_exception=raise_exception
+    )
 
 
 @frappe.whitelist()
-def get_dni(dni: str, cache: bool = True) -> Dict[str, Any]:
+def get_dni(
+    dni: str, cache: bool = True, raise_exception: bool = True
+) -> Dict[str, Any]:
     """
     Get DNI (national ID) information from PERU API COM service.
 
@@ -461,6 +498,7 @@ def get_dni(dni: str, cache: bool = True) -> Dict[str, Any]:
     Args:
         dni: The 8-digit DNI number to look up
         cache: Whether to use cached data if available (default: True)
+        raise_exception: Whether to raise exceptions on API errors (default: True)
 
     Returns:
         Dictionary containing personal information with keys:
@@ -483,12 +521,14 @@ def get_dni(dni: str, cache: bool = True) -> Dict[str, Any]:
         The API returns basic identification information. Additional fields
         like address or birth date are not included in this service.
     """
-    return _make_api_call("dni", key=dni, cache=cache)
+    return _make_api_call("dni", key=dni, cache=cache, raise_exception=raise_exception)
 
 
 @frappe.whitelist()
 def get_tc(
-    date: Optional[Union[str, date]] = None, cache: bool = True
+    date: Optional[Union[str, date]] = None,
+    cache: bool = True,
+    raise_exception: bool = True,
 ) -> Dict[str, Any]:
     """
     Get exchange rate (tipo de cambio) information from PERU API COM service.
@@ -502,6 +542,7 @@ def get_tc(
               - String in YYYY-MM-DD format
               - None (defaults to current date)
         cache: Whether to use cached data if available (default: True)
+        raise_exception: Whether to raise exceptions on API errors (default: True)
 
     Returns:
         Dictionary containing exchange rate information:
@@ -533,7 +574,9 @@ def get_tc(
     date = getdate(date)
     date = format_date(date, "yyyy-mm-dd")
 
-    return _make_api_call("tc", key=date, param="fecha", cache=cache)
+    return _make_api_call(
+        "tc", key=date, param="fecha", cache=cache, raise_exception=raise_exception
+    )
 
 
 @frappe.whitelist()
@@ -738,7 +781,9 @@ def sync_customer_with_sunat(customer):
 
 @frappe.whitelist()
 def update_currency_exchange(
-    date: Optional[Union[str, date]] = None, cache: bool = False
+    date: Optional[Union[str, date]] = None,
+    cache: bool = False,
+    raise_exception: bool = True,
 ) -> Dict[str, Any]:
     """
     Update currency exchange rates in the system using PERU API COM service.
@@ -749,6 +794,7 @@ def update_currency_exchange(
     Args:
         date: The date for which to update exchange rates. If None, uses current date.
         cache: Whether to use cached data if available (default: False for fresh rates).
+        raise_exception: Whether to raise exceptions on API errors (default: True)
 
     Returns:
         Dictionary containing the exchange rate data that was processed.
@@ -764,7 +810,9 @@ def update_currency_exchange(
         >>> # Update specific date rates
         >>> tc_data = update_currency_exchange("2025-01-15")
     """
-    tc_data = get_tc(date=date, cache=cache)
+    tc_data = get_tc(date=date, cache=cache, raise_exception=raise_exception)
+    if not tc_data:
+        return None
     date = getdate(tc_data["fecha"])
 
     # Use 'venta' (sale rate) for USD to PEN conversion

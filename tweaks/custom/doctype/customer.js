@@ -88,7 +88,7 @@ frappe.ui.form.SUNATCustomerQuickEntryForm = class SUNATCustomerQuickEntryForm e
         const me = this
         frappe.call({
             method: 'tweaks.tweaks.doctype.peru_api_com.peru_api_com.get_rut',
-            args: { rut: me.dialog.doc.tax_id },
+            args: { rut: me.dialog.doc.tax_id, raise_exception: 0 },
             error: (exc) => me.displayError(__('Error while searching RUC/DNI on SUNAT'), exc),
             always() {
                 // Reset the dialog working state and resolve the promise with doc
@@ -98,6 +98,16 @@ frappe.ui.form.SUNATCustomerQuickEntryForm = class SUNATCustomerQuickEntryForm e
             freeze: true,
             freeze_message: __('Searching RUC/DNI on SUNAT...'),
             callback({ message }) {
+
+                if (!message) {
+                    frappe.msgprint({
+                        indicator: 'red',
+                        title: __('Error'),
+                        message: __("RUC/DNI '{0}' not found on SUNAT", [me.dialog.doc.tax_id]),
+                    })
+                    return
+                }
+
                 frappe.confirm(
                     __('Create customer {0} ?', [message.razon_social || message.cliente]),
                     () => me.createCustomer(message.ruc || message.dni),
