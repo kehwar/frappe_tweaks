@@ -205,6 +205,4 @@ def group_aggregate(
     result = recurse(0, [], rows)
     result["summary"] = build_summary(result)
 
-    frappe.log_error("result", frappe.as_json(result))
-
     return result
