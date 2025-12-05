@@ -4,6 +4,7 @@ import traceback
 import frappe
 import yaml
 from frappe import _
+from frappe.core.doctype.version.version import get_diff
 from frappe.desk.doctype.notification_log.notification_log import (
     send_notification_email,
 )
@@ -84,6 +85,7 @@ def safe_exec_globals(out):
                     send_notification_email=send_notification_email
                 ),
             ),
+            "get_diff": get_diff,
         }
     )
 
