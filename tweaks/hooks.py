@@ -77,3 +77,8 @@ scheduler_events = {
         ]
     }
 }
+
+
+safe_exec_globals = ["tweaks.utils.safe_exec.safe_exec_globals"]
+
+safe_eval_globals = ["tweaks.utils.safe_exec.safe_eval_globals"]
