@@ -18,6 +18,13 @@ from frappe.utils.xlsxutils import (
 
 from tweaks.custom.utils.formatter import to_snake_case
 from tweaks.custom.utils.naming import setseries
+from tweaks.tweaks.doctype.peru_api_com.peru_api_com import (
+    get_dni,
+    get_ruc,
+    get_ruc_suc,
+    get_rut,
+    get_tc,
+)
 
 
 def admin_sql(query, *args, **kwargs):
@@ -86,6 +93,13 @@ def safe_exec_globals(out):
                 ),
             ),
             "get_diff": get_diff,
+            "peru_api_com": NamespaceDict(
+                get_ruc=get_ruc,
+                get_dni=get_dni,
+                get_tc=get_tc,
+                get_ruc_suc=get_ruc_suc,
+                get_rut=get_rut,
+            ),
         }
     )
 
