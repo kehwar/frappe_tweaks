@@ -77,6 +77,8 @@ def get_export_content(
 
     if extension == "pdf":
         return get_pdf_report_content(report_name, data, pdf_generator=pdf_generator)
+    elif extension == "html":
+        return get_html_report_content(report_name, data)
     else:
         return get_xlxs_report_content(report_name, data)
 
@@ -145,7 +147,13 @@ def run_export_query_job(
         attached_to_name=report_name,
         user=user,
     )
-    external_url = frappe.utils.get_url(_file.file_url)
+
+    # Use /h/<name> route for HTML files to display directly in browser
+    if extension == "html":
+        external_url = frappe.utils.get_url(f"/h/{_file.name}")
+    else:
+        external_url = frappe.utils.get_url(_file.file_url)
+
     file_retention_hours = (
         frappe.get_system_settings("delete_background_exported_reports_after") or 48
     )
@@ -184,7 +192,7 @@ def run_export_query_job(
     frappe.publish_realtime(
         "export_query_file_ready",
         {
-            "url": _file.file_url,
+            "url": f"/h/{_file.name}" if extension == "html" else _file.file_url,
             "report_name": report_name,
             "jobid": jobid,
             "external_url": external_url,
@@ -224,6 +232,22 @@ def create_report_file(
     _file.save(ignore_permissions=True)
 
     return _file
+
+
+def get_html_report_content(report_name, data):
+    meta = get_pdf_report_meta(report_name)
+    context = {"data": data}
+    if meta.get("before_print"):
+        meta.get("before_print")(data)
+    if meta.get("get_print_utils"):
+        context.update(meta.get("get_print_utils")())
+    context.update(
+        {
+            "preflight_css": get_preflight_css(),
+        }
+    )
+    html = frappe.render_template(meta.get("html_format"), context)
+    return html.encode("utf-8")
 
 
 def get_pdf_report_content(report_name, data, pdf_generator=None):
@@ -296,6 +320,11 @@ def provide_binary_file(filename: str, extension: str, content: bytes) -> None:
     """Provide a binary file to the client."""
     from frappe import _
 
-    frappe.response["type"] = "pdf" if extension == "pdf" else "binary"
+    if extension == "pdf":
+        frappe.response["type"] = "pdf"
+    elif extension == "html":
+        frappe.response["type"] = "download"
+    else:
+        frappe.response["type"] = "binary"
     frappe.response["filecontent"] = content
     frappe.response["filename"] = f"{_(filename)}.{extension}"
