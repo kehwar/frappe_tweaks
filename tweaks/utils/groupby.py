@@ -129,7 +129,11 @@ def group_aggregate(
         key = group_fields[level]
         buckets: Dict[Any, List[Dict[str, Any]]] = defaultdict(list)
         for r in subset:
-            buckets[get_nested_value(r, key)].append(r)
+            value = get_nested_value(r, key)
+            # Coalesce null values to "-" to ensure no null values in groups
+            if value is None:
+                value = "-"
+            buckets[value].append(r)
 
         # Keep stable order by sorting on the key if it’s sortable; otherwise leave insertion order
         try:
