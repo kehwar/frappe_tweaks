@@ -52,10 +52,6 @@ permission_query_conditions = {
     )
 }
 
-override_whitelisted_methods = {
-    "frappe.desk.form.utils.get_next": f"tweaks.custom.utils.virtual_doctype.get_next"
-}
-
 override_doctype_class = {
     "Reminder": "tweaks.custom.doctype.reminder.TweaksReminder",
     "Server Script": "tweaks.custom.doctype.server_script.TweaksServerScript",
