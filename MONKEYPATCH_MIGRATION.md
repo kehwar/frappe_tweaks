@@ -1,6 +1,8 @@
 # Monkeypatch Migration Guide
 
-This document lists all monkeypatches in the `frappe_tweaks` repository and how to migrate them to a Frappe/ERPNext fork.
+This document lists all **actual monkeypatches** in the `frappe_tweaks` repository and how to migrate them to a Frappe/ERPNext fork.
+
+**Note:** This document excludes features that use Frappe's standard hook system (`override_doctype_class`, `has_permission`, `permission_query_conditions`, `doc_events`, etc.) as these are not monkeypatches.
 
 ---
 
@@ -127,25 +129,7 @@ def apply_db_query_patches():
 
 ---
 
-## 5. Permission Policy System (New Feature)
-
-**Brief Description:** Advanced permission system using Server Scripts for fine-grained access control.
-
-**Current Implementation:**
-- Location: `tweaks/custom/utils/permissions.py`
-- Uses hooks: `has_permission` and `permission_query_conditions`
-- Not a monkeypatch - uses Frappe's existing hook system
-
-**Proposed Migration:**
-- **Target File:** Create new `frappe/permissions/policy.py` or integrate into `frappe/permissions.py`
-- **Changes:**
-  - Move permission policy functions as core Frappe features
-  - Integrate with Server Script enhancements (requires migration #2 first)
-  - Functions to migrate: `get_permission_policies`, `get_permission_policy_query_conditions`, `has_permission_policy`
-
----
-
-## 6. Authentication Fallback Enhancement
+## 5. Authentication Fallback Enhancement
 
 **Brief Description:** Allows username/password for API authentication in addition to API key/secret.
 
@@ -167,109 +151,6 @@ def apply_authentication_patches():
 
 ---
 
-## 7. Server Script Class Override
-
-**Brief Description:** Enhanced Server Script doctype with validation for new script types and permission policy execution.
-
-**Current Implementation:**
-- Location: `tweaks/custom/doctype/server_script.py`
-- Override: `frappe.core.doctype.server_script.server_script.ServerScript` → `TweaksServerScript`
-
-```python
-override_doctype_class = {
-    "Server Script": "tweaks.custom.doctype.server_script.TweaksServerScript",
-}
-```
-
-**Proposed Migration:**
-- **Target File:** `frappe/core/doctype/server_script/server_script.py`
-- **Changes:**
-  - Add `before_validate` logic from TweaksServerScript to clear irrelevant fields based on script_type
-  - Add `validate` logic to ensure required fields (doctype_event, reference_doctype) are set
-  - Add `get_permission_policy` method for Permission Policy script execution
-
----
-
-## 8. Reminder Class Override
-
-**Brief Description:** Enhanced reminder with better notification handling.
-
-**Current Implementation:**
-- Location: `tweaks/custom/doctype/reminder.py`
-- Override: `frappe.automation.doctype.reminder.reminder.Reminder` → `TweaksReminder`
-
-```python
-override_doctype_class = {
-    "Reminder": "tweaks.custom.doctype.reminder.TweaksReminder",
-}
-```
-
-**Proposed Migration:**
-- **Target File:** `frappe/automation/doctype/reminder/reminder.py`
-- **Changes:**
-  - Replace `send_reminder` method with the enhanced version that sends both notification log and email
-
----
-
-## 9. User Group Rename Permission
-
-**Brief Description:** Allows renaming User Groups.
-
-**Current Implementation:**
-- Location: `tweaks/custom/doctype/user_group.py`
-- Sets property: `allow_rename = 1` via property setter
-
-```python
-def apply_user_group_patches():
-    make_property_setter("User Group", None, "allow_rename", "1", "Check", for_doctype=True)
-```
-
-**Proposed Migration:**
-- **Target File:** `frappe/core/doctype/user_group/user_group.json`
-- **Changes:**
-  - Set `"allow_rename": 1` in the doctype JSON definition
-
----
-
-## 10. Role Rename Permission
-
-**Brief Description:** Allows renaming Roles.
-
-**Current Implementation:**
-- Location: `tweaks/custom/doctype/role.py`
-- Sets property: `allow_rename = 1` via property setter
-
-```python
-def apply_role_patches():
-    make_property_setter("Role", None, "allow_rename", "1", "Check", for_doctype=True)
-```
-
-**Proposed Migration:**
-- **Target File:** `frappe/core/doctype/role/role.json`
-- **Changes:**
-  - Set `"allow_rename": 1` in the doctype JSON definition
-
----
-
-## 11. Pricing Rule Enhancements (ERPNext)
-
-**Brief Description:** Adds dynamic free item calculation and dynamic pricing rule validation via Python scripts.
-
-**Current Implementation:**
-- Location: `tweaks/custom/doctype/pricing_rule.py`
-- Uses hooks: `get_product_discount_rule`, `apply_pricing_rule_on_transaction`
-- Not a monkeypatch - uses ERPNext's existing hook system
-
-**Proposed Migration:**
-- **Target Files:**
-  - `erpnext/accounts/doctype/pricing_rule/pricing_rule.json` - Add custom fields
-  - `erpnext/accounts/doctype/pricing_rule/utils.py` - Integrate hook handlers
-- **Custom Fields to Add:**
-  - `dynamic_free_item` (Code, Python) - Script to calculate free item quantities
-  - `dynamic_validation` (Code, Python) - Script to validate pricing rule application
-
----
-
 ## Migration Priority
 
 **High Priority (Core Functionality):**
@@ -279,15 +160,7 @@ def apply_role_patches():
 
 **Medium Priority (Quality of Life):**
 4. Database Query Optimization (#4)
-5. Server Script Class Override (#7)
-6. Permission Policy System (#5)
-
-**Low Priority (Minor Features):**
-7. Authentication Fallback Enhancement (#6)
-8. Reminder Class Override (#8)
-9. User Group Rename Permission (#9)
-10. Role Rename Permission (#10)
-11. Pricing Rule Enhancements (#11)
+5. Authentication Fallback Enhancement (#5)
 
 ---
 
@@ -295,19 +168,14 @@ def apply_role_patches():
 
 ### Pre-Migration
 - [ ] Create branch in Frappe fork
-- [ ] Create branch in ERPNext fork (for pricing rules)
 - [ ] Set up development environment
 
 ### Migration Process (in priority order)
-- [ ] Migrate Server Script enhancements (#2, #7)
+- [ ] Migrate Server Script enhancements (#2)
 - [ ] Migrate Document.run_method (#1)
 - [ ] Migrate Workflow enhancements (#3)
 - [ ] Migrate Database Query optimizations (#4)
-- [ ] Migrate Permission Policy system (#5)
-- [ ] Migrate Authentication enhancement (#6)
-- [ ] Migrate Reminder override (#8)
-- [ ] Migrate User Group/Role rename (#9, #10)
-- [ ] Migrate Pricing Rule enhancements (#11)
+- [ ] Migrate Authentication enhancement (#5)
 
 ### Post-Migration
 - [ ] Update `frappe_tweaks` to detect fork and skip patches
@@ -345,3 +213,4 @@ tweaks/__init__.py
        ├─> apply_server_script_patches()
        └─> apply_workflow_patches()
 ```
+
