@@ -4,8 +4,11 @@ Tweaks for Frappe
 
 ### Documentation
 
+**Start here:** [Documentation Index](INDEX.md) - Complete guide to all documentation
+
 - **[Monkeypatch Migration Guide](MONKEYPATCH_MIGRATION.md)** - Comprehensive guide for migrating monkeypatches to a Frappe/ERPNext fork
 - **[Monkeypatch Quick Reference](MONKEYPATCH_SUMMARY.md)** - Quick lookup table for all monkeypatches
+- **[Architecture Diagrams](ARCHITECTURE.md)** - Visual flow charts and system architecture
 
 ### Features
 
