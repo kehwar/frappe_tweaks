@@ -1,0 +1,143 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:sync_job_type_name",
+ "creation": "2025-12-16 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sync_job_type_name",
+  "module",
+  "is_standard",
+  "disabled",
+  "column_break_1",
+  "source_doctype",
+  "target_doctype",
+  "section_break_config",
+  "queue",
+  "timeout",
+  "column_break_2",
+  "retry_delay",
+  "max_retries"
+ ],
+ "fields": [
+  {
+   "fieldname": "sync_job_type_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Sync Job Type Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "module",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Module",
+   "options": "Module Def",
+   "reqd": 1
+  },
+  {
+   "default": "No",
+   "fieldname": "is_standard",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Is Standard",
+   "options": "Yes\nNo"
+  },
+  {
+   "default": "0",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "source_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Source DocType",
+   "options": "DocType",
+   "reqd": 1
+  },
+  {
+   "fieldname": "target_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Target DocType",
+   "options": "DocType",
+   "reqd": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_config",
+   "fieldtype": "Section Break",
+   "label": "Job Configuration"
+  },
+  {
+   "default": "default",
+   "description": "RQ queue name",
+   "fieldname": "queue",
+   "fieldtype": "Data",
+   "label": "Queue"
+  },
+  {
+   "default": "300",
+   "description": "Job timeout in seconds",
+   "fieldname": "timeout",
+   "fieldtype": "Int",
+   "label": "Timeout"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "5",
+   "description": "Delay between retries in minutes",
+   "fieldname": "retry_delay",
+   "fieldtype": "Int",
+   "label": "Retry Delay"
+  },
+  {
+   "default": "3",
+   "description": "Maximum retry attempts",
+   "fieldname": "max_retries",
+   "fieldtype": "Int",
+   "label": "Max Retries"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-12-16 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Tweaks",
+ "name": "Sync Job Type",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
