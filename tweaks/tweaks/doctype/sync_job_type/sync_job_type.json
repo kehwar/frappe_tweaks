@@ -86,7 +86,8 @@
    "description": "RQ queue name",
    "fieldname": "queue",
    "fieldtype": "Data",
-   "label": "Queue"
+   "label": "Queue",
+   "read_only": 1
   },
   {
    "default": "300",
@@ -116,7 +117,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-16 00:00:00",
+ "modified": "2025-12-16 16:31:25.780732",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Sync Job Type",
@@ -136,6 +137,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
