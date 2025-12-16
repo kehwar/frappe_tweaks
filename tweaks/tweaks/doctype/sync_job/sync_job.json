@@ -1,0 +1,350 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:SYNC-{YYYY}-{#####}",
+ "creation": "2025-12-16 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_header",
+  "sync_job_type",
+  "parent_sync_job",
+  "title",
+  "status",
+  "column_break_1",
+  "source_doctype",
+  "source_document_name",
+  "target_doctype",
+  "target_document_name",
+  "operation",
+  "section_break_config",
+  "queue",
+  "timeout",
+  "column_break_3",
+  "retry_delay",
+  "max_retries",
+  "retry_count",
+  "retry_after",
+  "section_break_data",
+  "context",
+  "column_break_4",
+  "filters",
+  "section_break_imvq",
+  "multiple_target_documents",
+  "section_break_snapshots",
+  "current_data",
+  "column_break_5",
+  "updated_data",
+  "section_break_diff",
+  "diff_summary",
+  "section_break_execution",
+  "trigger_type",
+  "job_id",
+  "column_break_6",
+  "started_at",
+  "ended_at",
+  "time_taken",
+  "section_break_results",
+  "error_message",
+  "cancel_reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_header",
+   "fieldtype": "Section Break",
+   "label": "Job Details"
+  },
+  {
+   "fieldname": "sync_job_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sync Job Type",
+   "options": "Sync Job Type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "parent_sync_job",
+   "fieldtype": "Link",
+   "label": "Parent Sync Job",
+   "options": "Sync Job",
+   "read_only": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "read_only": 1
+  },
+  {
+   "default": "Queued",
+   "depends_on": "eval:!doc.__islocal",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Queued\nStarted\nFinished\nFailed\nCanceled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "sync_job_type.source_doctype",
+   "fieldname": "source_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Source DocType",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_document_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Source Document",
+   "options": "source_doctype",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "sync_job_type.target_doctype",
+   "fieldname": "target_doctype",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Target DocType",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "target_document_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Target Document",
+   "options": "target_doctype",
+   "read_only": 1
+  },
+  {
+   "fieldname": "operation",
+   "fieldtype": "Select",
+   "label": "Operation",
+   "options": "\nInsert\nUpdate\nDelete",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_config",
+   "fieldtype": "Section Break",
+   "label": "Job Configuration"
+  },
+  {
+   "description": "RQ queue name",
+   "fetch_from": "sync_job_type.queue",
+   "fieldname": "queue",
+   "fieldtype": "Data",
+   "label": "Queue",
+   "read_only": 1
+  },
+  {
+   "description": "Job timeout in seconds",
+   "fetch_from": "sync_job_type.timeout",
+   "fieldname": "timeout",
+   "fieldtype": "Int",
+   "label": "Timeout"
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Delay between retries in minutes",
+   "fetch_from": "sync_job_type.retry_delay",
+   "fieldname": "retry_delay",
+   "fieldtype": "Int",
+   "label": "Retry Delay"
+  },
+  {
+   "description": "Maximum retry attempts",
+   "fetch_from": "sync_job_type.max_retries",
+   "fieldname": "max_retries",
+   "fieldtype": "Int",
+   "label": "Max Retries"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.retry_count",
+   "fieldname": "retry_count",
+   "fieldtype": "Int",
+   "label": "Retry Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "retry_after",
+   "fieldtype": "Datetime",
+   "label": "Retry After",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_data",
+   "fieldtype": "Section Break",
+   "label": "Job Data"
+  },
+  {
+   "description": "Filters passed to sync job (JSON)",
+   "fieldname": "filters",
+   "fieldtype": "Code",
+   "label": "Filters",
+   "options": "JSON"
+  },
+  {
+   "description": "Extra context payload for sync job (JSON)",
+   "fieldname": "context",
+   "fieldtype": "Code",
+   "label": "Context",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Array of spawned child jobs when multiple targets",
+   "fieldname": "multiple_target_documents",
+   "fieldtype": "Code",
+   "label": "Multiple Target Documents",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_snapshots",
+   "fieldtype": "Section Break",
+   "label": "Data Snapshots"
+  },
+  {
+   "description": "Target document state before sync",
+   "fieldname": "current_data",
+   "fieldtype": "Code",
+   "label": "Current Data",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_5",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Target document state after sync",
+   "fieldname": "updated_data",
+   "fieldtype": "Code",
+   "label": "Updated Data",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_diff",
+   "fieldtype": "Section Break",
+   "label": "Differences"
+  },
+  {
+   "description": "Version-format diff between current and updated data",
+   "fieldname": "diff_summary",
+   "fieldtype": "Code",
+   "label": "Diff Summary",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_execution",
+   "fieldtype": "Section Break",
+   "label": "Execution Tracking"
+  },
+  {
+   "description": "RQ job ID",
+   "fieldname": "job_id",
+   "fieldtype": "Data",
+   "label": "Job ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "started_at",
+   "fieldtype": "Datetime",
+   "label": "Started At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ended_at",
+   "fieldtype": "Datetime",
+   "label": "Ended At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_6",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "time_taken",
+   "fieldtype": "Duration",
+   "label": "Time Taken",
+   "read_only": 1
+  },
+  {
+   "default": "Manual",
+   "depends_on": "eval:!doc.__islocal",
+   "description": "How sync was initiated",
+   "fieldname": "trigger_type",
+   "fieldtype": "Select",
+   "label": "Trigger Type",
+   "options": "Manual\nScheduler\nWebhook\nAPI\nDocument Hook",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_results",
+   "fieldtype": "Section Break",
+   "label": "Results"
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Long Text",
+   "label": "Error Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cancel_reason",
+   "fieldtype": "Long Text",
+   "label": "Cancel Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_imvq",
+   "fieldtype": "Section Break",
+   "label": "Multiple Targets"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-12-16 16:39:13.625026",
+ "modified_by": "Administrator",
+ "module": "Tweaks",
+ "name": "Sync Job",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
