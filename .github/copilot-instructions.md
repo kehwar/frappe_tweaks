@@ -68,9 +68,11 @@ bench --site development.localhost restore --db-root-password 123 "backups/backu
 
 ## Code Conventions
 
+**Universal Rule**: Always use **4 spaces** for indentation in all files (Python, JavaScript, JSON, YAML, etc.). Never use tabs.
+
 ### Python
 
-- **Indentation**: 4 spaces (as defined in .editorconfig)
+- **Indentation**: 4 spaces (as defined in .editorconfig, PEP 8 compliant)
 - **Import Style**: Standard library first, then Frappe imports, then local imports
 - **Doctype Classes**: Inherit from `frappe.model.document.Document` or appropriate base classes
 - **Naming**: 
