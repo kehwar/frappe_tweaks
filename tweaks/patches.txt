@@ -14,3 +14,4 @@ tweaks.patches.2025.2025_09_16__ac_module
 tweaks.patches.2025.2025_09_25__remove_server_performance_log
 tweaks.patches.2025.2025_10_15__apiperucom
 tweaks.patches.2025.2025_10_31__sunat_tipo_documento_identidad
+tweaks.patches.2025.2025_12_16__add_sync_job_log_settings
