@@ -27,6 +27,8 @@ after_install = (
     + server_script_hooks["after_install"]
 )
 
+after_migrate = ["tweaks.utils.sync_job_type.sync_job_types"]
+
 doc_events = {
     "*": {
         "on_change": workflow_script_hooks["doc_events"]["*"]["on_change"],
