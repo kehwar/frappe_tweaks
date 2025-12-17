@@ -110,10 +110,3 @@ class SyncJobType(Document):
                 template_module="Tweaks",
                 template_doctype="Sync Job Type",
             )
-            make_boilerplate(
-                "controller.js",
-                self,
-                {"name": self.name},
-                template_module="Tweaks",
-                template_doctype="Sync Job Type",
-            )
