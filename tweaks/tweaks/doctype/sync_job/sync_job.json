@@ -228,7 +228,7 @@
   },
   {
    "default": "0",
-   "description": "If checked and operation is Update with no diff, job will finish with status Skipped",
+   "description": "If checked, updates will proceed even when there are no changes. Otherwise, updates with no changes will be skipped",
    "fieldname": "ignore_diff",
    "fieldtype": "Check",
    "label": "Ignore Diff",
@@ -367,7 +367,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-17 01:48:55.966351",
+ "modified": "2025-12-17 02:01:19.976219",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Sync Job",

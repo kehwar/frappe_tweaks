@@ -442,8 +442,8 @@ class SyncJob(Document, LogType):
         # Get diff after mapping but before saving
         diff = target_doc.get_diff() if not target_doc.is_new() else {}
 
-        # Check if we should skip update with no diff
-        if operation.lower() == "update" and self.get("ignore_diff", False) and not diff:
+        # Skip update if no changes detected (unless ignore_diff is True to force update anyway)
+        if operation.lower() == "update" and not self.get("ignore_diff", False) and not diff:
             self._finish_as_skipped(target_doc)
             return {}
 
