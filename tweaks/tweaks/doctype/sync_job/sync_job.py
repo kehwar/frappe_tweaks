@@ -295,7 +295,7 @@ def generate_sync(sync_job_name):
                             )
 
                         # Store child job references
-                        sync_job.multiple_target_documents = json.dumps(child_jobs)
+                        sync_job.multiple_target_documents = frappe.as_json(child_jobs)
                         sync_job.status = "Finished"
                         sync_job.ended_at = now()
                         sync_job.save(ignore_permissions=True)
@@ -342,9 +342,7 @@ def generate_sync(sync_job_name):
 
                 # Capture current state before delete
                 if target_doc:
-                    sync_job.current_data = json.dumps(
-                        target_doc.as_dict(), default=str
-                    )
+                    sync_job.current_data = target_doc.as_json()
 
                 # Call before_sync hook
                 if hasattr(module, "before_sync"):
@@ -368,9 +366,8 @@ def generate_sync(sync_job_name):
 
                 # Capture current state for existing docs
                 if target_doc and not target_doc.is_new():
-                    sync_job.current_data = json.dumps(
-                        target_doc.as_dict(), default=str
-                    )
+                    target_doc.get_latest()
+                    sync_job.current_data = target_doc.as_json()
 
                 # Get field mapping
                 field_mapping = module.get_field_mapping(
@@ -407,11 +404,11 @@ def generate_sync(sync_job_name):
                     )
 
                 # Capture updated state
-                sync_job.updated_data = json.dumps(target_doc.as_dict(), default=str)
+                sync_job.updated_data = target_doc.as_json()
                 sync_job.target_document_name = target_doc.name
 
         # Save results
-        sync_job.diff_summary = json.dumps(diff, default=str)
+        sync_job.diff_summary = frappe.as_json(diff)
         sync_job.operation = operation.title()
         sync_job.status = "Finished"
         sync_job.ended_at = now()
