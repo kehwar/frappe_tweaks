@@ -74,21 +74,5 @@ frappe.ui.form.on('Sync Job', {
                 })
             })
         }
-
-        // Set indicator colors
-        frm.page.set_indicator(__('Status: {0}', [frm.doc.status]), get_status_color(frm.doc.status))
     },
 })
-
-function get_status_color(status) {
-    const colors = {
-        'Pending': 'gray',
-        'Queued': 'blue',
-        'Started': 'orange',
-        'Finished': 'green',
-        'Failed': 'red',
-        'Canceled': 'gray',
-        'Skipped': 'gray',
-    }
-    return colors[status] || 'gray'
-}

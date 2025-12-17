@@ -375,7 +375,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-17 09:30:55.256247",
+ "modified": "2025-12-17 09:39:59.763621",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Sync Job",
@@ -399,7 +399,36 @@
  "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
+ "states": [
+  {
+   "color": "Yellow",
+   "title": "Pending"
+  },
+  {
+   "color": "Blue",
+   "title": "Queued"
+  },
+  {
+   "color": "Light Blue",
+   "title": "Started"
+  },
+  {
+   "color": "Green",
+   "title": "Finished"
+  },
+  {
+   "color": "Red",
+   "title": "Failed"
+  },
+  {
+   "color": "Gray",
+   "title": "Canceled"
+  },
+  {
+   "color": "Gray",
+   "title": "Skipped"
+  }
+ ],
  "title_field": "title",
  "track_changes": 1
 }
