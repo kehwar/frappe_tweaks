@@ -21,9 +21,9 @@ class SyncJobType(Document):
         module: DF.Link
         queue: DF.Data | None
         retry_delay: DF.Int
-        source_doctype: DF.Link
+        source_document_type: DF.Link
         sync_job_type_name: DF.Data
-        target_doctype: DF.Link
+        target_document_type: DF.Link
         timeout: DF.Int
     # end: auto-generated types
 
@@ -31,7 +31,7 @@ class SyncJobType(Document):
         """Validate sync job type"""
         # Set module from source doctype if not set
         if not self.module:
-            self.module = frappe.db.get_value("DocType", self.source_doctype, "module")
+            self.module = frappe.db.get_value("DocType", self.source_document_type, "module")
 
         # Set is_standard based on developer mode
         if not self.is_standard:

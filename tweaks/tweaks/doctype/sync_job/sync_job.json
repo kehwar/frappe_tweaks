@@ -11,11 +11,11 @@
   "title",
   "status",
   "column_break_1",
-  "source_doctype",
+  "source_document_type",
   "source_document_name",
   "operation",
   "column_break_yndn",
-  "target_doctype",
+  "target_document_type",
   "target_document_name",
   "context",
   "section_break_diff",
@@ -96,8 +96,8 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "sync_job_type.source_doctype",
-   "fieldname": "source_doctype",
+   "fetch_from": "sync_job_type.source_document_type",
+   "fieldname": "source_document_type",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
@@ -109,13 +109,13 @@
    "fieldname": "source_document_name",
    "fieldtype": "Dynamic Link",
    "label": "Source Document",
-   "options": "source_doctype",
+   "options": "source_document_type",
    "reqd": 1,
    "set_only_once": 1
   },
   {
-   "fetch_from": "sync_job_type.target_doctype",
-   "fieldname": "target_doctype",
+   "fetch_from": "sync_job_type.target_document_type",
+   "fieldname": "target_document_type",
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Target DocType",
@@ -128,7 +128,7 @@
    "fieldtype": "Dynamic Link",
    "label": "Target Document",
    "no_copy": 1,
-   "options": "target_doctype",
+   "options": "target_document_type",
    "read_only": 1
   },
   {

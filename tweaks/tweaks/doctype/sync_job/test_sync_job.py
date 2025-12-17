@@ -20,8 +20,8 @@ class TestSyncJob(FrappeTestCase):
                     "doctype": "Sync Job Type",
                     "sync_job_type_name": "Test Customer Sync",
                     "module": "Soldamundo",
-                    "source_doctype": "Customer",
-                    "target_doctype": "Contact",
+                    "source_document_type": "Customer",
+                    "target_document_type": "Contact",
                     "is_standard": "No",
                     "queue": "default",
                     "timeout": 300,
@@ -71,7 +71,7 @@ class TestSyncJob(FrappeTestCase):
 
         self.assertTrue(frappe.db.exists("Sync Job", sync_job.name))
         self.assertEqual(sync_job.status, "Queued")
-        self.assertEqual(sync_job.source_doctype, "Customer")
+        self.assertEqual(sync_job.source_document_type, "Customer")
         self.assertEqual(sync_job.source_document_name, "Test Customer")
 
         # Check JSON fields

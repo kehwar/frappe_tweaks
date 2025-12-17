@@ -27,8 +27,8 @@ class IntegrationTestSyncJobType(IntegrationTestCase):
                 "doctype": "Sync Job Type",
                 "sync_job_type_name": "Test Sync Type",
                 "module": "Tweaks",
-                "source_doctype": "Customer",
-                "target_doctype": "Contact",
+                "source_document_type": "Customer",
+                "target_document_type": "Contact",
                 "is_standard": "No",
                 "queue": "default",
                 "timeout": 300,
@@ -54,8 +54,8 @@ class IntegrationTestSyncJobType(IntegrationTestCase):
                 "doctype": "Sync Job Type",
                 "sync_job_type_name": "Test Standard Sync",
                 "module": "Tweaks",
-                "source_doctype": "Customer",
-                "target_doctype": "Contact",
+                "source_document_type": "Customer",
+                "target_document_type": "Contact",
                 "is_standard": "Yes",
             }
         )

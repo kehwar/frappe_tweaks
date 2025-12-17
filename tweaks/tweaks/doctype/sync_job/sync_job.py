@@ -41,14 +41,14 @@ class SyncJob(Document, LogType):
         retry_after: DF.Datetime | None
         retry_count: DF.Int
         retry_delay: DF.Int
-        source_doctype: DF.Link | None
+        source_document_type: DF.Link | None
         source_document_name: DF.DynamicLink | None
         started_at: DF.Datetime | None
         status: DF.Literal[
             "Queued", "Started", "Finished", "Failed", "Canceled", "Skipped"
         ]
         sync_job_type: DF.Link
-        target_doctype: DF.Link | None
+        target_document_type: DF.Link | None
         target_document_name: DF.DynamicLink | None
         time_taken: DF.Duration | None
         timeout: DF.Int
@@ -67,7 +67,7 @@ class SyncJob(Document, LogType):
 
         # Auto-generate title
         if not self.title:
-            self.title = f"{self.source_doctype} : {self.source_document_name}"[:140]
+            self.title = f"{self.source_document_type} : {self.source_document_name}"[:140]
 
         # Validate context JSON
         if self.context:
@@ -81,10 +81,10 @@ class SyncJob(Document, LogType):
             job_type = frappe.get_doc("Sync Job Type", self.sync_job_type)
 
             # Fetch doctypes
-            if not self.source_doctype:
-                self.source_doctype = job_type.source_doctype
-            if not self.target_doctype:
-                self.target_doctype = job_type.target_doctype
+            if not self.source_document_type:
+                self.source_document_type = job_type.source_document_type
+            if not self.target_document_type:
+                self.target_document_type = job_type.target_document_type
 
             # Allow override, otherwise use defaults from type
             if self.queue is None:
@@ -212,7 +212,7 @@ class SyncJob(Document, LogType):
 
     def _load_source_document(self):
         """Load source document"""
-        return frappe.get_doc(self.source_doctype, self.source_document_name)
+        return frappe.get_doc(self.source_document_type, self.source_document_name)
 
     def _parse_context(self):
         """Parse JSON context"""
@@ -279,7 +279,7 @@ class SyncJob(Document, LogType):
                 _("Operation must be specified when target_document_name is provided")
             )
 
-        target_doc = frappe.get_doc(self.target_doctype, self.target_document_name)
+        target_doc = frappe.get_doc(self.target_document_type, self.target_document_name)
         return target_doc, self.operation.lower()
 
     def _discover_target(self, module, source_doc, context):

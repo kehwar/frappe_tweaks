@@ -54,9 +54,9 @@ def enqueue_sync_job(
         {
             "doctype": "Sync Job",
             "sync_job_type": sync_job_type,
-            "source_doctype": job_type.source_doctype,
+            "source_document_type": job_type.source_document_type,
             "source_document_name": source_doc_name,
-            "target_doctype": job_type.target_doctype,
+            "target_document_type": job_type.target_document_type,
             "target_document_name": target_document_name,
             "operation": operation,
             "context": json.dumps(context) if context else None,
