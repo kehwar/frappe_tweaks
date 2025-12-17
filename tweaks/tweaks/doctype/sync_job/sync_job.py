@@ -378,17 +378,6 @@ class SyncJob(Document, LogType):
         self.save(ignore_permissions=True)
         frappe.db.commit()
 
-        # Publish completion event
-        frappe.publish_realtime(
-            "sync_job_completed",
-            {
-                "sync_job": self.name,
-                "status": "Finished",
-                "children": len(child_jobs),
-            },
-            after_commit=True,
-        )
-
     def _finish_with_no_targets(self):
         """Finish sync job when no targets found"""
         self.status = "Finished"
@@ -479,13 +468,6 @@ class SyncJob(Document, LogType):
         self.save(ignore_permissions=True)
         frappe.db.commit()
 
-        # Publish completion event
-        frappe.publish_realtime(
-            "sync_job_completed",
-            {"sync_job": self.name, "status": "Skipped"},
-            after_commit=True,
-        )
-
         # Raise exception to stop execution
         raise StopIteration("Sync job skipped")
 
@@ -502,13 +484,6 @@ class SyncJob(Document, LogType):
         self.save(ignore_permissions=True)
         frappe.db.commit()
 
-        # Publish completion event
-        frappe.publish_realtime(
-            "sync_job_completed",
-            {"sync_job": self.name, "status": "Finished"},
-            after_commit=True,
-        )
-
     def _handle_error(self, e):
         """Handle errors during sync execution"""
         # Don't handle StopIteration (used for skipped jobs)
@@ -523,15 +498,8 @@ class SyncJob(Document, LogType):
         if (self.retry_count or 0) < self.max_retries:
             self.retry_after = add_to_date(now(), minutes=self.retry_delay or 5)
 
-        self.db_update()
+        self.save(ignore_permissions=True)
         frappe.db.commit()
-
-        # Publish failure event
-        frappe.publish_realtime(
-            "sync_job_completed",
-            {"sync_job": self.name, "status": "Failed"},
-            after_commit=True,
-        )
 
 
 def execute_sync_job(sync_job_name):
