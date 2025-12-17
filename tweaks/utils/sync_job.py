@@ -97,7 +97,7 @@ def validate_sync_job_module(module, soft=False):
 
     Module must have either:
     - execute() function (bypass mode)
-    - get_target_document() AND get_field_mapping() functions (standard mode)
+    - get_target_document() AND update_target_doc() functions (standard mode)
 
     Args:
         module: Python module object
@@ -108,11 +108,11 @@ def validate_sync_job_module(module, soft=False):
     """
     has_execute = hasattr(module, "execute")
     has_get_target = hasattr(module, "get_target_document")
-    has_get_mapping = hasattr(module, "get_field_mapping")
+    has_update_target = hasattr(module, "update_target_doc")
 
-    if not has_execute and not (has_get_target and has_get_mapping):
+    if not has_execute and not (has_get_target and has_update_target):
         msg = _(
-            "Sync job module must have either execute() function or both get_target_document() and get_field_mapping() functions"
+            "Sync job module must have either execute() function or both get_target_document() and update_target_doc() functions"
         )
 
         if soft:
