@@ -301,12 +301,13 @@ def update_target_doc(sync_job, source_doc, target_doc):
 
 ### Status Flow
 
-1. **Queued** - Job created and queued for execution
-2. **Started** - Job picked up by worker
-3. **Finished** - Completed successfully
-4. **Failed** - Error occurred (can retry)
-5. **Canceled** - Manually canceled
-6. **Skipped** - No action needed (no changes detected)
+1. **Pending** - Job created but not yet queued for execution
+2. **Queued** - Job queued and waiting for worker
+3. **Started** - Job picked up by worker and executing
+4. **Finished** - Completed successfully
+5. **Failed** - Error occurred (can retry if under max_retries)
+6. **Canceled** - Manually canceled (only from Pending, Queued, or Failed status)
+7. **Skipped** - No action taken (no changes detected or operation disabled)
 
 ### Automatic Retry
 
