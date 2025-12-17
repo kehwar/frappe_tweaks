@@ -142,8 +142,8 @@ class SyncJob(Document, LogType):
         # Increment retry count
         self.retry_count = (self.retry_count or 0) + 1
 
-        # Set retry_after timestamp
-        self.retry_after = add_to_date(now(), minutes=self.retry_delay or 5)
+        # Clear retry_after timestamp
+        self.retry_after = None
 
         # Reset status and error
         self.status = "Queued"
