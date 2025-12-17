@@ -9,6 +9,9 @@ from frappe.model.document import Document
 # 	"""
 # 	Execute sync job with full control
 #
+# 	NOTE: In bypass mode, you are responsible for handling dry run mode yourself.
+# 	      Check sync_job.get("dry_run") to avoid making database changes when in dry run.
+#
 # 	Args:
 # 		sync_job: Sync Job document
 # 		source_doc: Source document
@@ -31,6 +34,9 @@ from frappe.model.document import Document
 # 	"""
 # 	Get multiple target documents for this source
 #
+# 	NOTE: This hook runs even in dry run mode.
+# 	NOTE: Avoid making database changes here - only query and return targets.
+#
 # 	Args:
 # 		sync_job: Sync Job document (contains operation, context, and flags)
 # 		source_doc: Source document
@@ -48,6 +54,9 @@ from frappe.model.document import Document
 def get_target_document(sync_job, source_doc):
     """
     Get target document for sync
+
+    NOTE: This hook runs even in dry run mode.
+    NOTE: Avoid making database changes here - only query and return the target.
 
     Args:
             sync_job: Sync Job document (contains operation, context, and flags)
@@ -78,6 +87,9 @@ def update_target_doc(sync_job, source_doc, target_doc):
     """
     Update target document with data from source
 
+    NOTE: This hook runs even in dry run mode.
+    NOTE: Avoid making database changes here - only update field values on target_doc.
+
     Args:
             sync_job: Sync Job document (contains operation and context)
             source_doc: Source document
@@ -89,7 +101,9 @@ def update_target_doc(sync_job, source_doc, target_doc):
 # Optional: Before sync hook
 # def before_sync(sync_job, source_doc, target_doc):
 # 	"""
-# 	Hook called before sync
+# 	Hook called before sync (before save)
+#
+# 	NOTE: This hook does NOT run in dry run mode.
 #
 # 	Args:
 # 		sync_job: Sync Job document (contains operation and context)
@@ -102,7 +116,9 @@ def update_target_doc(sync_job, source_doc, target_doc):
 # Optional: After sync hook
 # def after_sync(sync_job, source_doc, target_doc):
 # 	"""
-# 	Hook called after sync
+# 	Hook called after sync (after save)
+#
+# 	NOTE: This hook does NOT run in dry run mode.
 #
 # 	Args:
 # 		sync_job: Sync Job document (contains operation and context)
