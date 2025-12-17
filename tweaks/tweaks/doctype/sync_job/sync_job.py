@@ -387,6 +387,9 @@ class SyncJob(Document, LogType):
                 timeout=self.timeout,
                 retry_delay=self.retry_delay,
                 max_retries=self.max_retries,
+                trigger_type=self.trigger_type,
+                queue_on_insert=self.queue_on_insert,
+                dry_run=self.dry_run,
             )
 
             child_jobs.append(
