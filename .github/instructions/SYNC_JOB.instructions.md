@@ -1,5 +1,5 @@
 ---
-applyTo: "tweaks/doctype/sync_job_type/**, tweaks/doctype/sync_job/**, utils/sync_job.py"
+applyTo: "tweaks/doctype/sync_job_type/**, tweaks/doctype/sync_job/**, utils/sync_job.py, **/sync_job_type/**"
 ---
 
 # Sync Job Framework
@@ -127,21 +127,30 @@ def get_multiple_target_documents(sync_job, source_doc):
     """
     Return multiple targets (creates child jobs if > 1)
     
+    NOTE: Do not return the doc object itself, as this will be serialized to new jobs.
+    
     Returns:
         List of dicts with keys:
-            target_doc: Target document
+            target_document_type: DocType name of target
+            target_document_name: Name of target document (None for insert operations)
             operation: "insert", "update", or "delete"
             context: Dict of context for this target (optional)
     """
+    # Find existing target
+    target1_name = frappe.db.get_value("Target DocType", {"link_field": source_doc.name})
+    
     return [
         {
-            "target_doc": target1,
-            "operation": "update",
+            "target_document_type": "Target DocType",
+            "target_document_name": target1_name,  # Can be None for insert
+            "operation": "update" if target1_name else "insert",
             "context": {"batch": 1}
         },
         {
-            "target_doc": target2,
-            "operation": "insert"
+            "target_document_type": "Another Target DocType",
+            "target_document_name": None,  # None for insert operation
+            "operation": "insert",
+            "context": {"batch": 2}
         }
     ]
 
@@ -196,19 +205,37 @@ Edit this file to implement your sync logic using either bypass or standard mode
 ```python
 from tweaks.utils.sync_job import enqueue_sync_job
 
-# Basic usage
+# Basic usage with document name
 sync_job = enqueue_sync_job(
     sync_job_type="SAP Customer Sync",
-    source_doc_name="CUST-00001"
+    source_document_name="CUST-00001"
+)
+
+# Using document objects (automatically extracts type and name)
+customer = frappe.get_doc("Customer", "CUST-00001")
+sync_job = enqueue_sync_job(
+    sync_job_type="SAP Customer Sync",
+    source_doc=customer
+)
+
+# With target document object
+customer = frappe.get_doc("Customer", "CUST-00001")
+sap_customer = frappe.get_doc("SAP Customer", "SAP-001")
+sync_job = enqueue_sync_job(
+    sync_job_type="SAP Customer Sync",
+    source_doc=customer,
+    target_doc=sap_customer,
+    operation="Update"
 )
 
 # With context and options
 sync_job = enqueue_sync_job(
     sync_job_type="SAP Customer Sync",
-    source_doc_name="CUST-00001",
+    source_document_name="CUST-00001",
     context={"force_update": True, "batch_id": "BATCH-001"},
     operation="Update",  # Pre-specify operation
-    target_document_name="TARGET-001",  # Pre-specify target
+    target_document_type="SAP Customer",  # Pre-specify target type
+    target_document_name="TARGET-001",  # Pre-specify target name
     queue="long",  # Override queue
     timeout=600,  # Override timeout
     trigger_type="API"  # How job was triggered
@@ -222,7 +249,7 @@ frappe.call({
     method: 'tweaks.utils.sync_job.enqueue_sync_job',
     args: {
         sync_job_type: 'SAP Customer Sync',
-        source_doc_name: 'CUST-00001',
+        source_document_name: 'CUST-00001',
         context: {force_update: true}
     },
     callback: function(r) {
@@ -247,9 +274,10 @@ doc_events = {
 def sync_customer(doc, method):
     from tweaks.utils.sync_job import enqueue_sync_job
     
+    # Using document object directly
     enqueue_sync_job(
         sync_job_type="SAP Customer Sync",
-        source_doc_name=doc.name,
+        source_doc=doc,
         trigger_type="Document Hook"
     )
 ```
@@ -281,7 +309,7 @@ Pass custom data to your sync logic:
 ```python
 enqueue_sync_job(
     sync_job_type="SAP Customer Sync",
-    source_doc_name="CUST-00001",
+    source_document_name="CUST-00001",
     context={
         "force_update": True,
         "sync_addresses": True,
@@ -344,7 +372,7 @@ Jobs can be configured to run in dry run mode, which calculates the diff without
 # Enqueue job with dry run enabled
 sync_job = enqueue_sync_job(
     sync_job_type="SAP Customer Sync",
-    source_doc_name="CUST-00001",
+    source_document_name="CUST-00001",
     dry_run=True  # Calculate diff but don't save
 )
 
@@ -585,7 +613,7 @@ from tweaks.utils.sync_job import enqueue_sync_job
 
 sync_job = enqueue_sync_job(
     sync_job_type,              # Required: Sync Job Type name
-    source_doc_name,            # Required: Source document name
+    source_document_name,       # Required: Source document name
     context=None,               # Optional: Dict of context data
     operation=None,             # Optional: "Insert", "Update", or "Delete"
     target_document_name=None,  # Optional: Pre-specify target

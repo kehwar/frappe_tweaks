@@ -16,9 +16,13 @@ from frappe.utils import now
 @frappe.whitelist()
 def enqueue_sync_job(
     sync_job_type,
-    source_doc_name,
-    context=None,
+    source_doc=None,
+    source_document_type=None,
+    source_document_name=None,
     operation=None,
+    context=None,
+    target_doc=None,
+    target_document_type=None,
     target_document_name=None,
     parent_sync_job=None,
     queue=None,
@@ -34,9 +38,13 @@ def enqueue_sync_job(
 
     Args:
         sync_job_type: Name of Sync Job Type
-        source_doc_name: Name of source document
-        context: Optional context dictionary
+        source_doc: Optional source document object (extracts type and name from it)
+        source_document_type: Optional pre-specified source document type (overrides job type default)
+        source_document_name: Name of source document
         operation: Optional pre-specified operation (Insert/Update/Delete)
+        context: Optional context dictionary
+        target_doc: Optional target document object (extracts type and name from it)
+        target_document_type: Optional pre-specified target document type (overrides job type default)
         target_document_name: Optional pre-specified target document name
         parent_sync_job: Optional parent sync job name
         queue: Optional queue override
@@ -53,14 +61,36 @@ def enqueue_sync_job(
     # Get Sync Job Type
     job_type = frappe.get_doc("Sync Job Type", sync_job_type)
 
+    # Extract source info from source_doc if provided
+    if source_doc:
+        if not source_document_type:
+            source_document_type = source_doc.doctype
+        if not source_document_name and source_doc.name:
+            source_document_name = source_doc.name
+
+    # Use job_type default if source_document_type not specified
+    if not source_document_type:
+        source_document_type = job_type.source_document_type
+
+    # Extract target info from target_doc if provided
+    if target_doc:
+        if not target_document_type:
+            target_document_type = target_doc.doctype
+        if not target_document_name and target_doc.name:
+            target_document_name = target_doc.name
+
+    # Use job_type default if target_document_type not specified
+    if not target_document_type:
+        target_document_type = job_type.target_document_type
+
     # Create Sync Job document
     sync_job = frappe.get_doc(
         {
             "doctype": "Sync Job",
             "sync_job_type": sync_job_type,
-            "source_document_type": job_type.source_document_type,
-            "source_document_name": source_doc_name,
-            "target_document_type": job_type.target_document_type,
+            "source_document_type": source_document_type,
+            "source_document_name": source_document_name,
+            "target_document_type": target_document_type,
             "target_document_name": target_document_name,
             "operation": operation,
             "context": json.dumps(context) if context else None,

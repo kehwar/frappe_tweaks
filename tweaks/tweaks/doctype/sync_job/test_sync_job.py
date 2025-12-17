@@ -65,7 +65,7 @@ class TestSyncJob(FrappeTestCase):
 
         sync_job = enqueue_sync_job(
             sync_job_type="Test Customer Sync",
-            source_doc_name="Test Customer",
+            source_document_name="Test Customer",
             context={"test": "context"},
         )
 
@@ -84,7 +84,7 @@ class TestSyncJob(FrappeTestCase):
 
         sync_job = enqueue_sync_job(
             sync_job_type="Test Customer Sync",
-            source_doc_name="Test Customer",
+            source_document_name="Test Customer",
         )
 
         # Cancel job

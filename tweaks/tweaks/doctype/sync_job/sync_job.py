@@ -336,18 +336,26 @@ class SyncJob(Document, LogType):
                 return None, None, context
 
             elif len(targets) == 1:
-                target_doc = targets[0]["target_doc"]
-                operation = targets[0]["operation"]
-                context = targets[0].get("context", context)
+                target_info = targets[0]
+                operation = target_info["operation"]
+                target_document_type = target_info["target_document_type"]
+                target_document_name = target_info.get("target_document_name")
+                context = target_info.get("context", context)
                 
                 # Save target_document_type immediately
                 if not self.target_document_type:
-                    self.target_document_type = target_doc.doctype
+                    self.target_document_type = target_document_type
                 
                 # For updates/deletes, save target_document_name immediately
                 # For inserts, it will be set after save (may be auto-generated)
-                if operation.lower() != "insert" and target_doc:
-                    self.target_document_name = target_doc.name
+                if operation.lower() != "insert" and target_document_name:
+                    self.target_document_name = target_document_name
+                
+                # Load the actual document for processing
+                if operation.lower() == "insert":
+                    target_doc = frappe.new_doc(target_document_type)
+                else:
+                    target_doc = frappe.get_doc(target_document_type, target_document_name)
                 
                 return target_doc, operation, context
 
@@ -378,10 +386,12 @@ class SyncJob(Document, LogType):
         for target_info in targets:
             child_job = enqueue_sync_job(
                 sync_job_type=self.sync_job_type,
-                source_doc_name=self.source_document_name,
+                source_document_name=self.source_document_name,
+                source_document_type=self.source_document_type,
                 context=target_info.get("context", {}),
                 operation=target_info["operation"].title(),
-                target_document_name=target_info["target_doc"].name,
+                target_document_type=target_info["target_document_type"],
+                target_document_name=target_info.get("target_document_name"),
                 parent_sync_job=self.name,
                 queue=self.queue,
                 timeout=self.timeout,
@@ -394,7 +404,8 @@ class SyncJob(Document, LogType):
 
             child_jobs.append(
                 {
-                    "target_doc": target_info["target_doc"].name,
+                    "target_document_type": target_info["target_document_type"],
+                    "target_document_name": target_info.get("target_document_name"),
                     "operation": target_info["operation"],
                     "context": target_info.get("context", {}),
                     "sync_job": child_job.name,

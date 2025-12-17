@@ -36,6 +36,7 @@ from frappe.model.document import Document
 #
 # 	NOTE: This hook runs even in dry run mode.
 # 	NOTE: Avoid making database changes here - only query and return targets.
+# 	NOTE: Do not return the doc object itself, as this will be serialized to new jobs.
 #
 # 	Args:
 # 		sync_job: Sync Job document (contains operation, context, and flags)
@@ -43,7 +44,8 @@ from frappe.model.document import Document
 #
 # 	Returns:
 # 		List of dicts with keys:
-# 			target_doc: Target document
+# 			target_document_type: DocType name of target
+# 			target_document_name: Name of target document (None for insert operations)
 # 			operation: "insert", "update", or "delete"
 # 			context: Dict of context for this target (optional)
 # 	"""
