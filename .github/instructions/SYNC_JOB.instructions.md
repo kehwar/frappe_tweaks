@@ -319,7 +319,7 @@ enqueue_sync_job(
 
 # Access in controller
 def update_target_doc(sync_job, source_doc, target_doc):
-    context = json.loads(sync_job.context) if sync_job.context else {}
+    context = sync_job.get_context()
     if context.get("force_update"):
         # Force update logic
         pass
