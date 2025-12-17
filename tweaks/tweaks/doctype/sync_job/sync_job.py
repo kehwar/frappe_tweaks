@@ -28,6 +28,10 @@ class SyncJob(Document, LogType):
         diff_summary: DF.Code | None
         ended_at: DF.Datetime | None
         error_message: DF.LongText | None
+        ignore_diff: DF.Check
+        ignore_delete: DF.Check
+        ignore_insert: DF.Check
+        ignore_update: DF.Check
         job_id: DF.Data | None
         max_retries: DF.Int
         multiple_target_documents: DF.Code | None
@@ -40,7 +44,9 @@ class SyncJob(Document, LogType):
         source_doctype: DF.Link | None
         source_document_name: DF.DynamicLink | None
         started_at: DF.Datetime | None
-        status: DF.Literal["Queued", "Started", "Finished", "Failed", "Canceled"]
+        status: DF.Literal[
+            "Queued", "Started", "Finished", "Failed", "Canceled", "Skipped"
+        ]
         sync_job_type: DF.Link
         target_doctype: DF.Link | None
         target_document_name: DF.DynamicLink | None
@@ -339,6 +345,28 @@ def generate_sync(sync_job_name):
             if operation.lower() == "delete":
                 # Delete operation - skip field mapping
 
+                # Check if we should skip delete operations
+                if sync_job.get("ignore_delete", False):
+                    # Skip delete operation when ignore_delete is True
+                    sync_job.status = "Skipped"
+                    sync_job.ended_at = now()
+
+                    if sync_job.started_at and sync_job.ended_at:
+                        sync_job.time_taken = time_diff_in_seconds(
+                            sync_job.ended_at, sync_job.started_at
+                        )
+
+                    sync_job.save(ignore_permissions=True)
+                    frappe.db.commit()
+
+                    # Publish completion event
+                    frappe.publish_realtime(
+                        "sync_job_completed",
+                        {"sync_job": sync_job.name, "status": "Skipped"},
+                        after_commit=True,
+                    )
+                    return
+
                 # Capture current state before delete
                 if target_doc:
                     sync_job.current_data = target_doc.as_json()
@@ -363,6 +391,54 @@ def generate_sync(sync_job_name):
             else:
                 # Insert or Update operation
 
+                # Check if we should skip insert operations
+                if operation.lower() == "insert" and sync_job.get(
+                    "ignore_insert", False
+                ):
+                    # Skip insert operation when ignore_insert is True
+                    sync_job.status = "Skipped"
+                    sync_job.ended_at = now()
+
+                    if sync_job.started_at and sync_job.ended_at:
+                        sync_job.time_taken = time_diff_in_seconds(
+                            sync_job.ended_at, sync_job.started_at
+                        )
+
+                    sync_job.save(ignore_permissions=True)
+                    frappe.db.commit()
+
+                    # Publish completion event
+                    frappe.publish_realtime(
+                        "sync_job_completed",
+                        {"sync_job": sync_job.name, "status": "Skipped"},
+                        after_commit=True,
+                    )
+                    return
+
+                # Check if we should skip update operations
+                if operation.lower() == "update" and sync_job.get(
+                    "ignore_update", False
+                ):
+                    # Skip update operation when ignore_update is True
+                    sync_job.status = "Skipped"
+                    sync_job.ended_at = now()
+
+                    if sync_job.started_at and sync_job.ended_at:
+                        sync_job.time_taken = time_diff_in_seconds(
+                            sync_job.ended_at, sync_job.started_at
+                        )
+
+                    sync_job.save(ignore_permissions=True)
+                    frappe.db.commit()
+
+                    # Publish completion event
+                    frappe.publish_realtime(
+                        "sync_job_completed",
+                        {"sync_job": sync_job.name, "status": "Skipped"},
+                        after_commit=True,
+                    )
+                    return
+
                 # Capture current state for existing docs
                 if target_doc and not target_doc.is_new():
                     target_doc.get_latest()
@@ -378,6 +454,32 @@ def generate_sync(sync_job_name):
 
                 # Get diff after mapping but before saving
                 diff = target_doc.get_diff() if not target_doc.is_new() else {}
+
+                # Check if we should skip update with no diff
+                if (
+                    operation.lower() == "update"
+                    and sync_job.get("ignore_diff", False)
+                    and not diff
+                ):
+                    # Skip update operation when ignore_diff is True and no changes
+                    sync_job.status = "Skipped"
+                    sync_job.ended_at = now()
+
+                    if sync_job.started_at and sync_job.ended_at:
+                        sync_job.time_taken = time_diff_in_seconds(
+                            sync_job.ended_at, sync_job.started_at
+                        )
+
+                    sync_job.save(ignore_permissions=True)
+                    frappe.db.commit()
+
+                    # Publish completion event
+                    frappe.publish_realtime(
+                        "sync_job_completed",
+                        {"sync_job": sync_job.name, "status": "Skipped"},
+                        after_commit=True,
+                    )
+                    return
 
                 # Call before_sync hook
                 if hasattr(module, "before_sync"):

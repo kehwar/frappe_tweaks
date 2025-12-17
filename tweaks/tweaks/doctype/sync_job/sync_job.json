@@ -36,6 +36,11 @@
   "max_retries",
   "retry_count",
   "retry_after",
+  "column_break_ewsh",
+  "ignore_insert",
+  "ignore_update",
+  "ignore_diff",
+  "ignore_delete",
   "section_break_execution",
   "trigger_type",
   "job_id",
@@ -83,7 +88,7 @@
    "in_standard_filter": 1,
    "label": "Status",
    "no_copy": 1,
-   "options": "Queued\nStarted\nFinished\nFailed\nCanceled",
+   "options": "Queued\nStarted\nFinished\nFailed\nCanceled\nSkipped",
    "read_only": 1
   },
   {
@@ -188,6 +193,38 @@
    "fieldtype": "Datetime",
    "label": "Retry After",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "If checked and operation is Insert, job will finish with status Skipped",
+   "fieldname": "ignore_insert",
+   "fieldtype": "Check",
+   "label": "Ignore Insert",
+   "set_only_once": 1
+  },
+  {
+   "default": "0",
+   "description": "If checked and operation is Update, job will finish with status Skipped",
+   "fieldname": "ignore_update",
+   "fieldtype": "Check",
+   "label": "Ignore Update",
+   "set_only_once": 1
+  },
+  {
+   "default": "0",
+   "description": "If checked and operation is Delete, job will finish with status Skipped",
+   "fieldname": "ignore_delete",
+   "fieldtype": "Check",
+   "label": "Ignore Delete",
+   "set_only_once": 1
+  },
+  {
+   "default": "0",
+   "description": "If checked and operation is Update with no diff, job will finish with status Skipped",
+   "fieldname": "ignore_diff",
+   "fieldtype": "Check",
+   "label": "Ignore Diff",
+   "set_only_once": 1
   },
   {
    "description": "Extra context payload for sync job (JSON)",
@@ -314,11 +351,15 @@
   {
    "fieldname": "column_break_yndn",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_ewsh",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-16 22:07:57.954032",
+ "modified": "2025-12-16 23:35:39.009719",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Sync Job",
