@@ -61,15 +61,15 @@ class SyncJob(Document, LogType):
         updated_data: DF.Code | None
     # end: auto-generated types
 
+    def before_validate(self):
+        """Set title before validation"""
+        self.title = self.generate_title()
+
     def before_insert(self):
         """Set defaults before inserting"""
         # Set default status
         if not self.status:
             self.status = "Pending"
-
-        # Auto-generate title
-        if not self.title:
-            self.title = f"{self.source_document_type} : {self.source_document_name}"[:140]
 
         # Validate context JSON
         if self.context:
@@ -97,6 +97,24 @@ class SyncJob(Document, LogType):
                 self.retry_delay = job_type.retry_delay or 5
             if self.max_retries is None:
                 self.max_retries = job_type.max_retries or 3
+
+    def generate_title(self):
+        """
+        Generate title for sync job.
+        
+        Format:
+        - If target: source_document_type > target_document_type: target_document_name
+        - If no target: source_document_type: source_document_name
+        
+        Returns:
+            str: Generated title (max 140 chars)
+        """        
+        # Has target
+        if self.target_document_type and self.target_document_name:
+            return f"{self.source_document_type} > {self.target_document_type}: {self.target_document_name}"[:140]
+        
+        # No target - use source only
+        return f"{self.source_document_type}: {self.source_document_name}"[:140]
 
     def after_insert(self):
         """Enqueue sync job after insert if queue_on_insert is enabled"""
