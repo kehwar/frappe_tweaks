@@ -58,17 +58,6 @@ frappe.ui.form.on('Sync Job', {
 
         // Set indicator colors
         frm.page.set_indicator(__('Status: {0}', [frm.doc.status]), get_status_color(frm.doc.status))
-
-        // Make fields read-only after insert
-        if (!frm.is_new()) {
-            frm.set_df_property('sync_job_type', 'read_only', 1)
-            frm.set_df_property('source_doctype', 'read_only', 1)
-            frm.set_df_property('source_document_name', 'read_only', 1)
-            frm.set_df_property('target_doctype', 'read_only', 1)
-            frm.set_df_property('target_document_name', 'read_only', 1)
-            frm.set_df_property('operation', 'read_only', 1)
-            frm.set_df_property('context', 'read_only', 1)
-        }
     },
 })
 

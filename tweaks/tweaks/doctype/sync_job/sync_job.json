@@ -1,7 +1,6 @@
 {
  "actions": [],
- "allow_rename": 1,
- "autoname": "format:SYNC-{YYYY}-{#####}",
+ "autoname": "hash",
  "creation": "2025-12-16 00:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -14,9 +13,21 @@
   "column_break_1",
   "source_doctype",
   "source_document_name",
+  "operation",
+  "column_break_yndn",
   "target_doctype",
   "target_document_name",
-  "operation",
+  "context",
+  "section_break_diff",
+  "diff_summary",
+  "section_break_snapshots",
+  "current_data",
+  "column_break_5",
+  "updated_data",
+  "section_break_results",
+  "error_message",
+  "multiple_target_documents",
+  "cancel_reason",
   "section_break_config",
   "queue",
   "timeout",
@@ -25,25 +36,13 @@
   "max_retries",
   "retry_count",
   "retry_after",
-  "section_break_data",
-  "context",
-  "multiple_target_documents",
-  "section_break_snapshots",
-  "current_data",
-  "column_break_5",
-  "updated_data",
-  "section_break_diff",
-  "diff_summary",
   "section_break_execution",
   "trigger_type",
   "job_id",
   "column_break_6",
   "started_at",
   "ended_at",
-  "time_taken",
-  "section_break_results",
-  "error_message",
-  "cancel_reason"
+  "time_taken"
  ],
  "fields": [
   {
@@ -58,7 +57,8 @@
    "in_standard_filter": 1,
    "label": "Sync Job Type",
    "options": "Sync Job Type",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "parent_sync_job",
@@ -82,6 +82,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
+   "no_copy": 1,
    "options": "Queued\nStarted\nFinished\nFailed\nCanceled",
    "read_only": 1
   },
@@ -104,7 +105,8 @@
    "fieldtype": "Dynamic Link",
    "label": "Source Document",
    "options": "source_doctype",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fetch_from": "sync_job_type.target_doctype",
@@ -112,6 +114,7 @@
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Target DocType",
+   "no_copy": 1,
    "options": "DocType",
    "read_only": 1
   },
@@ -119,6 +122,7 @@
    "fieldname": "target_document_name",
    "fieldtype": "Dynamic Link",
    "label": "Target Document",
+   "no_copy": 1,
    "options": "target_doctype",
    "read_only": 1
   },
@@ -126,6 +130,7 @@
    "fieldname": "operation",
    "fieldtype": "Select",
    "label": "Operation",
+   "no_copy": 1,
    "options": "\nInsert\nUpdate\nDelete",
    "read_only": 1
   },
@@ -147,7 +152,8 @@
    "fetch_from": "sync_job_type.timeout",
    "fieldname": "timeout",
    "fieldtype": "Int",
-   "label": "Timeout"
+   "label": "Timeout",
+   "set_only_once": 1
   },
   {
    "fieldname": "column_break_3",
@@ -158,14 +164,16 @@
    "fetch_from": "sync_job_type.retry_delay",
    "fieldname": "retry_delay",
    "fieldtype": "Int",
-   "label": "Retry Delay"
+   "label": "Retry Delay",
+   "set_only_once": 1
   },
   {
    "description": "Maximum retry attempts",
    "fetch_from": "sync_job_type.max_retries",
    "fieldname": "max_retries",
    "fieldtype": "Int",
-   "label": "Max Retries"
+   "label": "Max Retries",
+   "set_only_once": 1
   },
   {
    "default": "0",
@@ -182,26 +190,22 @@
    "read_only": 1
   },
   {
-   "fieldname": "section_break_data",
-   "fieldtype": "Section Break",
-   "label": "Job Data"
-  },
-  {
    "description": "Extra context payload for sync job (JSON)",
    "fieldname": "context",
-   "fieldtype": "Code",
+   "fieldtype": "JSON",
    "label": "Context",
-   "options": "JSON"
+   "set_only_once": 1
   },
   {
    "description": "Array of spawned child jobs when multiple targets",
    "fieldname": "multiple_target_documents",
-   "fieldtype": "Code",
+   "fieldtype": "JSON",
    "label": "Multiple Target Documents",
-   "options": "JSON",
+   "no_copy": 1,
    "read_only": 1
   },
   {
+   "collapsible": 1,
    "fieldname": "section_break_snapshots",
    "fieldtype": "Section Break",
    "label": "Data Snapshots"
@@ -209,9 +213,9 @@
   {
    "description": "Target document state before sync",
    "fieldname": "current_data",
-   "fieldtype": "Code",
+   "fieldtype": "JSON",
    "label": "Current Data",
-   "options": "JSON",
+   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -221,12 +225,13 @@
   {
    "description": "Target document state after sync",
    "fieldname": "updated_data",
-   "fieldtype": "Code",
+   "fieldtype": "JSON",
    "label": "Updated Data",
-   "options": "JSON",
+   "no_copy": 1,
    "read_only": 1
   },
   {
+   "collapsible": 1,
    "fieldname": "section_break_diff",
    "fieldtype": "Section Break",
    "label": "Differences"
@@ -234,9 +239,9 @@
   {
    "description": "Version-format diff between current and updated data",
    "fieldname": "diff_summary",
-   "fieldtype": "Code",
+   "fieldtype": "JSON",
    "label": "Diff Summary",
-   "options": "JSON",
+   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -249,18 +254,21 @@
    "fieldname": "job_id",
    "fieldtype": "Data",
    "label": "Job ID",
+   "no_copy": 1,
    "read_only": 1
   },
   {
    "fieldname": "started_at",
    "fieldtype": "Datetime",
    "label": "Started At",
+   "no_copy": 1,
    "read_only": 1
   },
   {
    "fieldname": "ended_at",
    "fieldtype": "Datetime",
    "label": "Ended At",
+   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -271,6 +279,7 @@
    "fieldname": "time_taken",
    "fieldtype": "Duration",
    "label": "Time Taken",
+   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -292,22 +301,28 @@
    "fieldname": "error_message",
    "fieldtype": "Long Text",
    "label": "Error Message",
+   "no_copy": 1,
    "read_only": 1
   },
   {
    "fieldname": "cancel_reason",
    "fieldtype": "Long Text",
    "label": "Cancel Reason",
+   "no_copy": 1,
    "read_only": 1
+  },
+  {
+   "fieldname": "column_break_yndn",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-16 21:17:34.195267",
+ "modified": "2025-12-16 22:07:57.954032",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Sync Job",
- "naming_rule": "Expression",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [
   {
@@ -324,8 +339,10 @@
   }
  ],
  "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
+ "title_field": "title",
  "track_changes": 1
 }

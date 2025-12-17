@@ -61,7 +61,7 @@ class SyncJob(Document, LogType):
 
         # Auto-generate title
         if not self.title:
-            self.title = f"{self.source_doctype}:{self.source_document_name}"
+            self.title = f"{self.source_doctype} : {self.source_document_name}"[:140]
 
         # Validate context JSON
         if self.context:
@@ -168,18 +168,17 @@ def update_job_id(sync_job_name):
 
     job = get_current_job()
 
-    frappe.db.set_value(
-        "Sync Job",
-        sync_job_name,
+    sync_job = frappe.get_doc("Sync Job", sync_job_name)
+    sync_job.db_set(
         {
             "job_id": job and job.id,
             "status": "Started",
             "started_at": now(),
         },
         update_modified=False,
+        notify=True,
+        commit=True,
     )
-
-    frappe.db.commit()
 
 
 def generate_sync(sync_job_name):
@@ -408,7 +407,7 @@ def generate_sync(sync_job_name):
                 sync_job.target_document_name = target_doc.name
 
         # Save results
-        sync_job.diff_summary = frappe.as_json(diff)
+        sync_job.diff_summary = frappe.as_json(diff or {})
         sync_job.operation = operation.title()
         sync_job.status = "Finished"
         sync_job.ended_at = now()
