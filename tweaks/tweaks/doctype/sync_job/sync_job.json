@@ -32,6 +32,7 @@
   "queue",
   "timeout",
   "queue_on_insert",
+  "dry_run",
   "column_break_3",
   "retry_delay",
   "max_retries",
@@ -243,6 +244,13 @@
    "set_only_once": 1
   },
   {
+   "default": "0",
+   "fieldname": "dry_run",
+   "fieldtype": "Check",
+   "label": "Dry Run",
+   "set_only_once": 1
+  },
+  {
    "description": "Extra context payload for sync job (JSON)",
    "fieldname": "context",
    "fieldtype": "JSON",
@@ -375,7 +383,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-17 09:39:59.763621",
+ "modified": "2025-12-17 10:23:26.447853",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Sync Job",

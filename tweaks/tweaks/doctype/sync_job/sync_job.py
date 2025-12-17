@@ -32,6 +32,7 @@ class SyncJob(Document, LogType):
         update_enabled: DF.Check
         delete_enabled: DF.Check
         update_without_changes_enabled: DF.Check
+        dry_run: DF.Check
         job_id: DF.Data | None
         max_retries: DF.Int
         multiple_target_documents: DF.Code | None
@@ -456,6 +457,10 @@ class SyncJob(Document, LogType):
 
         # Get diff after mapping but before saving
         diff = target_doc.get_diff() if not target_doc.is_new() else {}
+
+        # Dry run mode: finish without saving
+        if self.get("dry_run"):
+            return diff
 
         # Skip update if no changes detected (unless update_without_changes_enabled is True to force update anyway)
         if operation.lower() == "update" and not self.get("update_without_changes_enabled", False) and not diff:

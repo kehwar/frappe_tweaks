@@ -336,6 +336,35 @@ sync_job = frappe.get_doc("Sync Job", job_name)
 sync_job.cancel_sync(reason="No longer needed")
 ```
 
+### Dry Run Mode
+
+Jobs can be configured to run in dry run mode, which calculates the diff without actually saving any changes:
+
+```python
+# Enqueue job with dry run enabled
+sync_job = enqueue_sync_job(
+    sync_job_type="SAP Customer Sync",
+    source_doc_name="CUST-00001",
+    dry_run=True  # Calculate diff but don't save
+)
+
+# After execution, job will have status "Finished"
+# Review the diff_summary field to see what changes would be made
+```
+
+**Use dry run mode when:**
+- Testing sync configurations before applying them
+- Validating what changes will be made without committing them
+- Auditing sync operations
+- Debugging sync logic
+
+**How it works:**
+1. Job executes normally until the diff is calculated
+2. The `diff_summary` field is populated with proposed changes
+3. Job skips the save operation and all hooks (before_sync, after_sync)
+4. Status is set to "Finished" without making any actual changes
+5. You can review the diff to see what would have happened
+
 ## Advanced Features
 
 ### Parent-Child Jobs
@@ -565,7 +594,8 @@ sync_job = enqueue_sync_job(
     timeout=None,               # Optional: Override timeout
     retry_delay=None,           # Optional: Override retry delay
     max_retries=None,           # Optional: Override max retries
-    trigger_type="Manual"       # Optional: Trigger source
+    trigger_type="Manual",      # Optional: Trigger source
+    dry_run=False               # Optional: Calculate diff without saving
 )
 ```
 

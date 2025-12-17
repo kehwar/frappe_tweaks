@@ -27,6 +27,7 @@ def enqueue_sync_job(
     max_retries=None,
     trigger_type="Manual",
     queue_on_insert=True,
+    dry_run=False,
 ):
     """
     Create and enqueue a sync job
@@ -44,6 +45,7 @@ def enqueue_sync_job(
         max_retries: Optional max retries override
         trigger_type: How the job was triggered (default: Manual)
         queue_on_insert: Whether to queue job on insert (default: True)
+        dry_run: Whether to calculate diff only without saving (default: False)
 
     Returns:
         Sync Job document
@@ -69,6 +71,7 @@ def enqueue_sync_job(
             "max_retries": max_retries or job_type.max_retries,
             "trigger_type": trigger_type,
             "queue_on_insert": queue_on_insert,
+            "dry_run": dry_run,
         }
     )
 
