@@ -215,7 +215,7 @@ class SyncJob(Document, LogType):
         """Execute the sync job"""
         try:
             # Load components
-            source_doc = self._load_source_document()
+            source_doc = self.get_source_document()
             context = self.get_context()
             module = self._load_and_validate_module()
 
@@ -237,9 +237,13 @@ class SyncJob(Document, LogType):
         except Exception as e:
             self._handle_error(e)
 
-    def _load_source_document(self):
+    def get_source_document(self):
         """Load source document"""
         return frappe.get_doc(self.source_document_type, self.source_document_name)
+
+    def get_target_document(self):
+        """Load target document"""
+        return frappe.get_doc(self.target_document_type, self.target_document_name)
 
     def get_context(self):
         """Parse JSON context"""
