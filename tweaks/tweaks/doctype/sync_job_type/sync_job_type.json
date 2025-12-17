@@ -72,8 +72,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Target DocType",
-   "options": "DocType",
-   "reqd": 1
+   "options": "DocType"
   },
   {
    "collapsible": 1,
@@ -117,7 +116,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-16 16:31:25.780732",
+ "modified": "2025-12-17 00:33:20.693737",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Sync Job Type",
