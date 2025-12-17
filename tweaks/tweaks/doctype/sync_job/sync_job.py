@@ -99,7 +99,7 @@ class SyncJob(Document, LogType):
     def after_insert(self):
         """Enqueue sync job after insert"""
         enqueue(
-            generate_sync,
+            execute_sync_job,
             queue=self.queue or "default",
             timeout=self.timeout or 300,
             sync_job_name=self.name,
@@ -153,7 +153,7 @@ class SyncJob(Document, LogType):
 
         # Re-enqueue
         enqueue(
-            generate_sync,
+            execute_sync_job,
             queue=self.queue or "default",
             timeout=self.timeout or 300,
             sync_job_name=self.name,
@@ -167,54 +167,65 @@ class SyncJob(Document, LogType):
             table, filters=(table.modified < (Now() - Interval(days=days)))
         )
 
+    def update_job_id(self):
+        """Update job_id when job starts running"""
+        from rq import get_current_job
 
-def update_job_id(sync_job_name):
-    """Update job_id when job starts running"""
-    from rq import get_current_job
+        job = get_current_job()
 
-    job = get_current_job()
-
-    sync_job = frappe.get_doc("Sync Job", sync_job_name)
-    sync_job.db_set(
-        {
-            "job_id": job and job.id,
-            "status": "Started",
-            "started_at": now(),
-        },
-        update_modified=False,
-        notify=True,
-        commit=True,
-    )
-
-
-def generate_sync(sync_job_name):
-    """
-    Execute sync job (runs in background)
-
-    Args:
-        sync_job_name: Name of Sync Job document
-    """
-
-    update_job_id(sync_job_name)
-
-    sync_job = frappe.get_doc("Sync Job", sync_job_name)
-    job_type = frappe.get_doc("Sync Job Type", sync_job.sync_job_type)
-
-    try:
-        # Load source document
-        source_doc = frappe.get_doc(
-            sync_job.source_doctype, sync_job.source_document_name
+        self.db_set(
+            {
+                "job_id": job and job.id,
+                "status": "Started",
+                "started_at": now(),
+            },
+            update_modified=False,
+            notify=True,
+            commit=True,
         )
 
-        # Parse JSON fields
-        context = json.loads(sync_job.context) if sync_job.context else {}
+    def execute(self):
+        """Execute the sync job"""
+        try:
+            # Load components
+            source_doc = self._load_source_document()
+            context = self._parse_context()
+            module = self._load_and_validate_module()
 
-        # Load sync job module
+            # Execute based on mode
+            has_execute = hasattr(module, "execute")
+            if has_execute:
+                target_doc, operation, diff = self._execute_bypass_mode(
+                    module, source_doc, context
+                )
+            else:
+                target_doc, operation, diff = self._execute_standard_mode(
+                    module, source_doc, context
+                )
+
+            # Finalize
+            if target_doc is not None:
+                self._finalize_sync(target_doc, operation, diff)
+
+        except Exception as e:
+            self._handle_error(e)
+
+    def _load_source_document(self):
+        """Load source document"""
+        return frappe.get_doc(self.source_doctype, self.source_document_name)
+
+    def _parse_context(self):
+        """Parse JSON context"""
+        return json.loads(self.context) if self.context else {}
+
+    def _load_and_validate_module(self):
+        """Load and validate sync job module"""
         from tweaks.utils.sync_job import (
             get_sync_job_module_dotted_path,
             validate_sync_job_module,
         )
 
+        job_type = frappe.get_doc("Sync Job Type", self.sync_job_type)
         module_path = get_sync_job_module_dotted_path(job_type.module, job_type.name)
         module = frappe.get_module(module_path)
 
@@ -223,303 +234,277 @@ def generate_sync(sync_job_name):
             validate_sync_job_module(module, soft=False)
         except Exception as e:
             # Module validation error - don't increment retry_count
-            sync_job.status = "Failed"
-            sync_job.error_message = _("Module validation failed: {0}").format(str(e))
-            sync_job.ended_at = now()
-            sync_job.save(ignore_permissions=True)
+            self.status = "Failed"
+            self.error_message = _("Module validation failed: {0}").format(str(e))
+            self.ended_at = now()
+            self.save(ignore_permissions=True)
             frappe.db.commit()
-            return
+            raise
 
-        # Check execution mode
-        has_execute = hasattr(module, "execute")
+        return module
 
-        if has_execute:
-            # BYPASS MODE
-            result = module.execute(sync_job, source_doc, context)
-            target_doc = result["target_doc"]
-            operation = result["operation"]
-            diff = result.get("diff", {})
+    def _execute_bypass_mode(self, module, source_doc, context):
+        """Execute in bypass mode"""
+        result = module.execute(self, source_doc, context)
+        return result["target_doc"], result["operation"], result.get("diff", {})
 
+    def _execute_standard_mode(self, module, source_doc, context):
+        """Execute in standard mode"""
+        # Determine target document and operation
+        if self.target_document_name:
+            target_doc, operation = self._get_predefined_target()
         else:
-            # STANDARD MODE
-
-            # Determine target document and operation
-            if sync_job.target_document_name:
-                # Pre-specified target
-                if not sync_job.operation:
-                    frappe.throw(
-                        _(
-                            "Operation must be specified when target_document_name is provided"
-                        )
-                    )
-
-                target_doc = frappe.get_doc(
-                    sync_job.target_doctype, sync_job.target_document_name
-                )
-                operation = sync_job.operation.lower()
-
-            else:
-                # Discover target(s)
-                has_multiple = hasattr(module, "get_multiple_target_documents")
-
-                if has_multiple:
-                    # Check for multiple targets
-                    targets = module.get_multiple_target_documents(
-                        sync_job, source_doc
-                    )
-
-                    if len(targets) > 1:
-                        # Spawn child jobs
-                        from tweaks.utils.sync_job import enqueue_sync_job
-
-                        child_jobs = []
-                        for target_info in targets:
-                            child_job = enqueue_sync_job(
-                                sync_job_type=sync_job.sync_job_type,
-                                source_doc_name=sync_job.source_document_name,
-                                context=target_info.get("context", {}),
-                                operation=target_info["operation"].title(),
-                                target_document_name=target_info["target_doc"].name,
-                                parent_sync_job=sync_job.name,
-                                queue=sync_job.queue,
-                                timeout=sync_job.timeout,
-                                retry_delay=sync_job.retry_delay,
-                                max_retries=sync_job.max_retries,
-                            )
-
-                            child_jobs.append(
-                                {
-                                    "target_doc": target_info["target_doc"].name,
-                                    "operation": target_info["operation"],
-                                    "context": target_info.get("context", {}),
-                                    "sync_job": child_job.name,
-                                }
-                            )
-
-                        # Store child job references
-                        sync_job.multiple_target_documents = frappe.as_json(child_jobs)
-                        sync_job.status = "Finished"
-                        sync_job.ended_at = now()
-                        sync_job.save(ignore_permissions=True)
-                        frappe.db.commit()
-
-                        # Publish completion event
-                        frappe.publish_realtime(
-                            "sync_job_completed",
-                            {
-                                "sync_job": sync_job.name,
-                                "status": "Finished",
-                                "children": len(child_jobs),
-                            },
-                            after_commit=True,
-                        )
-                        return
-
-                    elif len(targets) == 1:
-                        # Single target from get_multiple
-                        target_doc = targets[0]["target_doc"]
-                        operation = targets[0]["operation"]
-                        context = targets[0].get("context", context)
-
-                    else:
-                        # No targets found
-                        sync_job.status = "Finished"
-                        sync_job.ended_at = now()
-                        sync_job.save(ignore_permissions=True)
-                        frappe.db.commit()
-                        return
-
-                else:
-                    # Single target
-                    target_doc, operation = module.get_target_document(
-                        sync_job, source_doc
-                    )
-
-            # Execute sync based on operation
-            if operation.lower() == "delete":
-                # Delete operation - skip field mapping
-
-                # Check if we should skip delete operations
-                if sync_job.get("ignore_delete", False):
-                    # Skip delete operation when ignore_delete is True
-                    sync_job.status = "Skipped"
-                    sync_job.ended_at = now()
-
-                    if sync_job.started_at and sync_job.ended_at:
-                        sync_job.time_taken = time_diff_in_seconds(
-                            sync_job.ended_at, sync_job.started_at
-                        )
-
-                    sync_job.save(ignore_permissions=True)
-                    frappe.db.commit()
-
-                    # Publish completion event
-                    frappe.publish_realtime(
-                        "sync_job_completed",
-                        {"sync_job": sync_job.name, "status": "Skipped"},
-                        after_commit=True,
-                    )
-                    return
-
-                # Capture current state before delete
-                if target_doc:
-                    sync_job.current_data = target_doc.as_json()
-
-                # Call before_sync hook
-                if hasattr(module, "before_sync"):
-                    module.before_sync(sync_job, source_doc, target_doc)
-
-                # Delete document
-                target_doc.delete(ignore_permissions=True)
-
-                # Call after_sync hook
-                if hasattr(module, "after_sync"):
-                    module.after_sync(sync_job, source_doc, target_doc)
-
-                diff = {}
-
-            else:
-                # Insert or Update operation
-
-                # Check if we should skip insert operations
-                if operation.lower() == "insert" and sync_job.get(
-                    "ignore_insert", False
-                ):
-                    # Skip insert operation when ignore_insert is True
-                    sync_job.status = "Skipped"
-                    sync_job.ended_at = now()
-
-                    if sync_job.started_at and sync_job.ended_at:
-                        sync_job.time_taken = time_diff_in_seconds(
-                            sync_job.ended_at, sync_job.started_at
-                        )
-
-                    sync_job.save(ignore_permissions=True)
-                    frappe.db.commit()
-
-                    # Publish completion event
-                    frappe.publish_realtime(
-                        "sync_job_completed",
-                        {"sync_job": sync_job.name, "status": "Skipped"},
-                        after_commit=True,
-                    )
-                    return
-
-                # Check if we should skip update operations
-                if operation.lower() == "update" and sync_job.get(
-                    "ignore_update", False
-                ):
-                    # Skip update operation when ignore_update is True
-                    sync_job.status = "Skipped"
-                    sync_job.ended_at = now()
-
-                    if sync_job.started_at and sync_job.ended_at:
-                        sync_job.time_taken = time_diff_in_seconds(
-                            sync_job.ended_at, sync_job.started_at
-                        )
-
-                    sync_job.save(ignore_permissions=True)
-                    frappe.db.commit()
-
-                    # Publish completion event
-                    frappe.publish_realtime(
-                        "sync_job_completed",
-                        {"sync_job": sync_job.name, "status": "Skipped"},
-                        after_commit=True,
-                    )
-                    return
-
-                # Capture current state for existing docs
-                if target_doc and not target_doc.is_new():
-                    target_doc.get_latest()
-                    sync_job.current_data = target_doc.as_json()
-
-                # Update target document
-                module.update_target_doc(sync_job, source_doc, target_doc)
-
-                # Get diff after mapping but before saving
-                diff = target_doc.get_diff() if not target_doc.is_new() else {}
-
-                # Check if we should skip update with no diff
-                if (
-                    operation.lower() == "update"
-                    and sync_job.get("ignore_diff", False)
-                    and not diff
-                ):
-                    # Skip update operation when ignore_diff is True and no changes
-                    sync_job.status = "Skipped"
-                    sync_job.ended_at = now()
-
-                    if sync_job.started_at and sync_job.ended_at:
-                        sync_job.time_taken = time_diff_in_seconds(
-                            sync_job.ended_at, sync_job.started_at
-                        )
-
-                    sync_job.save(ignore_permissions=True)
-                    frappe.db.commit()
-
-                    # Publish completion event
-                    frappe.publish_realtime(
-                        "sync_job_completed",
-                        {"sync_job": sync_job.name, "status": "Skipped"},
-                        after_commit=True,
-                    )
-                    return
-
-                # Call before_sync hook
-                if hasattr(module, "before_sync"):
-                    module.before_sync(sync_job, source_doc, target_doc)
-
-                # Save document
-                target_doc.flags.ignore_permissions = True
-                target_doc.flags.ignore_links = True
-                target_doc.save()
-
-                # Call after_sync hook
-                if hasattr(module, "after_sync"):
-                    module.after_sync(sync_job, source_doc, target_doc)
-
-                # Capture updated state
-                sync_job.updated_data = target_doc.as_json()
-                sync_job.target_document_name = target_doc.name
-
-        # Save results
-        sync_job.diff_summary = frappe.as_json(diff or {})
-        sync_job.operation = operation.title()
-        sync_job.status = "Finished"
-        sync_job.ended_at = now()
-
-        if sync_job.started_at and sync_job.ended_at:
-            sync_job.time_taken = time_diff_in_seconds(
-                sync_job.ended_at, sync_job.started_at
+            target_doc, operation, context = self._discover_target(
+                module, source_doc, context
             )
 
-        sync_job.save(ignore_permissions=True)
+        if target_doc is None:
+            # No target found or multiple targets handled
+            return None, None, None
+
+        # Execute based on operation
+        if operation.lower() == "delete":
+            diff = self._execute_delete_operation(module, source_doc, target_doc)
+        else:
+            diff = self._execute_insert_update_operation(
+                module, source_doc, target_doc, operation
+            )
+
+        return target_doc, operation, diff
+
+    def _get_predefined_target(self):
+        """Get pre-specified target document"""
+        if not self.operation:
+            frappe.throw(
+                _("Operation must be specified when target_document_name is provided")
+            )
+
+        target_doc = frappe.get_doc(self.target_doctype, self.target_document_name)
+        return target_doc, self.operation.lower()
+
+    def _discover_target(self, module, source_doc, context):
+        """Discover target document(s)"""
+        has_multiple = hasattr(module, "get_multiple_target_documents")
+
+        if has_multiple:
+            targets = module.get_multiple_target_documents(self, source_doc)
+
+            if len(targets) > 1:
+                self._handle_multiple_targets(targets)
+                return None, None, context
+
+            elif len(targets) == 1:
+                target_doc = targets[0]["target_doc"]
+                operation = targets[0]["operation"]
+                context = targets[0].get("context", context)
+                return target_doc, operation, context
+
+            else:
+                # No targets found
+                self._finish_with_no_targets()
+                return None, None, context
+
+        else:
+            target_doc, operation = module.get_target_document(self, source_doc)
+            return target_doc, operation, context
+
+    def _handle_multiple_targets(self, targets):
+        """Handle multiple target documents by spawning child jobs"""
+        from tweaks.utils.sync_job import enqueue_sync_job
+
+        child_jobs = []
+        for target_info in targets:
+            child_job = enqueue_sync_job(
+                sync_job_type=self.sync_job_type,
+                source_doc_name=self.source_document_name,
+                context=target_info.get("context", {}),
+                operation=target_info["operation"].title(),
+                target_document_name=target_info["target_doc"].name,
+                parent_sync_job=self.name,
+                queue=self.queue,
+                timeout=self.timeout,
+                retry_delay=self.retry_delay,
+                max_retries=self.max_retries,
+            )
+
+            child_jobs.append(
+                {
+                    "target_doc": target_info["target_doc"].name,
+                    "operation": target_info["operation"],
+                    "context": target_info.get("context", {}),
+                    "sync_job": child_job.name,
+                }
+            )
+
+        # Store child job references
+        self.multiple_target_documents = frappe.as_json(child_jobs)
+        self.status = "Finished"
+        self.ended_at = now()
+        self.save(ignore_permissions=True)
         frappe.db.commit()
 
         # Publish completion event
         frappe.publish_realtime(
             "sync_job_completed",
-            {"sync_job": sync_job.name, "status": "Finished"},
+            {
+                "sync_job": self.name,
+                "status": "Finished",
+                "children": len(child_jobs),
+            },
             after_commit=True,
         )
 
-    except Exception as e:
-        # Handle errors
-        sync_job.status = "Failed"
-        sync_job.error_message = frappe.get_traceback(with_context=True)
-        sync_job.ended_at = now()
+    def _finish_with_no_targets(self):
+        """Finish sync job when no targets found"""
+        self.status = "Finished"
+        self.ended_at = now()
+        self.save(ignore_permissions=True)
+        frappe.db.commit()
+
+    def _execute_delete_operation(self, module, source_doc, target_doc):
+        """Execute delete operation"""
+        # Check if we should skip delete operations
+        if self.get("ignore_delete", False):
+            self._finish_as_skipped()
+            return {}
+
+        # Capture current state before delete
+        if target_doc:
+            self.current_data = target_doc.as_json()
+
+        # Call before_sync hook
+        if hasattr(module, "before_sync"):
+            module.before_sync(self, source_doc, target_doc)
+
+        # Delete document
+        target_doc.delete(ignore_permissions=True)
+
+        # Call after_sync hook
+        if hasattr(module, "after_sync"):
+            module.after_sync(self, source_doc, target_doc)
+
+        return {}
+
+    def _execute_insert_update_operation(self, module, source_doc, target_doc, operation):
+        """Execute insert or update operation"""
+        # Check if we should skip based on operation type
+        if operation.lower() == "insert" and self.get("ignore_insert", False):
+            self._finish_as_skipped()
+            return {}
+
+        if operation.lower() == "update" and self.get("ignore_update", False):
+            self._finish_as_skipped()
+            return {}
+
+        # Capture current state for existing docs
+        if target_doc and not target_doc.is_new():
+            target_doc.get_latest()
+            self.current_data = target_doc.as_json()
+
+        # Update target document
+        module.update_target_doc(self, source_doc, target_doc)
+
+        # Get diff after mapping but before saving
+        diff = target_doc.get_diff() if not target_doc.is_new() else {}
+
+        # Check if we should skip update with no diff
+        if operation.lower() == "update" and self.get("ignore_diff", False) and not diff:
+            self._finish_as_skipped()
+            return {}
+
+        # Call before_sync hook
+        if hasattr(module, "before_sync"):
+            module.before_sync(self, source_doc, target_doc)
+
+        # Save document
+        target_doc.flags.ignore_permissions = True
+        target_doc.flags.ignore_links = True
+        target_doc.save()
+
+        # Call after_sync hook
+        if hasattr(module, "after_sync"):
+            module.after_sync(self, source_doc, target_doc)
+
+        # Capture updated state
+        self.updated_data = target_doc.as_json()
+        self.target_document_name = target_doc.name
+
+        return diff
+
+    def _finish_as_skipped(self):
+        """Finish sync job with Skipped status"""
+        self.status = "Skipped"
+        self.ended_at = now()
+
+        if self.started_at and self.ended_at:
+            self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
+
+        self.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        # Publish completion event
+        frappe.publish_realtime(
+            "sync_job_completed",
+            {"sync_job": self.name, "status": "Skipped"},
+            after_commit=True,
+        )
+
+        # Raise exception to stop execution
+        raise StopIteration("Sync job skipped")
+
+    def _finalize_sync(self, target_doc, operation, diff):
+        """Finalize sync job after successful execution"""
+        self.diff_summary = frappe.as_json(diff or {})
+        self.operation = operation.title()
+        self.status = "Finished"
+        self.ended_at = now()
+
+        if self.started_at and self.ended_at:
+            self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
+
+        self.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        # Publish completion event
+        frappe.publish_realtime(
+            "sync_job_completed",
+            {"sync_job": self.name, "status": "Finished"},
+            after_commit=True,
+        )
+
+    def _handle_error(self, e):
+        """Handle errors during sync execution"""
+        # Don't handle StopIteration (used for skipped jobs)
+        if isinstance(e, StopIteration):
+            return
+
+        self.status = "Failed"
+        self.error_message = frappe.get_traceback(with_context=True)
+        self.ended_at = now()
 
         # Set retry_after timestamp
-        if (sync_job.retry_count or 0) < sync_job.max_retries:
-            sync_job.retry_after = add_to_date(now(), minutes=sync_job.retry_delay or 5)
+        if (self.retry_count or 0) < self.max_retries:
+            self.retry_after = add_to_date(now(), minutes=self.retry_delay or 5)
 
-        sync_job.save(ignore_permissions=True)
+        self.save(ignore_permissions=True)
         frappe.db.commit()
 
         # Publish failure event
         frappe.publish_realtime(
             "sync_job_completed",
-            {"sync_job": sync_job.name, "status": "Failed"},
+            {"sync_job": self.name, "status": "Failed"},
             after_commit=True,
         )
+
+
+def execute_sync_job(sync_job_name):
+    """
+    Execute sync job (runs in background)
+
+    Args:
+        sync_job_name: Name of Sync Job document
+    """
+    sync_job = frappe.get_doc("Sync Job", sync_job_name)
+    sync_job.update_job_id()
+    sync_job.execute()
+
