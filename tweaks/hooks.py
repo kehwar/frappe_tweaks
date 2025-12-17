@@ -72,7 +72,7 @@ scheduler_events = {
             "tweaks.tweaks.doctype.peru_api_com.peru_api_com.autoupdate_currency_exchange"
         ]
     },
-    "hourly": ["tweaks.utils.sync_job.auto_retry_failed_jobs"],
+    "all": ["tweaks.utils.sync_job.auto_retry_failed_jobs"],
 }
 
 
