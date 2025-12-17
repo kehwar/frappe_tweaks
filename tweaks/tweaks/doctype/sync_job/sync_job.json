@@ -37,10 +37,10 @@
   "retry_count",
   "retry_after",
   "column_break_ewsh",
-  "ignore_insert",
-  "ignore_update",
-  "ignore_diff",
-  "ignore_delete",
+  "insert_enabled",
+  "update_enabled",
+  "delete_enabled",
+  "update_without_changes_enabled",
   "section_break_execution",
   "trigger_type",
   "job_id",
@@ -203,35 +203,35 @@
    "read_only": 1
   },
   {
-   "default": "0",
-   "description": "If checked and operation is Insert, job will finish with status Skipped",
-   "fieldname": "ignore_insert",
+   "default": "1",
+   "description": "If uncheked, Insert operations will be skipped",
+   "fieldname": "insert_enabled",
    "fieldtype": "Check",
-   "label": "Ignore Insert",
+   "label": "Allow Inserts",
+   "set_only_once": 1
+  },
+  {
+   "default": "1",
+   "description": "If unchecked, Update operations will be skipped",
+   "fieldname": "update_enabled",
+   "fieldtype": "Check",
+   "label": "Allow Updates",
+   "set_only_once": 1
+  },
+  {
+   "default": "1",
+   "description": "If unchecked, Delete operations will be skipped",
+   "fieldname": "delete_enabled",
+   "fieldtype": "Check",
+   "label": "Allow Deletes",
    "set_only_once": 1
   },
   {
    "default": "0",
-   "description": "If checked and operation is Update, job will finish with status Skipped",
-   "fieldname": "ignore_update",
+   "description": "If unchecked, Update operations without changes will be skipped",
+   "fieldname": "update_without_changes_enabled",
    "fieldtype": "Check",
-   "label": "Ignore Update",
-   "set_only_once": 1
-  },
-  {
-   "default": "0",
-   "description": "If checked and operation is Delete, job will finish with status Skipped",
-   "fieldname": "ignore_delete",
-   "fieldtype": "Check",
-   "label": "Ignore Delete",
-   "set_only_once": 1
-  },
-  {
-   "default": "0",
-   "description": "If checked, updates will proceed even when there are no changes. Otherwise, updates with no changes will be skipped",
-   "fieldname": "ignore_diff",
-   "fieldtype": "Check",
-   "label": "Ignore Diff",
+   "label": "Allow Updates without changes",
    "set_only_once": 1
   },
   {
@@ -367,7 +367,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-17 02:01:19.976219",
+ "modified": "2025-12-17 08:55:55.521539",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Sync Job",

@@ -28,10 +28,10 @@ class SyncJob(Document, LogType):
         diff_summary: DF.Code | None
         ended_at: DF.Datetime | None
         error_message: DF.LongText | None
-        ignore_diff: DF.Check
-        ignore_delete: DF.Check
-        ignore_insert: DF.Check
-        ignore_update: DF.Check
+        insert_enabled: DF.Check
+        update_enabled: DF.Check
+        delete_enabled: DF.Check
+        update_without_changes_enabled: DF.Check
         job_id: DF.Data | None
         max_retries: DF.Int
         multiple_target_documents: DF.Code | None
@@ -388,7 +388,7 @@ class SyncJob(Document, LogType):
     def _execute_delete_operation(self, module, source_doc, target_doc):
         """Execute delete operation"""
         # Check if we should skip delete operations
-        if self.get("ignore_delete", False):
+        if not self.get("delete_enabled", True):
             self._finish_as_skipped(target_doc)
             return {}
 
@@ -412,11 +412,11 @@ class SyncJob(Document, LogType):
     def _execute_insert_update_operation(self, module, source_doc, target_doc, operation):
         """Execute insert or update operation"""
         # Check if we should skip based on operation type
-        if operation.lower() == "insert" and self.get("ignore_insert", False):
+        if operation.lower() == "insert" and not self.get("insert_enabled", True):
             self._finish_as_skipped(target_doc)
             return {}
 
-        if operation.lower() == "update" and self.get("ignore_update", False):
+        if operation.lower() == "update" and not self.get("update_enabled", True):
             self._finish_as_skipped(target_doc)
             return {}
 
@@ -431,8 +431,8 @@ class SyncJob(Document, LogType):
         # Get diff after mapping but before saving
         diff = target_doc.get_diff() if not target_doc.is_new() else {}
 
-        # Skip update if no changes detected (unless ignore_diff is True to force update anyway)
-        if operation.lower() == "update" and not self.get("ignore_diff", False) and not diff:
+        # Skip update if no changes detected (unless update_without_changes_enabled is True to force update anyway)
+        if operation.lower() == "update" and not self.get("update_without_changes_enabled", False) and not diff:
             self._finish_as_skipped(target_doc)
             return {}
 

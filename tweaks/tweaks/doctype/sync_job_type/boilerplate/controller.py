@@ -32,7 +32,7 @@ from frappe.model.document import Document
 # 	Get multiple target documents for this source
 #
 # 	Args:
-# 		sync_job: Sync Job document (contains operation, context, and ignore_insert flag)
+# 		sync_job: Sync Job document (contains operation, context, and flags)
 # 		source_doc: Source document
 #
 # 	Returns:
@@ -50,7 +50,7 @@ def get_target_document(sync_job, source_doc):
     Get target document for sync
 
     Args:
-            sync_job: Sync Job document (contains operation, context, and ignore_insert flag)
+            sync_job: Sync Job document (contains operation, context, and flags)
             source_doc: Source document
 
     Returns:
