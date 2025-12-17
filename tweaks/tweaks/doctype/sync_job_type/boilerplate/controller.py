@@ -73,17 +73,15 @@ def get_target_document(sync_job, source_doc):
     return target_doc, operation
 
 
-# Required: Get field mapping
-def get_field_mapping(sync_job, source_doc):
+# Required: Update target document
+def update_target_doc(sync_job, source_doc, target_doc):
     """
-    Get field mapping from source to target
+    Update target document with data from source
 
     Args:
             sync_job: Sync Job document (contains operation and context)
             source_doc: Source document
-
-    Returns:
-            Dict of field mappings
+            target_doc: Target document to update
     """
     pass
 

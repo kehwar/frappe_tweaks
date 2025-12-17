@@ -434,11 +434,8 @@ def generate_sync(sync_job_name):
                     target_doc.get_latest()
                     sync_job.current_data = target_doc.as_json()
 
-                # Get field mapping
-                field_mapping = module.get_field_mapping(sync_job, source_doc)
-
-                # Apply field mapping
-                target_doc.update(field_mapping)
+                # Update target document
+                module.update_target_doc(sync_job, source_doc, target_doc)
 
                 # Get diff after mapping but before saving
                 diff = target_doc.get_diff() if not target_doc.is_new() else {}
