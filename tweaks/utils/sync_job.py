@@ -93,7 +93,7 @@ def enqueue_sync_job(
             "target_document_type": target_document_type,
             "target_document_name": target_document_name,
             "operation": operation,
-            "context": json.dumps(context) if context else None,
+            "context": frappe.as_json(context) if context else None,
             "parent_sync_job": parent_sync_job,
             "queue": queue or job_type.queue,
             "timeout": timeout or job_type.timeout,
