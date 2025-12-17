@@ -478,10 +478,6 @@ def generate_sync(sync_job_name):
                 target_doc.flags.ignore_links = True
                 target_doc.save()
 
-                # Update link field if provided
-                if hasattr(module, "update_link_field"):
-                    module.update_link_field(sync_job, source_doc, target_doc)
-
                 # Call after_sync hook
                 if hasattr(module, "after_sync"):
                     module.after_sync(sync_job, source_doc, target_doc)

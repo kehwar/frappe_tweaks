@@ -88,22 +88,6 @@ def get_field_mapping(sync_job, source_doc):
     pass
 
 
-# Optional: Update link field after sync
-# def update_link_field(sync_job, source_doc, target_doc):
-# 	"""
-# 	Update link field to establish bidirectional link
-#
-# 	Args:
-# 		sync_job: Sync Job document (contains operation and context)
-# 		source_doc: Source document
-# 		target_doc: Target document (saved)
-# 	"""
-# 	# Example: Update source with target link
-# 	# source_doc.target_link = target_doc.name
-# 	# source_doc.save(ignore_permissions=True)
-# 	pass
-
-
 # Optional: Before sync hook
 # def before_sync(sync_job, source_doc, target_doc):
 # 	"""
