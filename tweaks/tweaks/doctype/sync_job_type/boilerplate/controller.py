@@ -27,15 +27,13 @@ from frappe.model.document import Document
 # STANDARD MODE: Define these functions for framework-handled flow
 
 # Optional: Return multiple targets (creates child jobs if > 1)
-# def get_multiple_target_documents(sync_job, source_doc, create_missing, context):
+# def get_multiple_target_documents(sync_job, source_doc):
 # 	"""
 # 	Get multiple target documents for this source
 #
 # 	Args:
-# 		sync_job: Sync Job document
+# 		sync_job: Sync Job document (contains operation, context, and ignore_insert flag)
 # 		source_doc: Source document
-# 		create_missing: Whether to create missing targets
-# 		context: Dict of context data
 #
 # 	Returns:
 # 		List of dicts with keys:
@@ -47,15 +45,13 @@ from frappe.model.document import Document
 
 
 # Required: Get single target document
-def get_target_document(sync_job, source_doc, create_missing, context):
+def get_target_document(sync_job, source_doc):
     """
     Get target document for sync
 
     Args:
-            sync_job: Sync Job document
+            sync_job: Sync Job document (contains operation, context, and ignore_insert flag)
             source_doc: Source document
-            create_missing: Whether to create missing target
-            context: Dict of context data
 
     Returns:
             Tuple of (target_doc, operation)
@@ -78,15 +74,13 @@ def get_target_document(sync_job, source_doc, create_missing, context):
 
 
 # Required: Get field mapping
-def get_field_mapping(sync_job, source_doc, operation, context):
+def get_field_mapping(sync_job, source_doc):
     """
     Get field mapping from source to target
 
     Args:
-            sync_job: Sync Job document
+            sync_job: Sync Job document (contains operation and context)
             source_doc: Source document
-            operation: "insert", "update", or "delete"
-            context: Dict of context data
 
     Returns:
             Dict of field mappings
@@ -95,16 +89,14 @@ def get_field_mapping(sync_job, source_doc, operation, context):
 
 
 # Optional: Update link field after sync
-# def update_link_field(sync_job, source_doc, target_doc, operation, context):
+# def update_link_field(sync_job, source_doc, target_doc):
 # 	"""
 # 	Update link field to establish bidirectional link
 #
 # 	Args:
-# 		sync_job: Sync Job document
+# 		sync_job: Sync Job document (contains operation and context)
 # 		source_doc: Source document
 # 		target_doc: Target document (saved)
-# 		operation: "insert", "update", or "delete"
-# 		context: Dict of context data
 # 	"""
 # 	# Example: Update source with target link
 # 	# source_doc.target_link = target_doc.name
@@ -113,30 +105,26 @@ def get_field_mapping(sync_job, source_doc, operation, context):
 
 
 # Optional: Before sync hook
-# def before_sync(sync_job, source_doc, target_doc, operation, context):
+# def before_sync(sync_job, source_doc, target_doc):
 # 	"""
 # 	Hook called before sync
 #
 # 	Args:
-# 		sync_job: Sync Job document
+# 		sync_job: Sync Job document (contains operation and context)
 # 		source_doc: Source document
 # 		target_doc: Target document (not yet saved)
-# 		operation: "insert", "update", or "delete"
-# 		context: Dict of context data
 # 	"""
 # 	pass
 
 
 # Optional: After sync hook
-# def after_sync(sync_job, source_doc, target_doc, operation, context):
+# def after_sync(sync_job, source_doc, target_doc):
 # 	"""
 # 	Hook called after sync
 #
 # 	Args:
-# 		sync_job: Sync Job document
+# 		sync_job: Sync Job document (contains operation and context)
 # 		source_doc: Source document
 # 		target_doc: Target document (saved)
-# 		operation: "insert", "update", or "delete"
-# 		context: Dict of context data
 # 	"""
 # 	pass

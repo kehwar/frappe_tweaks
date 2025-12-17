@@ -265,10 +265,7 @@ def generate_sync(sync_job_name):
                 if has_multiple:
                     # Check for multiple targets
                     targets = module.get_multiple_target_documents(
-                        sync_job,
-                        source_doc,
-                        sync_job.get("create_missing", True),
-                        context,
+                        sync_job, source_doc
                     )
 
                     if len(targets) > 1:
@@ -335,10 +332,7 @@ def generate_sync(sync_job_name):
                 else:
                     # Single target
                     target_doc, operation = module.get_target_document(
-                        sync_job,
-                        source_doc,
-                        sync_job.get("create_missing", True),
-                        context,
+                        sync_job, source_doc
                     )
 
             # Execute sync based on operation
@@ -373,18 +367,14 @@ def generate_sync(sync_job_name):
 
                 # Call before_sync hook
                 if hasattr(module, "before_sync"):
-                    module.before_sync(
-                        sync_job, source_doc, target_doc, operation, context
-                    )
+                    module.before_sync(sync_job, source_doc, target_doc)
 
                 # Delete document
                 target_doc.delete(ignore_permissions=True)
 
                 # Call after_sync hook
                 if hasattr(module, "after_sync"):
-                    module.after_sync(
-                        sync_job, source_doc, target_doc, operation, context
-                    )
+                    module.after_sync(sync_job, source_doc, target_doc)
 
                 diff = {}
 
@@ -445,9 +435,7 @@ def generate_sync(sync_job_name):
                     sync_job.current_data = target_doc.as_json()
 
                 # Get field mapping
-                field_mapping = module.get_field_mapping(
-                    sync_job, source_doc, operation, context
-                )
+                field_mapping = module.get_field_mapping(sync_job, source_doc)
 
                 # Apply field mapping
                 target_doc.update(field_mapping)
@@ -483,9 +471,7 @@ def generate_sync(sync_job_name):
 
                 # Call before_sync hook
                 if hasattr(module, "before_sync"):
-                    module.before_sync(
-                        sync_job, source_doc, target_doc, operation, context
-                    )
+                    module.before_sync(sync_job, source_doc, target_doc)
 
                 # Save document
                 target_doc.flags.ignore_permissions = True
@@ -494,15 +480,11 @@ def generate_sync(sync_job_name):
 
                 # Update link field if provided
                 if hasattr(module, "update_link_field"):
-                    module.update_link_field(
-                        sync_job, source_doc, target_doc, operation, context
-                    )
+                    module.update_link_field(sync_job, source_doc, target_doc)
 
                 # Call after_sync hook
                 if hasattr(module, "after_sync"):
-                    module.after_sync(
-                        sync_job, source_doc, target_doc, operation, context
-                    )
+                    module.after_sync(sync_job, source_doc, target_doc)
 
                 # Capture updated state
                 sync_job.updated_data = target_doc.as_json()
