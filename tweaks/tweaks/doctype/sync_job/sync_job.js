@@ -67,7 +67,6 @@ frappe.ui.form.on('Sync Job', {
             frm.set_df_property('target_doctype', 'read_only', 1)
             frm.set_df_property('target_document_name', 'read_only', 1)
             frm.set_df_property('operation', 'read_only', 1)
-            frm.set_df_property('filters', 'read_only', 1)
             frm.set_df_property('context', 'read_only', 1)
         }
     },

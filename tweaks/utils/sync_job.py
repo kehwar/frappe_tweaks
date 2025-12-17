@@ -17,7 +17,6 @@ from frappe.utils import now
 def enqueue_sync_job(
     sync_job_type,
     source_doc_name,
-    filters=None,
     context=None,
     operation=None,
     target_document_name=None,
@@ -34,7 +33,6 @@ def enqueue_sync_job(
     Args:
         sync_job_type: Name of Sync Job Type
         source_doc_name: Name of source document
-        filters: Optional filter dictionary
         context: Optional context dictionary
         operation: Optional pre-specified operation (Insert/Update/Delete)
         target_document_name: Optional pre-specified target document name
@@ -61,7 +59,6 @@ def enqueue_sync_job(
             "target_doctype": job_type.target_doctype,
             "target_document_name": target_document_name,
             "operation": operation,
-            "filters": json.dumps(filters) if filters else None,
             "context": json.dumps(context) if context else None,
             "parent_sync_job": parent_sync_job,
             "queue": queue or job_type.queue,

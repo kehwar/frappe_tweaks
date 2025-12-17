@@ -66,7 +66,6 @@ class TestSyncJob(FrappeTestCase):
         sync_job = enqueue_sync_job(
             sync_job_type="Test Customer Sync",
             source_doc_name="Test Customer",
-            filters={"test": "filter"},
             context={"test": "context"},
         )
 
@@ -76,9 +75,7 @@ class TestSyncJob(FrappeTestCase):
         self.assertEqual(sync_job.source_document_name, "Test Customer")
 
         # Check JSON fields
-        filters = json.loads(sync_job.filters)
         context = json.loads(sync_job.context)
-        self.assertEqual(filters["test"], "filter")
         self.assertEqual(context["test"], "context")
 
     def test_cancel_sync_job(self):

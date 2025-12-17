@@ -28,7 +28,6 @@ class SyncJob(Document, LogType):
         diff_summary: DF.Code | None
         ended_at: DF.Datetime | None
         error_message: DF.LongText | None
-        filters: DF.Code | None
         job_id: DF.Data | None
         max_retries: DF.Int
         multiple_target_documents: DF.Code | None
@@ -203,7 +202,6 @@ def generate_sync(sync_job_name):
         )
 
         # Parse JSON fields
-        filters = json.loads(sync_job.filters) if sync_job.filters else {}
         context = json.loads(sync_job.context) if sync_job.context else {}
 
         # Load sync job module
@@ -232,7 +230,7 @@ def generate_sync(sync_job_name):
 
         if has_execute:
             # BYPASS MODE
-            result = module.execute(sync_job, source_doc, filters, context)
+            result = module.execute(sync_job, source_doc, context)
             target_doc = result["target_doc"]
             operation = result["operation"]
             diff = result.get("diff", {})
@@ -277,7 +275,6 @@ def generate_sync(sync_job_name):
                             child_job = enqueue_sync_job(
                                 sync_job_type=sync_job.sync_job_type,
                                 source_doc_name=sync_job.source_document_name,
-                                filters=filters,
                                 context=target_info.get("context", {}),
                                 operation=target_info["operation"].title(),
                                 target_document_name=target_info["target_doc"].name,

@@ -27,9 +27,6 @@
   "retry_after",
   "section_break_data",
   "context",
-  "column_break_4",
-  "filters",
-  "section_break_imvq",
   "multiple_target_documents",
   "section_break_snapshots",
   "current_data",
@@ -190,22 +187,11 @@
    "label": "Job Data"
   },
   {
-   "description": "Filters passed to sync job (JSON)",
-   "fieldname": "filters",
-   "fieldtype": "Code",
-   "label": "Filters",
-   "options": "JSON"
-  },
-  {
    "description": "Extra context payload for sync job (JSON)",
    "fieldname": "context",
    "fieldtype": "Code",
    "label": "Context",
    "options": "JSON"
-  },
-  {
-   "fieldname": "column_break_4",
-   "fieldtype": "Column Break"
   },
   {
    "description": "Array of spawned child jobs when multiple targets",
@@ -313,16 +299,11 @@
    "fieldtype": "Long Text",
    "label": "Cancel Reason",
    "read_only": 1
-  },
-  {
-   "fieldname": "section_break_imvq",
-   "fieldtype": "Section Break",
-   "label": "Multiple Targets"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-16 16:39:13.625026",
+ "modified": "2025-12-16 21:17:34.195267",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Sync Job",
