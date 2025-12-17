@@ -216,7 +216,7 @@ class SyncJob(Document, LogType):
         try:
             # Load components
             source_doc = self._load_source_document()
-            context = self._parse_context()
+            context = self.get_context()
             module = self._load_and_validate_module()
 
             # Execute based on mode
@@ -241,7 +241,7 @@ class SyncJob(Document, LogType):
         """Load source document"""
         return frappe.get_doc(self.source_document_type, self.source_document_name)
 
-    def _parse_context(self):
+    def get_context(self):
         """Parse JSON context"""
         return json.loads(self.context) if self.context else {}
 
