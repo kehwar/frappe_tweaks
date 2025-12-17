@@ -133,7 +133,8 @@ def validate_sync_job_module(module, soft=False):
 
     Module must have either:
     - execute() function (bypass mode)
-    - get_target_document() AND update_target_doc() functions (standard mode)
+    - get_target_document() AND update_target_doc() functions (standard mode - single target)
+    - get_multiple_target_documents() AND update_target_doc() functions (standard mode - multiple targets)
 
     Args:
         module: Python module object
@@ -144,11 +145,23 @@ def validate_sync_job_module(module, soft=False):
     """
     has_execute = hasattr(module, "execute")
     has_get_target = hasattr(module, "get_target_document")
+    has_get_multiple_targets = hasattr(module, "get_multiple_target_documents")
     has_update_target = hasattr(module, "update_target_doc")
 
-    if not has_execute and not (has_get_target and has_update_target):
+    # Valid configurations:
+    # 1. Bypass mode: execute() exists
+    # 2. Standard single target: get_target_document() AND update_target_doc()
+    # 3. Standard multiple targets: get_multiple_target_documents() AND update_target_doc()
+    is_valid = (
+        has_execute
+        or (has_get_target and has_update_target)
+        or (has_get_multiple_targets and has_update_target)
+    )
+
+    if not is_valid:
         msg = _(
-            "Sync job module must have either execute() function or both get_target_document() and update_target_doc() functions"
+            "Sync job module must have either execute() function (bypass mode) "
+            "or update_target_doc() with get_target_document() or get_multiple_target_documents() (standard mode)"
         )
 
         if soft:
