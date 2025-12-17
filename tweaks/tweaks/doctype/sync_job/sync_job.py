@@ -246,7 +246,22 @@ class SyncJob(Document, LogType):
     def _execute_bypass_mode(self, module, source_doc, context):
         """Execute in bypass mode"""
         result = module.execute(self, source_doc, context)
-        return result["target_doc"], result["operation"], result.get("diff", {})
+        target_doc = result["target_doc"]
+        operation = result["operation"]
+        
+        # Save target_document_type immediately
+        if target_doc and not self.target_document_type:
+            self.target_document_type = target_doc.doctype
+        
+        # For updates/deletes, save target_document_name immediately
+        # For inserts, it will be set after save in the bypass execute function
+        if target_doc and operation.lower() != "insert":
+            self.target_document_name = target_doc.name
+        elif target_doc and operation.lower() == "insert":
+            # For inserts in bypass mode, the name should already be set after save in execute()
+            self.target_document_name = target_doc.name
+        
+        return target_doc, operation, result.get("diff", {})
 
     def _execute_standard_mode(self, module, source_doc, context):
         """Execute in standard mode"""
@@ -297,6 +312,16 @@ class SyncJob(Document, LogType):
                 target_doc = targets[0]["target_doc"]
                 operation = targets[0]["operation"]
                 context = targets[0].get("context", context)
+                
+                # Save target_document_type immediately
+                if not self.target_document_type:
+                    self.target_document_type = target_doc.doctype
+                
+                # For updates/deletes, save target_document_name immediately
+                # For inserts, it will be set after save (may be auto-generated)
+                if operation.lower() != "insert" and target_doc:
+                    self.target_document_name = target_doc.name
+                
                 return target_doc, operation, context
 
             else:
@@ -306,6 +331,16 @@ class SyncJob(Document, LogType):
 
         else:
             target_doc, operation = module.get_target_document(self, source_doc)
+            
+            # Save target_document_type immediately
+            if target_doc and not self.target_document_type:
+                self.target_document_type = target_doc.doctype
+            
+            # For updates/deletes, save target_document_name immediately
+            # For inserts, it will be set after save (may be auto-generated)
+            if target_doc and operation.lower() != "insert":
+                self.target_document_name = target_doc.name
+            
             return target_doc, operation, context
 
     def _handle_multiple_targets(self, targets):
@@ -365,7 +400,7 @@ class SyncJob(Document, LogType):
         """Execute delete operation"""
         # Check if we should skip delete operations
         if self.get("ignore_delete", False):
-            self._finish_as_skipped()
+            self._finish_as_skipped(target_doc)
             return {}
 
         # Capture current state before delete
@@ -389,11 +424,11 @@ class SyncJob(Document, LogType):
         """Execute insert or update operation"""
         # Check if we should skip based on operation type
         if operation.lower() == "insert" and self.get("ignore_insert", False):
-            self._finish_as_skipped()
+            self._finish_as_skipped(target_doc)
             return {}
 
         if operation.lower() == "update" and self.get("ignore_update", False):
-            self._finish_as_skipped()
+            self._finish_as_skipped(target_doc)
             return {}
 
         # Capture current state for existing docs
@@ -409,7 +444,7 @@ class SyncJob(Document, LogType):
 
         # Check if we should skip update with no diff
         if operation.lower() == "update" and self.get("ignore_diff", False) and not diff:
-            self._finish_as_skipped()
+            self._finish_as_skipped(target_doc)
             return {}
 
         # Call before_sync hook
@@ -421,18 +456,20 @@ class SyncJob(Document, LogType):
         target_doc.flags.ignore_links = True
         target_doc.save()
 
+        # Set target_document_name after save (for inserts with auto-generated names)
+        self.target_document_name = target_doc.name
+
         # Call after_sync hook
         if hasattr(module, "after_sync"):
             module.after_sync(self, source_doc, target_doc)
 
         # Capture updated state
         self.updated_data = target_doc.as_json()
-        self.target_document_name = target_doc.name
 
         return diff
 
-    def _finish_as_skipped(self):
-        """Finish sync job with Skipped status"""
+    def _finish_as_skipped(self, target_doc=None):
+        """Finish sync job as skipped"""
         self.status = "Skipped"
         self.ended_at = now()
 
@@ -486,7 +523,7 @@ class SyncJob(Document, LogType):
         if (self.retry_count or 0) < self.max_retries:
             self.retry_after = add_to_date(now(), minutes=self.retry_delay or 5)
 
-        self.save(ignore_permissions=True)
+        self.db_update()
         frappe.db.commit()
 
         # Publish failure event
@@ -508,3 +545,6 @@ def execute_sync_job(sync_job_name):
     sync_job.update_job_id()
     sync_job.execute()
 
+
+def generate_sync(sync_job_name):
+    pass

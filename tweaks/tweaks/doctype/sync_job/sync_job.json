@@ -98,6 +98,7 @@
   },
   {
    "fetch_from": "sync_job_type.source_document_type",
+   "fetch_if_empty": 1,
    "fieldname": "source_document_type",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -116,12 +117,14 @@
   },
   {
    "fetch_from": "sync_job_type.target_document_type",
+   "fetch_if_empty": 1,
    "fieldname": "target_document_type",
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Target DocType",
    "no_copy": 1,
-   "options": "DocType"
+   "options": "DocType",
+   "read_only_depends_on": "eval:!doc.__islocal"
   },
   {
    "fieldname": "target_document_name",
@@ -129,7 +132,7 @@
    "label": "Target Document",
    "no_copy": 1,
    "options": "target_document_type",
-   "read_only": 1
+   "read_only_depends_on": "eval:!doc.__islocal"
   },
   {
    "fieldname": "operation",
@@ -147,6 +150,7 @@
   {
    "description": "RQ queue name",
    "fetch_from": "sync_job_type.queue",
+   "fetch_if_empty": 1,
    "fieldname": "queue",
    "fieldtype": "Data",
    "label": "Queue",
@@ -155,6 +159,7 @@
   {
    "description": "Job timeout in seconds",
    "fetch_from": "sync_job_type.timeout",
+   "fetch_if_empty": 1,
    "fieldname": "timeout",
    "fieldtype": "Int",
    "label": "Timeout",
@@ -167,6 +172,7 @@
   {
    "description": "Delay between retries in minutes",
    "fetch_from": "sync_job_type.retry_delay",
+   "fetch_if_empty": 1,
    "fieldname": "retry_delay",
    "fieldtype": "Int",
    "label": "Retry Delay",
@@ -175,6 +181,7 @@
   {
    "description": "Maximum retry attempts",
    "fetch_from": "sync_job_type.max_retries",
+   "fetch_if_empty": 1,
    "fieldname": "max_retries",
    "fieldtype": "Int",
    "label": "Max Retries",
@@ -183,6 +190,7 @@
   {
    "default": "0",
    "depends_on": "eval:doc.retry_count",
+   "fetch_if_empty": 1,
    "fieldname": "retry_count",
    "fieldtype": "Int",
    "label": "Retry Count",
@@ -359,7 +367,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-17 00:35:55.370289",
+ "modified": "2025-12-17 01:48:55.966351",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Sync Job",
