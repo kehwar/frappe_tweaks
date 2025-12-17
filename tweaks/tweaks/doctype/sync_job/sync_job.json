@@ -31,6 +31,7 @@
   "section_break_config",
   "queue",
   "timeout",
+  "queue_on_insert",
   "column_break_3",
   "retry_delay",
   "max_retries",
@@ -81,7 +82,7 @@
    "read_only": 1
   },
   {
-   "default": "Queued",
+   "default": "Pending",
    "depends_on": "eval:!doc.__islocal",
    "fieldname": "status",
    "fieldtype": "Select",
@@ -89,7 +90,7 @@
    "in_standard_filter": 1,
    "label": "Status",
    "no_copy": 1,
-   "options": "Queued\nStarted\nFinished\nFailed\nCanceled\nSkipped",
+   "options": "Pending\nQueued\nStarted\nFinished\nFailed\nCanceled\nSkipped",
    "read_only": 1
   },
   {
@@ -141,6 +142,13 @@
    "no_copy": 1,
    "options": "\nInsert\nUpdate\nDelete",
    "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "queue_on_insert",
+   "fieldtype": "Check",
+   "label": "Auto Queue",
+   "set_only_once": 1
   },
   {
    "fieldname": "section_break_config",
@@ -367,7 +375,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-17 08:55:55.521539",
+ "modified": "2025-12-17 09:30:55.256247",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Sync Job",

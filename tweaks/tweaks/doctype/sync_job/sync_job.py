@@ -38,6 +38,7 @@ class SyncJob(Document, LogType):
         operation: DF.Literal["", "Insert", "Update", "Delete"]
         parent_sync_job: DF.Link | None
         queue: DF.Data | None
+        queue_on_insert: DF.Check
         retry_after: DF.Datetime | None
         retry_count: DF.Int
         retry_delay: DF.Int
@@ -45,7 +46,7 @@ class SyncJob(Document, LogType):
         source_document_name: DF.DynamicLink | None
         started_at: DF.Datetime | None
         status: DF.Literal[
-            "Queued", "Started", "Finished", "Failed", "Canceled", "Skipped"
+            "Pending", "Queued", "Started", "Finished", "Failed", "Canceled", "Skipped"
         ]
         sync_job_type: DF.Link
         target_document_type: DF.Link | None
@@ -63,7 +64,7 @@ class SyncJob(Document, LogType):
         """Set defaults before inserting"""
         # Set default status
         if not self.status:
-            self.status = "Queued"
+            self.status = "Pending"
 
         # Auto-generate title
         if not self.title:
@@ -97,7 +98,14 @@ class SyncJob(Document, LogType):
                 self.max_retries = job_type.max_retries or 3
 
     def after_insert(self):
-        """Enqueue sync job after insert"""
+        """Enqueue sync job after insert if queue_on_insert is enabled"""
+        # Only queue if queue_on_insert is True
+        if not self.queue_on_insert:
+            return
+
+        # Set status to Queued
+        self.db_set("status", "Queued", update_modified=False)
+
         enqueue(
             execute_sync_job,
             queue=self.queue or "default",
@@ -113,12 +121,12 @@ class SyncJob(Document, LogType):
 
     def cancel_sync(self, reason=None):
         """
-        Cancel sync job (only Queued or Failed)
+        Cancel sync job (only Pending, Queued or Failed)
 
         Args:
             reason: Optional cancellation reason
         """
-        if self.status not in ["Queued", "Failed"]:
+        if self.status not in ["Pending", "Queued", "Failed"]:
             frappe.throw(_("Cannot cancel job with status {0}").format(self.status))
 
         # Stop RQ job if exists
@@ -152,6 +160,24 @@ class SyncJob(Document, LogType):
         self.save(ignore_permissions=True)
 
         # Re-enqueue
+        enqueue(
+            execute_sync_job,
+            queue=self.queue or "default",
+            timeout=self.timeout or 300,
+            sync_job_name=self.name,
+        )
+
+    @frappe.whitelist()
+    def start(self):
+        """Manually start a pending sync job"""
+        if self.status != "Pending":
+            frappe.throw(_("Can only start jobs with status Pending"))
+
+        # Update status to Queued
+        self.status = "Queued"
+        self.save(ignore_permissions=True)
+
+        # Enqueue the job
         enqueue(
             execute_sync_job,
             queue=self.queue or "default",

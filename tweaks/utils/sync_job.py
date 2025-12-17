@@ -26,6 +26,7 @@ def enqueue_sync_job(
     retry_delay=None,
     max_retries=None,
     trigger_type="Manual",
+    queue_on_insert=True,
 ):
     """
     Create and enqueue a sync job
@@ -42,6 +43,7 @@ def enqueue_sync_job(
         retry_delay: Optional retry delay override
         max_retries: Optional max retries override
         trigger_type: How the job was triggered (default: Manual)
+        queue_on_insert: Whether to queue job on insert (default: True)
 
     Returns:
         Sync Job document
@@ -66,6 +68,7 @@ def enqueue_sync_job(
             "retry_delay": retry_delay or job_type.retry_delay,
             "max_retries": max_retries or job_type.max_retries,
             "trigger_type": trigger_type,
+            "queue_on_insert": queue_on_insert,
         }
     )
 
