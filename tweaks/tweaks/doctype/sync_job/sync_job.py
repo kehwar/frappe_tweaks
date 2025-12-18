@@ -60,6 +60,7 @@ class SyncJob(Document, LogType):
         ]
         triggered_by_document_type: DF.Link | None
         triggered_by_document_name: DF.DynamicLink | None
+        trigger_document_timestamp: DF.Datetime | None
         updated_data: DF.Code | None
     # end: auto-generated types
 
@@ -72,6 +73,11 @@ class SyncJob(Document, LogType):
         # Set default status
         if not self.status:
             self.status = "Pending"
+
+        # Set trigger document timestamp if trigger document is present
+        if self.triggered_by_document_type and self.triggered_by_document_name:
+            trigger_doc = frappe.get_doc(self.triggered_by_document_type, self.triggered_by_document_name)
+            self.trigger_document_timestamp = trigger_doc.modified
 
         # Validate context JSON
         if self.context:
@@ -579,6 +585,3 @@ def execute_sync_job(sync_job_name):
 
     sync_job = frappe.get_doc("Sync Job", sync_job_name)
     sync_job.execute(job_id=job.id if job else None)
-
-def generate_sync(sync_job_name):
-    pass

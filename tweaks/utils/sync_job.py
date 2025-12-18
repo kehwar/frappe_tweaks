@@ -30,6 +30,7 @@ def enqueue_sync_job(
     retry_delay=None,
     max_retries=None,
     trigger_type="Manual",
+    triggered_by_doc=None,
     triggered_by_document_type=None,
     triggered_by_document_name=None,
     queue_on_insert=True,
@@ -54,6 +55,7 @@ def enqueue_sync_job(
         retry_delay: Optional retry delay override
         max_retries: Optional max retries override
         trigger_type: How the job was triggered (default: Manual)
+        triggered_by_doc: Optional document that triggered this sync job
         triggered_by_document_type: Optional document type that triggered this sync job
         triggered_by_document_name: Optional document name that triggered this sync job
         queue_on_insert: Whether to queue job on insert (default: True)
@@ -86,6 +88,13 @@ def enqueue_sync_job(
     # Use job_type default if target_document_type not specified
     if not target_document_type:
         target_document_type = job_type.target_document_type
+
+    # Extract triggered_by info from triggered_by_doc if provided
+    if triggered_by_doc:
+        if not triggered_by_document_type:
+            triggered_by_document_type = triggered_by_doc.doctype
+        if not triggered_by_document_name and triggered_by_doc.name:
+            triggered_by_document_name = triggered_by_doc.name
 
     # Create Sync Job document
     sync_job = frappe.get_doc(
