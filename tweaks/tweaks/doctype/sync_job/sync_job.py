@@ -508,9 +508,7 @@ class SyncJob(Document, LogType):
             module.before_sync(self, source_doc, target_doc)
 
         # Save document
-        target_doc.flags.ignore_permissions = True
-        target_doc.flags.ignore_links = True
-        target_doc.save()
+        target_doc.save(ignore_permissions=True)
 
         # Set target_document_name after save (for inserts with auto-generated names)
         self.target_document_name = target_doc.name
