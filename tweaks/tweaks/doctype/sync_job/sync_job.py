@@ -496,6 +496,9 @@ class SyncJob(Document, LogType):
         # Update target document
         module.update_target_doc(self, source_doc, target_doc)
 
+        # Capture updated state
+        self.updated_data = target_doc.as_json()
+
         # Get diff after mapping but before saving
         diff = target_doc.get_diff() if not target_doc.is_new() else {}
 
@@ -522,7 +525,7 @@ class SyncJob(Document, LogType):
         if hasattr(module, "after_sync"):
             module.after_sync(self, source_doc, target_doc)
 
-        # Capture updated state
+        # Capture updated state again
         self.updated_data = target_doc.as_json()
 
         return diff
