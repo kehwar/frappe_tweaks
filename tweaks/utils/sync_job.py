@@ -30,6 +30,8 @@ def enqueue_sync_job(
     retry_delay=None,
     max_retries=None,
     trigger_type="Manual",
+    triggered_by_document_type=None,
+    triggered_by_document_name=None,
     queue_on_insert=True,
     dry_run=False,
 ):
@@ -52,6 +54,8 @@ def enqueue_sync_job(
         retry_delay: Optional retry delay override
         max_retries: Optional max retries override
         trigger_type: How the job was triggered (default: Manual)
+        triggered_by_document_type: Optional document type that triggered this sync job
+        triggered_by_document_name: Optional document name that triggered this sync job
         queue_on_insert: Whether to queue job on insert (default: True)
         dry_run: Whether to calculate diff only without saving (default: False)
 
@@ -92,6 +96,8 @@ def enqueue_sync_job(
             "source_document_name": source_document_name,
             "target_document_type": target_document_type,
             "target_document_name": target_document_name,
+            "triggered_by_document_type": triggered_by_document_type,
+            "triggered_by_document_name": triggered_by_document_name,
             "operation": operation,
             "context": frappe.as_json(context) if context else None,
             "parent_sync_job": parent_sync_job,

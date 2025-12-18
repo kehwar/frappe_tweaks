@@ -58,6 +58,8 @@ class SyncJob(Document, LogType):
         trigger_type: DF.Literal[
             "Manual", "Scheduler", "Webhook", "API", "Document Hook"
         ]
+        triggered_by_document_type: DF.Link | None
+        triggered_by_document_name: DF.DynamicLink | None
         updated_data: DF.Code | None
     # end: auto-generated types
 

@@ -44,8 +44,10 @@
   "delete_enabled",
   "update_without_changes_enabled",
   "section_break_execution",
-  "trigger_type",
   "job_id",
+  "trigger_type",
+  "triggered_by_document_type",
+  "triggered_by_document_name",
   "column_break_6",
   "started_at",
   "ended_at",
@@ -135,6 +137,20 @@
    "no_copy": 1,
    "options": "target_document_type",
    "read_only_depends_on": "eval:!doc.__islocal"
+  },
+  {
+   "fieldname": "triggered_by_document_type",
+   "fieldtype": "Link",
+   "label": "Triggered By DocType",
+   "no_copy": 1,
+   "options": "DocType"
+  },
+  {
+   "fieldname": "triggered_by_document_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Triggered By Document",
+   "no_copy": 1,
+   "options": "triggered_by_document_type"
   },
   {
    "fieldname": "operation",
@@ -383,7 +399,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-17 10:23:26.447853",
+ "modified": "2025-12-18 01:30:20.838077",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Sync Job",
