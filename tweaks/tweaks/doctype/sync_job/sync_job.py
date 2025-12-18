@@ -214,26 +214,23 @@ class SyncJob(Document, LogType):
             table, filters=(table.modified < (Now() - Interval(days=days)))
         )
 
-    def update_job_id(self):
-        """Update job_id when job starts running"""
-        from rq import get_current_job
-
-        job = get_current_job()
-
-        self.db_set(
-            {
-                "job_id": job and job.id,
-                "status": "Started",
-                "started_at": now(),
-            },
-            update_modified=False,
-            notify=True,
-            commit=True,
-        )
-
-    def execute(self):
+    @frappe.whitelist()
+    def execute(self, job_id=None):
         """Execute the sync job"""
         try:
+
+            # Update status to Started
+            self.db_set(
+                {
+                    "job_id": job_id,
+                    "status": "Started",
+                    "started_at": now(),
+                },
+                update_modified=False,
+                notify=True,
+                commit=True,
+            )
+
             # Load components
             source_doc = self.get_source_document()
             context = self.get_context()
@@ -576,10 +573,12 @@ def execute_sync_job(sync_job_name):
     Args:
         sync_job_name: Name of Sync Job document
     """
-    sync_job = frappe.get_doc("Sync Job", sync_job_name)
-    sync_job.update_job_id()
-    sync_job.execute()
+    from rq import get_current_job
 
+    job = get_current_job()
+
+    sync_job = frappe.get_doc("Sync Job", sync_job_name)
+    sync_job.execute(job_id=job.id if job else None)
 
 def generate_sync(sync_job_name):
     pass
