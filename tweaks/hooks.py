@@ -77,6 +77,11 @@ scheduler_events = {
     "all": ["tweaks.utils.sync_job.auto_retry_failed_jobs"],
 }
 
+ignore_links_on_delete = [
+    "Sync Job",
+    "Sync Job Type",
+]
+
 
 safe_exec_globals = ["tweaks.utils.safe_exec.safe_exec_globals"]
 
