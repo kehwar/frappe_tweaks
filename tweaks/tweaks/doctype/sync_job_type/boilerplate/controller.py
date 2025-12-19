@@ -66,32 +66,32 @@ def get_target_document(sync_job, source_doc):
 
     Returns:
             Dict with keys:
-                target_document_type: DocType name of target
-                target_document_name: Name of target document (None for insert operations)
-                operation: "insert", "update", or "delete"
-                context: Dict of context for this target (optional)
+                operation: "insert", "update", or "delete" (required)
+                target_document_type: DocType name of target (optional - uses sync_job_type default if not provided)
+                target_document_name: Name of target document (required for update/delete, optional for insert)
+                context: Dict of context for this target (optional - overrides existing context)
     """
     # Example implementation
-    target_document_type = None
-    target_document_name = None
-    operation = "insert"
-
+    
     # Try to find existing target
-    # target_name = frappe.db.get_value("Target DocType", {{{{"link_field": source_doc.name}}}})
+    # target_name = frappe.db.get_value("Target DocType", {{"link_field": source_doc.name}})
     # if target_name:
-    # 	target_document_type = "Target DocType"
-    # 	target_document_name = target_name
-    # 	operation = "update"
-    # elif create_missing:
-    # 	target_document_type = "Target DocType"
-    # 	target_document_name = None  # Will be set after insert
-    # 	operation = "insert"
+    #     return {
+    #         "operation": "update",
+    #         "target_document_name": target_name,
+    #         # target_document_type is optional - will use sync_job_type's target if not provided
+    #     }
+    # else:
+    #     return {
+    #         "operation": "insert",
+    #         # target_document_type is optional - will use sync_job_type's target if not provided
+    #         # target_document_name is optional for insert - will be set after save
+    #     }
 
     return {
-        "target_document_type": target_document_type,
-        "target_document_name": target_document_name,
-        "operation": operation,
+        "operation": "insert",
     }
+
 
 
 # Required: Update target document

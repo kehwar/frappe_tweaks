@@ -92,24 +92,24 @@ def get_target_document(sync_job, source_doc):
     
     Returns:
         Dict with keys:
-            target_document_type: DocType name of target
-            target_document_name: Name of target document (None for insert operations)
-            operation: "insert", "update", or "delete"
-            context: Dict of context for this target (optional)
+            operation: "insert", "update", or "delete" (required)
+            target_document_type: DocType name of target (optional - uses sync_job_type default if not provided)
+            target_document_name: Name of target document (required for update/delete, optional for insert)
+            context: Dict of context for this target (optional - overrides existing context)
     """
     target_name = frappe.db.get_value("Target DocType", {"link_field": source_doc.name})
     
     if target_name:
         return {
-            "target_document_type": "Target DocType",
-            "target_document_name": target_name,
-            "operation": "update"
+            "operation": "update",
+            "target_document_name": target_name
+            # target_document_type is optional - will use sync_job_type's target if not provided
         }
     else:
         return {
-            "target_document_type": "Target DocType",
-            "target_document_name": None,  # Will be set after insert
             "operation": "insert"
+            # target_document_type is optional - will use sync_job_type's target if not provided
+            # target_document_name is optional for insert - will be set after save
         }
 
 
@@ -466,15 +466,15 @@ def get_target_document(sync_job, source_doc):
     
     if sap_id:
         return {
-            "target_document_type": "SAP Customer",
-            "target_document_name": sap_id,
-            "operation": "update"
+            "operation": "update",
+            "target_document_name": sap_id
+            # target_document_type is optional - uses sync_job_type's target_document_type
         }
     else:
         return {
-            "target_document_type": "SAP Customer",
-            "target_document_name": None,  # Will be set after insert
             "operation": "insert"
+            # target_document_type is optional - uses sync_job_type's target_document_type
+            # target_document_name is optional for insert - will be set after save
         }
 
 
@@ -500,16 +500,16 @@ def get_target_document(sync_job, source_doc):
     
     if sap_id:
         return {
-            "target_document_type": "SAP Customer",
-            "target_document_name": sap_id,
-            "operation": "delete"
+            "operation": "delete",
+            "target_document_name": sap_id
+            # target_document_type is optional - uses sync_job_type's target_document_type
         }
     else:
-        # No target found, nothing to delete
+        # No target found, nothing to delete - return None for target_document_type to skip
         return {
-            "target_document_type": None,
-            "target_document_name": None,
-            "operation": "delete"
+            "operation": "delete",
+            "target_document_type": None
+            # When target_document_type is None, job finishes without syncing
         }
 
 
@@ -563,25 +563,20 @@ def get_target_document(sync_job, source_doc):
         
         if sap_id:
             return {
-                "target_document_type": "SAP Customer",
+                "operation": "update",
                 "target_document_name": sap_id,
-                "operation": "update"
+                "context": {"synced_from_hook": True}  # Override/merge with existing context
             }
         else:
             return {
-                "target_document_type": "SAP Customer",
-                "target_document_name": None,
                 "operation": "insert",
-                "context": {"synced_from_hook": True}  # Additional context
+                "context": {"synced_from_hook": True}  # Override/merge with existing context
             }
     
     # Skip sync - return None for target_document_type
-    # Note: A valid operation is still required (insert/update/delete)
-    # but the actual operation value is not used when target_document_type is None
     return {
-        "target_document_type": None,  # None means skip sync
-        "target_document_name": None,
-        "operation": "update"  # Could be any valid operation; job will finish without syncing
+        "operation": "insert",  # Valid operation still required
+        "target_document_type": None  # None means skip sync - job will finish without syncing
     }
 
 

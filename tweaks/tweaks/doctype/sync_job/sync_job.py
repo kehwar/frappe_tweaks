@@ -397,16 +397,11 @@ class SyncJob(Document, LogType):
         else:
             target_info = module.get_target_document(self, source_doc)
             
-            # Validate required keys
+            # Validate required key: operation is always required
             if "operation" not in target_info:
                 frappe.throw(_("get_target_document must return dict with 'operation' key"))
-            if "target_document_type" not in target_info:
-                frappe.throw(_("get_target_document must return dict with 'target_document_type' key"))
             
             operation = target_info["operation"]
-            target_document_type = target_info["target_document_type"]
-            target_document_name = target_info.get("target_document_name")
-            context = target_info.get("context", context)
             
             # Normalize operation to lowercase for comparison
             operation_lower = operation.lower()
@@ -417,7 +412,26 @@ class SyncJob(Document, LogType):
                     "Invalid operation '{0}'. Must be one of: {1}"
                 ).format(operation, ", ".join(VALID_SYNC_OPERATIONS)))
             
-            # Save target_document_type immediately (can be None to skip sync)
+            # Get target_document_type from return dict, or use the one from sync_job_type
+            target_document_type = target_info.get("target_document_type")
+            if not target_document_type:
+                # Fall back to sync_job_type's target_document_type
+                target_document_type = self.target_document_type
+            
+            # Get target_document_name (required for update/delete)
+            target_document_name = target_info.get("target_document_name")
+            
+            # Context can override existing context
+            context = target_info.get("context", context)
+            
+            # Validate target_document_name is provided for update/delete operations
+            if operation_lower in ["update", "delete"] and not target_document_name:
+                frappe.throw(_(
+                    "target_document_name is required for {0} operation. "
+                    "Please return a valid document name in the dict returned by get_target_document()."
+                ).format(operation))
+            
+            # Save target_document_type if not already set
             if target_document_type and not self.target_document_type:
                 self.target_document_type = target_document_type
             
@@ -433,18 +447,6 @@ class SyncJob(Document, LogType):
                 return None, None, context
             elif operation_lower == "insert":
                 target_doc = frappe.new_doc(target_document_type)
-            elif not target_document_name:
-                # No target_document_name provided for update/delete
-                if operation_lower == "delete":
-                    # For delete, if target doesn't exist, finish job (nothing to delete)
-                    self._finish_with_no_targets()
-                    return None, None, context
-                else:
-                    # For update, target_document_name is required
-                    frappe.throw(_(
-                        "target_document_name is required for {0} operation. "
-                        "Please return a valid document name in the dict returned by get_target_document()."
-                    ).format(operation))
             else:
                 # Load the target document for update or delete
                 try:
