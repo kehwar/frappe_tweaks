@@ -395,102 +395,70 @@ class SyncJob(Document, LogType):
                 return None, None, context
 
         else:
-            result = module.get_target_document(self, source_doc)
+            target_info = module.get_target_document(self, source_doc)
             
-            # Support both old tuple format and new dict format for backward compatibility
-            if isinstance(result, dict):
-                # New dict format
-                target_info = result
-                
-                # Validate required keys
-                if "operation" not in target_info:
-                    frappe.throw(_("get_target_document must return dict with 'operation' key"))
-                if "target_document_type" not in target_info:
-                    frappe.throw(_("get_target_document must return dict with 'target_document_type' key"))
-                
-                operation = target_info["operation"]
-                target_document_type = target_info["target_document_type"]
-                target_document_name = target_info.get("target_document_name")
-                context = target_info.get("context", context)
-                
-                # Normalize operation to lowercase for comparison
-                operation_lower = operation.lower()
-                
-                # Validate operation is valid
-                if operation_lower not in VALID_SYNC_OPERATIONS:
-                    frappe.throw(_(
-                        "Invalid operation '{0}'. Must be one of: {1}"
-                    ).format(operation, ", ".join(VALID_SYNC_OPERATIONS)))
-                
-                # Save target_document_type immediately (can be None to skip sync)
-                if target_document_type and not self.target_document_type:
-                    self.target_document_type = target_document_type
-                
-                # For updates/deletes, save target_document_name immediately
-                # For inserts, it will be set after save (may be auto-generated)
-                if operation_lower != "insert" and target_document_name:
-                    self.target_document_name = target_document_name
-                
-                # Load the actual document for processing
-                if not target_document_type:
-                    # No target specified - finish job without target
+            # Validate required keys
+            if "operation" not in target_info:
+                frappe.throw(_("get_target_document must return dict with 'operation' key"))
+            if "target_document_type" not in target_info:
+                frappe.throw(_("get_target_document must return dict with 'target_document_type' key"))
+            
+            operation = target_info["operation"]
+            target_document_type = target_info["target_document_type"]
+            target_document_name = target_info.get("target_document_name")
+            context = target_info.get("context", context)
+            
+            # Normalize operation to lowercase for comparison
+            operation_lower = operation.lower()
+            
+            # Validate operation is valid
+            if operation_lower not in VALID_SYNC_OPERATIONS:
+                frappe.throw(_(
+                    "Invalid operation '{0}'. Must be one of: {1}"
+                ).format(operation, ", ".join(VALID_SYNC_OPERATIONS)))
+            
+            # Save target_document_type immediately (can be None to skip sync)
+            if target_document_type and not self.target_document_type:
+                self.target_document_type = target_document_type
+            
+            # For updates/deletes, save target_document_name immediately
+            # For inserts, it will be set after save (may be auto-generated)
+            if operation_lower != "insert" and target_document_name:
+                self.target_document_name = target_document_name
+            
+            # Load the actual document for processing
+            if not target_document_type:
+                # No target specified - finish job without target
+                self._finish_with_no_targets()
+                return None, None, context
+            elif operation_lower == "insert":
+                target_doc = frappe.new_doc(target_document_type)
+            elif not target_document_name:
+                # No target_document_name provided for update/delete
+                if operation_lower == "delete":
+                    # For delete, if target doesn't exist, finish job (nothing to delete)
                     self._finish_with_no_targets()
                     return None, None, context
-                elif operation_lower == "insert":
-                    target_doc = frappe.new_doc(target_document_type)
-                elif not target_document_name:
-                    # No target_document_name provided for update/delete
+                else:
+                    # For update, target_document_name is required
+                    frappe.throw(_(
+                        "target_document_name is required for {0} operation. "
+                        "Please return a valid document name in the dict returned by get_target_document()."
+                    ).format(operation))
+            else:
+                # Load the target document for update or delete
+                try:
+                    target_doc = frappe.get_doc(target_document_type, target_document_name)
+                except frappe.DoesNotExistError:
                     if operation_lower == "delete":
-                        # For delete, if target doesn't exist, finish job (nothing to delete)
+                        # Target doesn't exist, nothing to delete - finish job
                         self._finish_with_no_targets()
                         return None, None, context
                     else:
-                        # For update, target_document_name is required
-                        frappe.throw(_(
-                            "target_document_name is required for {0} operation. "
-                            "Please return a valid document name in the dict returned by get_target_document()."
-                        ).format(operation))
-                else:
-                    # Load the target document for update or delete
-                    try:
-                        target_doc = frappe.get_doc(target_document_type, target_document_name)
-                    except frappe.DoesNotExistError:
-                        if operation_lower == "delete":
-                            # Target doesn't exist, nothing to delete - finish job
-                            self._finish_with_no_targets()
-                            return None, None, context
-                        else:
-                            # For update, target must exist
-                            raise
-                
-                return target_doc, operation, context
-            else:
-                # Old tuple format (for backward compatibility)
-                # Validate tuple has exactly 2 elements
-                try:
-                    target_doc, operation = result
-                except (ValueError, TypeError) as e:
-                    frappe.throw(_(
-                        "get_target_document must return either:\n"
-                        "- Dict with required keys (operation, target_document_type) "
-                        "and optional keys (target_document_name, context)\n"
-                        "- Tuple of (target_doc, operation)\n"
-                        "Got: {0}. Error: {1}"
-                    ).format(type(result).__name__, str(e)))
-                
-                # Normalize operation to lowercase
-                operation_lower = operation.lower()
-                
-                # Save target_document_type immediately
-                if target_doc and not self.target_document_type:
-                    self.target_document_type = target_doc.doctype
-                
-                # For updates/deletes, save target_document_name immediately
-                # For inserts, it will be set after save (may be auto-generated)
-                if target_doc and operation_lower != "insert":
-                    self.target_document_name = target_doc.name
-                
-                return target_doc, operation, context
+                        # For update, target must exist
+                        raise
+            
+            return target_doc, operation, context
 
     def _handle_multiple_targets(self, targets):
         """Handle multiple target documents by spawning child jobs"""
