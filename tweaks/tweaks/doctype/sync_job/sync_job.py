@@ -12,6 +12,9 @@ from frappe.query_builder.functions import Now
 from frappe.utils import add_to_date, create_batch, now, time_diff_in_seconds
 from frappe.utils.background_jobs import enqueue
 
+# Valid sync job operations
+VALID_SYNC_OPERATIONS = ["insert", "update", "delete"]
+
 
 class SyncJob(Document, LogType):
     # begin: auto-generated types
@@ -411,11 +414,10 @@ class SyncJob(Document, LogType):
                 context = target_info.get("context", context)
                 
                 # Validate operation is valid
-                valid_operations = ["insert", "update", "delete"]
-                if operation.lower() not in valid_operations:
+                if operation.lower() not in VALID_SYNC_OPERATIONS:
                     frappe.throw(_(
                         "Invalid operation '{0}'. Must be one of: {1}"
-                    ).format(operation, ", ".join(valid_operations)))
+                    ).format(operation, ", ".join(VALID_SYNC_OPERATIONS)))
                 
                 # Save target_document_type immediately (can be None to skip sync)
                 if target_document_type and not self.target_document_type:
