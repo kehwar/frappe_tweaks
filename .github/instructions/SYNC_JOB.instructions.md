@@ -91,19 +91,26 @@ def get_target_document(sync_job, source_doc):
         source_doc: Source document
     
     Returns:
-        Tuple of (target_doc, operation)
-        operation: "insert", "update", or "delete"
+        Dict with keys:
+            operation: "insert", "update", or "delete" (required)
+            target_document_type: DocType name of target (optional - uses sync_job_type default if not provided)
+            target_document_name: Name of target document (required for update/delete, optional for insert)
+            context: Dict of context for this target (optional - overrides existing context)
     """
     target_name = frappe.db.get_value("Target DocType", {"link_field": source_doc.name})
     
     if target_name:
-        target_doc = frappe.get_doc("Target DocType", target_name)
-        operation = "update"
+        return {
+            "operation": "update",
+            "target_document_name": target_name
+            # target_document_type is optional - will use sync_job_type's target if not provided
+        }
     else:
-        target_doc = frappe.new_doc("Target DocType")
-        operation = "insert"
-    
-    return target_doc, operation
+        return {
+            "operation": "insert"
+            # target_document_type is optional - will use sync_job_type's target if not provided
+            # target_document_name is optional for insert - will be set after save
+        }
 
 
 def update_target_doc(sync_job, source_doc, target_doc):
@@ -458,18 +465,26 @@ def get_target_document(sync_job, source_doc):
     sap_id = frappe.db.get_value("SAP Customer", {"erp_customer": source_doc.name})
     
     if sap_id:
-        target_doc = frappe.get_doc("SAP Customer", sap_id)
-        operation = "update"
+        return {
+            "operation": "update",
+            "target_document_name": sap_id
+            # target_document_type is optional - uses sync_job_type's target_document_type
+        }
     else:
-        target_doc = frappe.new_doc("SAP Customer")
-        target_doc.erp_customer = source_doc.name
-        operation = "insert"
-    
-    return target_doc, operation
+        return {
+            "operation": "insert"
+            # target_document_type is optional - uses sync_job_type's target_document_type
+            # target_document_name is optional for insert - will be set after save
+        }
 
 
 def update_target_doc(sync_job, source_doc, target_doc):
     """Map fields from Customer to SAP Customer"""
+    # Set ERP reference on insert (since we only return metadata in get_target_document,
+    # field assignments are done here in update_target_doc)
+    if not target_doc.erp_customer:
+        target_doc.erp_customer = source_doc.name
+    
     target_doc.customer_name = source_doc.customer_name
     target_doc.customer_type = source_doc.customer_type
     target_doc.customer_group = source_doc.customer_group
@@ -484,14 +499,18 @@ def get_target_document(sync_job, source_doc):
     sap_id = frappe.db.get_value("SAP Customer", {"erp_customer": source_doc.name})
     
     if sap_id:
-        target_doc = frappe.get_doc("SAP Customer", sap_id)
-        operation = "delete"
+        return {
+            "operation": "delete",
+            "target_document_name": sap_id
+            # target_document_type is optional - uses sync_job_type's target_document_type
+        }
     else:
-        # No target found, nothing to delete
-        target_doc = None
-        operation = "delete"
-    
-    return target_doc, operation
+        # No target found, nothing to delete - return None for target_document_type to skip
+        return {
+            "operation": "delete",
+            "target_document_type": None
+            # When target_document_type is None, job finishes without syncing
+        }
 
 
 def update_target_doc(sync_job, source_doc, target_doc):
@@ -543,13 +562,22 @@ def get_target_document(sync_job, source_doc):
         sap_id = frappe.db.get_value("SAP Customer", {"erp_customer": source_doc.name})
         
         if sap_id:
-            return frappe.get_doc("SAP Customer", sap_id), "update"
+            return {
+                "operation": "update",
+                "target_document_name": sap_id,
+                "context": {"synced_from_hook": True}  # Override/merge with existing context
+            }
         else:
-            target = frappe.new_doc("SAP Customer")
-            target.erp_customer = source_doc.name
-            return target, "insert"
+            return {
+                "operation": "insert",
+                "context": {"synced_from_hook": True}  # Override/merge with existing context
+            }
     
-    return None, None  # Skip sync
+    # Skip sync - return None for target_document_type
+    return {
+        "operation": "insert",  # Valid operation still required
+        "target_document_type": None  # None means skip sync - job will finish without syncing
+    }
 
 
 def update_target_doc(sync_job, source_doc, target_doc):
@@ -568,7 +596,7 @@ def update_target_doc(sync_job, source_doc, target_doc):
 1. **Use Standard Mode** for simple field mappings
 2. **Use Bypass Mode** for complex operations or external integrations
 3. **Always validate** source and target documents before syncing
-4. **Handle missing targets** gracefully (return None or create new)
+4. **Handle missing targets** gracefully (return dict with target_document_type=None to skip sync)
 5. **Use context** to pass runtime parameters instead of hardcoding
 6. **Log important decisions** using `frappe.log_error()` for debugging
 7. **Set appropriate timeouts** based on operation complexity
@@ -634,7 +662,7 @@ sync_job = enqueue_sync_job(
 def execute(sync_job, source_doc, context) -> dict
 
 # Standard Mode - Required
-def get_target_document(sync_job, source_doc) -> tuple[Document|None, str|None]
+def get_target_document(sync_job, source_doc) -> dict
 def update_target_doc(sync_job, source_doc, target_doc) -> None
 
 # Standard Mode - Optional

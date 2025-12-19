@@ -65,23 +65,33 @@ def get_target_document(sync_job, source_doc):
             source_doc: Source document
 
     Returns:
-            Tuple of (target_doc, operation)
-            operation: "insert", "update", or "delete"
+            Dict with keys:
+                operation: "insert", "update", or "delete" (required)
+                target_document_type: DocType name of target (optional - uses sync_job_type default if not provided)
+                target_document_name: Name of target document (required for update/delete, optional for insert)
+                context: Dict of context for this target (optional - overrides existing context)
     """
     # Example implementation
-    target_doc = None
-    operation = "insert"
-
+    
     # Try to find existing target
-    # target_name = frappe.db.get_value("Target DocType", {{{{"link_field": source_doc.name}}}})
+    # target_name = frappe.db.get_value("Target DocType", {{"link_field": source_doc.name}})
     # if target_name:
-    # 	target_doc = frappe.get_doc("Target DocType", target_name)
-    # 	operation = "update"
-    # elif create_missing:
-    # 	target_doc = frappe.new_doc("Target DocType")
-    # 	operation = "insert"
+    #     return {
+    #         "operation": "update",
+    #         "target_document_name": target_name,
+    #         # target_document_type is optional - will use sync_job_type's target if not provided
+    #     }
+    # else:
+    #     return {
+    #         "operation": "insert",
+    #         # target_document_type is optional - will use sync_job_type's target if not provided
+    #         # target_document_name is optional for insert - will be set after save
+    #     }
 
-    return target_doc, operation
+    return {
+        "operation": "insert",
+    }
+
 
 
 # Required: Update target document
