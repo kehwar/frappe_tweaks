@@ -413,8 +413,11 @@ class SyncJob(Document, LogType):
                 target_document_name = target_info.get("target_document_name")
                 context = target_info.get("context", context)
                 
+                # Normalize operation to lowercase for comparison
+                operation_lower = operation.lower()
+                
                 # Validate operation is valid
-                if operation.lower() not in VALID_SYNC_OPERATIONS:
+                if operation_lower not in VALID_SYNC_OPERATIONS:
                     frappe.throw(_(
                         "Invalid operation '{0}'. Must be one of: {1}"
                     ).format(operation, ", ".join(VALID_SYNC_OPERATIONS)))
@@ -425,7 +428,7 @@ class SyncJob(Document, LogType):
                 
                 # For updates/deletes, save target_document_name immediately
                 # For inserts, it will be set after save (may be auto-generated)
-                if operation.lower() != "insert" and target_document_name:
+                if operation_lower != "insert" and target_document_name:
                     self.target_document_name = target_document_name
                 
                 # Load the actual document for processing
@@ -433,7 +436,7 @@ class SyncJob(Document, LogType):
                     # No target specified - finish job without target
                     self._finish_with_no_targets()
                     return None, None, context
-                elif operation.lower() == "insert":
+                elif operation_lower == "insert":
                     target_doc = frappe.new_doc(target_document_type)
                 else:
                     # Validate target_document_name is provided for update/delete
