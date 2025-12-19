@@ -438,14 +438,30 @@ class SyncJob(Document, LogType):
                     return None, None, context
                 elif operation_lower == "insert":
                     target_doc = frappe.new_doc(target_document_type)
-                else:
-                    # Validate target_document_name is provided for update/delete
-                    if not target_document_name:
+                elif not target_document_name:
+                    # No target_document_name provided for update/delete
+                    if operation_lower == "delete":
+                        # For delete, if target doesn't exist, finish job (nothing to delete)
+                        self._finish_with_no_targets()
+                        return None, None, context
+                    else:
+                        # For update, target_document_name is required
                         frappe.throw(_(
                             "target_document_name is required for {0} operation. "
                             "Please return a valid document name in the dict returned by get_target_document()."
                         ).format(operation))
-                    target_doc = frappe.get_doc(target_document_type, target_document_name)
+                else:
+                    # Load the target document for update or delete
+                    try:
+                        target_doc = frappe.get_doc(target_document_type, target_document_name)
+                    except frappe.DoesNotExistError:
+                        if operation_lower == "delete":
+                            # Target doesn't exist, nothing to delete - finish job
+                            self._finish_with_no_targets()
+                            return None, None, context
+                        else:
+                            # For update, target must exist
+                            raise
                 
                 return target_doc, operation, context
             else:
