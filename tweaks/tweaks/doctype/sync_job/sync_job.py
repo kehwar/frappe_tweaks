@@ -392,18 +392,50 @@ class SyncJob(Document, LogType):
                 return None, None, context
 
         else:
-            target_doc, operation = module.get_target_document(self, source_doc)
+            result = module.get_target_document(self, source_doc)
             
-            # Save target_document_type immediately
-            if target_doc and not self.target_document_type:
-                self.target_document_type = target_doc.doctype
-            
-            # For updates/deletes, save target_document_name immediately
-            # For inserts, it will be set after save (may be auto-generated)
-            if target_doc and operation.lower() != "insert":
-                self.target_document_name = target_doc.name
-            
-            return target_doc, operation, context
+            # Support both old tuple format and new dict format for backward compatibility
+            if isinstance(result, dict):
+                # New dict format
+                target_info = result
+                operation = target_info["operation"]
+                target_document_type = target_info["target_document_type"]
+                target_document_name = target_info.get("target_document_name")
+                context = target_info.get("context", context)
+                
+                # Save target_document_type immediately
+                if target_document_type and not self.target_document_type:
+                    self.target_document_type = target_document_type
+                
+                # For updates/deletes, save target_document_name immediately
+                # For inserts, it will be set after save (may be auto-generated)
+                if operation.lower() != "insert" and target_document_name:
+                    self.target_document_name = target_document_name
+                
+                # Load the actual document for processing
+                if not target_document_type:
+                    # No target specified
+                    target_doc = None
+                elif operation.lower() == "insert":
+                    target_doc = frappe.new_doc(target_document_type)
+                else:
+                    target_doc = frappe.get_doc(target_document_type, target_document_name)
+                
+                return target_doc, operation, context
+            else:
+                # Old tuple format (for backward compatibility)
+                target_doc, operation = result
+                
+                # Save target_document_type immediately
+                if target_doc and not self.target_document_type:
+                    self.target_document_type = target_doc.doctype
+                
+                # For updates/deletes, save target_document_name immediately
+                # For inserts, it will be set after save (may be auto-generated)
+                if target_doc and operation.lower() != "insert":
+                    self.target_document_name = target_doc.name
+                
+                return target_doc, operation, context
 
     def _handle_multiple_targets(self, targets):
         """Handle multiple target documents by spawning child jobs"""
