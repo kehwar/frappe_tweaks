@@ -12,8 +12,8 @@ from frappe.query_builder.functions import Now
 from frappe.utils import add_to_date, create_batch, now, time_diff_in_seconds
 from frappe.utils.background_jobs import enqueue
 
-# Valid sync job operations
-VALID_SYNC_OPERATIONS = ["insert", "update", "delete"]
+# Valid sync job operations (immutable)
+VALID_SYNC_OPERATIONS = ("insert", "update", "delete")
 
 
 class SyncJob(Document, LogType):
@@ -455,10 +455,15 @@ class SyncJob(Document, LogType):
                     target_doc, operation = result
                 except (ValueError, TypeError) as e:
                     frappe.throw(_(
-                        "get_target_document must return either a dict with required keys "
-                        "(operation, target_document_type) and optional keys (target_document_name, context) "
-                        "or a tuple of (target_doc, operation). Got: {0}. Error: {1}"
+                        "get_target_document must return either:\n"
+                        "- Dict with required keys (operation, target_document_type) "
+                        "and optional keys (target_document_name, context)\n"
+                        "- Tuple of (target_doc, operation)\n"
+                        "Got: {0}. Error: {1}"
                     ).format(type(result).__name__, str(e)))
+                
+                # Normalize operation to lowercase
+                operation_lower = operation.lower()
                 
                 # Save target_document_type immediately
                 if target_doc and not self.target_document_type:
@@ -466,7 +471,7 @@ class SyncJob(Document, LogType):
                 
                 # For updates/deletes, save target_document_name immediately
                 # For inserts, it will be set after save (may be auto-generated)
-                if target_doc and operation.lower() != "insert":
+                if target_doc and operation_lower != "insert":
                     self.target_document_name = target_doc.name
                 
                 return target_doc, operation, context
