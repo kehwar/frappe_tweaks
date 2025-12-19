@@ -576,11 +576,11 @@ def get_target_document(sync_job, source_doc):
             }
     
     # Skip sync - return None for target_document_type
-    # Operation value doesn't matter when target_document_type is None
+    # Note: operation must still be a valid value (insert/update/delete)
     return {
         "target_document_type": None,
         "target_document_name": None,
-        "operation": "insert"  # Any value is fine since sync will be skipped
+        "operation": "insert"  # Valid operation required, sync will be skipped due to None target_document_type
     }
 
 

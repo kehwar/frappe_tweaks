@@ -410,7 +410,14 @@ class SyncJob(Document, LogType):
                 target_document_name = target_info.get("target_document_name")
                 context = target_info.get("context", context)
                 
-                # Save target_document_type immediately
+                # Validate operation is valid
+                valid_operations = ["insert", "update", "delete"]
+                if operation.lower() not in valid_operations:
+                    frappe.throw(_(
+                        "Invalid operation '{0}'. Must be one of: {1}"
+                    ).format(operation, ", ".join(valid_operations)))
+                
+                # Save target_document_type immediately (can be None to skip sync)
                 if target_document_type and not self.target_document_type:
                     self.target_document_type = target_document_type
                 
@@ -445,8 +452,8 @@ class SyncJob(Document, LogType):
                     frappe.throw(_(
                         "get_target_document must return either a dict with required keys "
                         "(operation, target_document_type) and optional keys (target_document_name, context) "
-                        "or a tuple of (target_doc, operation). Got: {0}"
-                    ).format(type(result).__name__))
+                        "or a tuple of (target_doc, operation). Got: {0}. Error: {1}"
+                    ).format(type(result).__name__, str(e)))
                 
                 # Save target_document_type immediately
                 if target_doc and not self.target_document_type:
