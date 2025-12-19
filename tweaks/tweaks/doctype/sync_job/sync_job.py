@@ -429,7 +429,8 @@ class SyncJob(Document, LogType):
                     # Validate target_document_name is provided for update/delete
                     if not target_document_name:
                         frappe.throw(_(
-                            "target_document_name is required for {0} operation"
+                            "target_document_name is required for {0} operation. "
+                            "Please return a valid document name in the dict returned by get_target_document()."
                         ).format(operation))
                     target_doc = frappe.get_doc(target_document_type, target_document_name)
                 
@@ -439,10 +440,12 @@ class SyncJob(Document, LogType):
                 # Validate tuple has exactly 2 elements
                 try:
                     target_doc, operation = result
-                except (ValueError, TypeError):
+                except (ValueError, TypeError) as e:
                     frappe.throw(_(
-                        "get_target_document must return either a dict or a tuple of (target_doc, operation)"
-                    ))
+                        "get_target_document must return either a dict with keys "
+                        "(target_document_type, target_document_name, operation) "
+                        "or a tuple of (target_doc, operation). Got: {0}"
+                    ).format(type(result).__name__))
                 
                 # Save target_document_type immediately
                 if target_doc and not self.target_document_type:
