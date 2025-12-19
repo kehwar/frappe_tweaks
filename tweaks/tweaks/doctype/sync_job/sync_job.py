@@ -376,36 +376,30 @@ class SyncJob(Document, LogType):
 
         else:
             target_info = module.get_target_document(self, source_doc)
-            return self._process_target_info(target_info, context, validate_from_single=True)
+            return self._process_target_info(target_info, context)
 
-    def _process_target_info(self, target_info, context, validate_from_single=False):
+    def _process_target_info(self, target_info, context):
         """
         Process target info dict and return target document, operation, and context.
         
         Args:
             target_info: Dict containing operation, target_document_type, target_document_name, context
             context: Current context dict
-            validate_from_single: If True, perform extra validation for get_target_document return value.
-                This applies stricter validation for single targets vs multiple targets:
-                - Validates operation is in VALID_SYNC_OPERATIONS
-                - Requires target_document_name for update/delete operations
-                For multiple targets (validate_from_single=False), these validations are deferred
-                to when child jobs are spawned, allowing more flexibility in target discovery.
             
         Returns:
             Tuple of (target_doc, operation, context)
         """
         # Validate required key: operation is always required
         if "operation" not in target_info:
-            frappe.throw(_("get_target_document must return dict with 'operation' key"))
+            frappe.throw(_("Target info must contain 'operation' key"))
         
         operation = target_info["operation"]
         
         # Normalize operation to lowercase for comparison
         operation_lower = operation.lower()
         
-        # Validate operation is valid (only for get_target_document, not get_multiple_target_documents)
-        if validate_from_single and operation_lower not in VALID_SYNC_OPERATIONS:
+        # Validate operation is valid
+        if operation_lower not in VALID_SYNC_OPERATIONS:
             frappe.throw(_(
                 "Invalid operation '{0}'. Must be one of: {1}"
             ).format(operation, ", ".join(VALID_SYNC_OPERATIONS)))
@@ -422,11 +416,10 @@ class SyncJob(Document, LogType):
         # Context can override existing context
         context = target_info.get("context", context)
         
-        # Validate target_document_name is provided for update/delete operations (only for get_target_document)
-        if validate_from_single and operation_lower in ["update", "delete"] and not target_document_name:
+        # Validate target_document_name is provided for update/delete operations
+        if operation_lower in ["update", "delete"] and not target_document_name:
             frappe.throw(_(
-                "target_document_name is required for {0} operation. "
-                "Please return a valid document name in the dict returned by get_target_document()."
+                "target_document_name is required for {0} operation"
             ).format(operation))
         
         # Save target_document_type if not already set
