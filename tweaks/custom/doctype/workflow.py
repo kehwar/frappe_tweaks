@@ -229,6 +229,9 @@ def get_doc(doc):
 
 
 def apply_workflow_patches():
-
+    # refactor: Migrate to frappe/model/workflow.py
+    # - Replace get_transitions and apply_workflow with enhanced versions above
+    # - Add apply_workflow_transition and apply_auto_workflow_transition functions
+    # - Add support for before_transition and after_transition document methods
     workflow.get_transitions = get_transitions
     workflow.apply_workflow = apply_workflow

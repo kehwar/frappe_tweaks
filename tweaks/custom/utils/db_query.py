@@ -2,7 +2,9 @@ from frappe.model.db_query import DatabaseQuery
 
 
 def apply_db_query_patches():
-
+    # refactor: Migrate to frappe/model/db_query.py
+    # - Update build_match_conditions to set _fetch_shared_documents flag when permission queries exist
+    # - Add caching to get_permission_query_conditions using _permission_query_conditions attribute
     DatabaseQuery.build_match_conditions = build_match_conditions(
         DatabaseQuery.build_match_conditions
     )

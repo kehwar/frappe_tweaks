@@ -16,6 +16,11 @@ from tweaks.custom.doctype.server_script_utils import (
 
 
 def apply_server_script_patches():
+    # refactor: Migrate to frappe/core/doctype/server_script/server_script_utils.py
+    # - Replace get_server_script_map with version from server_script_utils.py (adds priority support)
+    # - Replace run_server_script_for_doc_event with enhanced version (supports Permission Policy/Query)
+    # - Update EVENT_MAP to include additional events (before_transition, after_transition, etc.)
+    # - Update imports in frappe/handler.py, frappe/model/db_query.py, frappe/model/document.py
 
     # get_server_script_map
     server_script_utils.get_server_script_map = get_server_script_map

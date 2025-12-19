@@ -32,4 +32,7 @@ def validate_api_token_as_user_password(user, password):
 
 def apply_authentication_patches():
     """Apply authentication patches."""
+    # refactor: Migrate to frappe/auth.py
+    # - Update validate_api_key_secret to support username/password fallback
+    # - Add validate_api_token_as_user_password logic before API key validation
     auth.validate_api_key_secret = decorate_validate_api_key_secret(auth.validate_api_key_secret)

@@ -46,7 +46,10 @@ def get_method_kwargs(self):
 
 
 def apply_document_patches():
-
+    # refactor: Migrate to frappe/model/document.py
+    # - Replace Document.run_method with enhanced version above
+    # - Add get_method_args and get_method_kwargs as Document class methods
+    # - Enhanced run_method adds Server Script execution after webhooks
     Document.run_method = run_method
     Document.get_method_args = get_method_args
     Document.get_method_kwargs = get_method_kwargs
