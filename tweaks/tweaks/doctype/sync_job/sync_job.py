@@ -421,8 +421,9 @@ class SyncJob(Document, LogType):
                 
                 # Load the actual document for processing
                 if not target_document_type:
-                    # No target specified
-                    target_doc = None
+                    # No target specified - finish job without target
+                    self._finish_with_no_targets()
+                    return None, None, context
                 elif operation.lower() == "insert":
                     target_doc = frappe.new_doc(target_document_type)
                 else:

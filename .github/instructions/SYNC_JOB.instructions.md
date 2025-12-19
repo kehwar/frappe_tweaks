@@ -575,11 +575,12 @@ def get_target_document(sync_job, source_doc):
                 "context": {"synced_from_hook": True}  # Additional context
             }
     
-    # Skip sync - no target
+    # Skip sync - return None for target_document_type
+    # Operation value doesn't matter when target_document_type is None
     return {
         "target_document_type": None,
         "target_document_name": None,
-        "operation": "update"
+        "operation": "insert"  # Any value is fine since sync will be skipped
     }
 
 
