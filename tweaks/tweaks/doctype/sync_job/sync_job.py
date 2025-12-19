@@ -385,7 +385,12 @@ class SyncJob(Document, LogType):
         Args:
             target_info: Dict containing operation, target_document_type, target_document_name, context
             context: Current context dict
-            validate_from_single: If True, perform extra validation for get_target_document return value
+            validate_from_single: If True, perform extra validation for get_target_document return value.
+                This applies stricter validation for single targets vs multiple targets:
+                - Validates operation is in VALID_SYNC_OPERATIONS
+                - Requires target_document_name for update/delete operations
+                For multiple targets (validate_from_single=False), these validations are deferred
+                to when child jobs are spawned, allowing more flexibility in target discovery.
             
         Returns:
             Tuple of (target_doc, operation, context)
