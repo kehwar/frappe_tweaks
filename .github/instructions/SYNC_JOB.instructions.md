@@ -480,7 +480,8 @@ def get_target_document(sync_job, source_doc):
 
 def update_target_doc(sync_job, source_doc, target_doc):
     """Map fields from Customer to SAP Customer"""
-    # Set ERP reference on insert
+    # Set ERP reference on insert (since we only return metadata in get_target_document,
+    # field assignments are done here in update_target_doc)
     if not target_doc.erp_customer:
         target_doc.erp_customer = source_doc.name
     

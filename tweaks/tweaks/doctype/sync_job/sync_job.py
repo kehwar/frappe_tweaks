@@ -398,6 +398,13 @@ class SyncJob(Document, LogType):
             if isinstance(result, dict):
                 # New dict format
                 target_info = result
+                
+                # Validate required keys
+                if "operation" not in target_info:
+                    frappe.throw(_("get_target_document must return dict with 'operation' key"))
+                if "target_document_type" not in target_info:
+                    frappe.throw(_("get_target_document must return dict with 'target_document_type' key"))
+                
                 operation = target_info["operation"]
                 target_document_type = target_info["target_document_type"]
                 target_document_name = target_info.get("target_document_name")
@@ -419,12 +426,23 @@ class SyncJob(Document, LogType):
                 elif operation.lower() == "insert":
                     target_doc = frappe.new_doc(target_document_type)
                 else:
+                    # Validate target_document_name is provided for update/delete
+                    if not target_document_name:
+                        frappe.throw(_(
+                            "target_document_name is required for {0} operation"
+                        ).format(operation))
                     target_doc = frappe.get_doc(target_document_type, target_document_name)
                 
                 return target_doc, operation, context
             else:
                 # Old tuple format (for backward compatibility)
-                target_doc, operation = result
+                # Validate tuple has exactly 2 elements
+                try:
+                    target_doc, operation = result
+                except (ValueError, TypeError):
+                    frappe.throw(_(
+                        "get_target_document must return either a dict or a tuple of (target_doc, operation)"
+                    ))
                 
                 # Save target_document_type immediately
                 if target_doc and not self.target_document_type:
