@@ -442,8 +442,8 @@ class SyncJob(Document, LogType):
                     target_doc, operation = result
                 except (ValueError, TypeError) as e:
                     frappe.throw(_(
-                        "get_target_document must return either a dict with keys "
-                        "(target_document_type, target_document_name, operation) "
+                        "get_target_document must return either a dict with required keys "
+                        "(operation, target_document_type) and optional keys (target_document_name, context) "
                         "or a tuple of (target_doc, operation). Got: {0}"
                     ).format(type(result).__name__))
                 
