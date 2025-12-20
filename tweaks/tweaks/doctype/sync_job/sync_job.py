@@ -124,7 +124,7 @@ class SyncJob(Document, LogType):
         Format:
         - If target: source_document_type > target_document_type: target_document_name
         - If no target: source_document_type: source_document_name
-        - If no source name: source_document_type (context-based)
+        - If no source name: source_document_type
         
         Returns:
             str: Generated title (max 140 chars)
@@ -137,7 +137,7 @@ class SyncJob(Document, LogType):
         if self.source_document_name:
             return f"{self.source_document_type}: {self.source_document_name}"[:140]
         else:
-            return f"{self.source_document_type} (context-based)"[:140]
+            return self.source_document_type[:140]
 
     def after_insert(self):
         """Enqueue sync job after insert if queue_on_insert is enabled"""

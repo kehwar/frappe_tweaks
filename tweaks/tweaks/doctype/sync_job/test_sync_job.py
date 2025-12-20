@@ -136,8 +136,8 @@ class TestSyncJob(FrappeTestCase):
         self.assertEqual(sync_job.source_document_type, "Customer")
         self.assertIsNone(sync_job.source_document_name)
         
-        # Check title generation for context-based sync
-        self.assertIn("context-based", sync_job.title)
+        # Check title generation - should be just the document type
+        self.assertEqual(sync_job.title, "Customer")
         
         # Check context
         context = json.loads(sync_job.context)
