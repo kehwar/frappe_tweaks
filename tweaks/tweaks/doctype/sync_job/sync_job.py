@@ -267,9 +267,9 @@ class SyncJob(Document, LogType):
         """Load source document"""
         return frappe.get_doc(self.source_document_type, self.source_document_name)
 
-    def get_target_document(self):
+    def get_target_document(self, for_update=False):
         """Load target document"""
-        return frappe.get_doc(self.target_document_type, self.target_document_name)
+        return frappe.get_doc(self.target_document_type, self.target_document_name, for_update=for_update)
 
     def get_context(self):
         """Parse JSON context"""
@@ -442,7 +442,7 @@ class SyncJob(Document, LogType):
         else:
             # Load the target document for update or delete
             try:
-                target_doc = frappe.get_doc(target_document_type, target_document_name)
+                target_doc = frappe.get_doc(target_document_type, target_document_name, for_update=True)
             except frappe.DoesNotExistError:
                 if operation_lower == "delete":
                     # Target doesn't exist, nothing to delete - finish job
