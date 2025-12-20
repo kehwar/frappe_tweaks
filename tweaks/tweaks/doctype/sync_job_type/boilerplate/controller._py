@@ -76,21 +76,19 @@ def get_target_document(sync_job, source_doc):
     # Try to find existing target
     # target_name = frappe.db.get_value("Target DocType", {{"link_field": source_doc.name}})
     # if target_name:
-    #     return {
+    #     return {{
     #         "operation": "update",
     #         "target_document_name": target_name,
     #         # target_document_type is optional - will use sync_job_type's target if not provided
-    #     }
+    #     }}
     # else:
-    #     return {
+    #     return {{
     #         "operation": "insert",
     #         # target_document_type is optional - will use sync_job_type's target if not provided
     #         # target_document_name is optional for insert - will be set after save
-    #     }
+    #     }}
 
-    return {
-        "operation": "insert",
-    }
+    pass
 
 
 

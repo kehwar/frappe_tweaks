@@ -104,7 +104,7 @@ class SyncJobType(Document):
 
             # Use Sync Job Type's own boilerplate templates
             make_boilerplate(
-                "controller.py",
+                "controller._py",
                 self,
                 {"name": self.name},
                 template_module="Tweaks",
