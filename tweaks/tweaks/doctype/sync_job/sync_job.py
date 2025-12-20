@@ -71,16 +71,8 @@ class SyncJob(Document, LogType):
         """Set title before validation"""
         self.title = self.generate_title()
 
-    def before_save(self):
-        """Set flags before save"""
-        # Set ignore_links flag to prevent failures from broken source document links
-        self.flags.ignore_links = True
-
     def before_insert(self):
         """Set defaults before inserting"""
-        # Set ignore_links flag to prevent failures from broken source document links
-        self.flags.ignore_links = True
-        
         # Set default status
         if not self.status:
             self.status = "Pending"
@@ -184,6 +176,7 @@ class SyncJob(Document, LogType):
         if reason:
             self.cancel_reason = reason
         self.ended_at = now()
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
 
     @frappe.whitelist()
@@ -199,6 +192,7 @@ class SyncJob(Document, LogType):
         self.status = "Queued"
         self.error_message = None
 
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
 
         # Re-enqueue
@@ -217,6 +211,7 @@ class SyncJob(Document, LogType):
 
         # Update status to Queued
         self.status = "Queued"
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
 
         # Enqueue the job
@@ -316,6 +311,7 @@ class SyncJob(Document, LogType):
             self.status = "Failed"
             self.error_message = _("Module validation failed: {0}").format(str(e))
             self.ended_at = now()
+            self.flags.ignore_links = True
             self.save(ignore_permissions=True)
             frappe.db.commit()
             raise
@@ -514,6 +510,7 @@ class SyncJob(Document, LogType):
         self.multiple_target_documents = frappe.as_json(child_jobs)
         self.status = "Finished"
         self.ended_at = now()
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
 
@@ -521,6 +518,7 @@ class SyncJob(Document, LogType):
         """Finish sync job when no targets found"""
         self.status = "Finished"
         self.ended_at = now()
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
 
@@ -609,6 +607,7 @@ class SyncJob(Document, LogType):
         if self.started_at and self.ended_at:
             self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
 
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
 
@@ -625,6 +624,7 @@ class SyncJob(Document, LogType):
         if self.started_at and self.ended_at:
             self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
 
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
 
@@ -642,6 +642,7 @@ class SyncJob(Document, LogType):
         if (self.retry_count or 0) < self.max_retries:
             self.retry_after = add_to_date(now(), minutes=self.retry_delay or 5)
 
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
 
