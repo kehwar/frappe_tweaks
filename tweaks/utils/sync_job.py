@@ -132,7 +132,7 @@ def enqueue_sync_job(
         }
     )
 
-    sync_job.insert(ignore_permissions=True, ignore_links=True)
+    sync_job.insert(ignore_permissions=True)
     frappe.db.commit()
 
     return sync_job
