@@ -394,6 +394,7 @@ class SyncJob(Document, LogType):
             frappe.throw(_("Target info must contain 'operation' key"))
         
         operation = target_info["operation"]
+        self.operation = operation.title()
         
         # Normalize operation to lowercase for comparison
         operation_lower = operation.lower()
