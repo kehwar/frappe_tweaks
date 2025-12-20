@@ -35,6 +35,10 @@ def enqueue_sync_job(
     triggered_by_document_name=None,
     queue_on_insert=True,
     dry_run=False,
+    insert_enabled=True,
+    update_enabled=True,
+    delete_enabled=True,
+    update_without_changes_enabled=False,
 ):
     """
     Create and enqueue a sync job
@@ -60,6 +64,10 @@ def enqueue_sync_job(
         triggered_by_document_name: Optional document name that triggered this sync job
         queue_on_insert: Whether to queue job on insert (default: True)
         dry_run: Whether to calculate diff only without saving (default: False)
+        insert_enabled: Allow insert operations (default: True)
+        update_enabled: Allow update operations (default: True)
+        delete_enabled: Allow delete operations (default: True)
+        update_without_changes_enabled: Save even if no changes (default: False)
 
     Returns:
         Sync Job document
@@ -117,6 +125,10 @@ def enqueue_sync_job(
             "trigger_type": trigger_type,
             "queue_on_insert": queue_on_insert,
             "dry_run": dry_run,
+            "insert_enabled": insert_enabled,
+            "update_enabled": update_enabled,
+            "delete_enabled": delete_enabled,
+            "update_without_changes_enabled": update_without_changes_enabled,
         }
     )
 
