@@ -624,6 +624,18 @@ class SyncJob(Document, LogType):
         frappe.db.commit()
 
 
+@frappe.whitelist()
+def clear_all_logs() -> None:
+    """
+    Clear all Sync Job logs.
+
+    This function is whitelisted and can only be called by System Managers.
+    It truncates the entire Sync Job table.
+    """
+    frappe.only_for("System Manager")
+    frappe.db.truncate("Sync Job")
+
+
 def execute_sync_job(sync_job_name):
     """
     Execute sync job (runs in background)
