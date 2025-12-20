@@ -635,5 +635,5 @@ def execute_sync_job(sync_job_name):
 
     job = get_current_job()
 
-    sync_job = frappe.get_doc("Sync Job", sync_job_name)
+    sync_job = frappe.get_doc("Sync Job", sync_job_name, for_update=1)
     sync_job.execute(job_id=job.id if job else None)
