@@ -116,6 +116,7 @@ class SyncJob(Document, LogType):
         Format:
         - If target: source_document_type > target_document_type: target_document_name
         - If no target: source_document_type: source_document_name
+        - If no source name: source_document_type (context-based)
         
         Returns:
             str: Generated title (max 140 chars)
@@ -125,7 +126,10 @@ class SyncJob(Document, LogType):
             return f"{self.source_document_type} > {self.target_document_type}: {self.target_document_name}"[:140]
         
         # No target - use source only
-        return f"{self.source_document_type}: {self.source_document_name}"[:140]
+        if self.source_document_name:
+            return f"{self.source_document_type}: {self.source_document_name}"[:140]
+        else:
+            return f"{self.source_document_type} (context-based)"[:140]
 
     def after_insert(self):
         """Enqueue sync job after insert if queue_on_insert is enabled"""
@@ -172,7 +176,7 @@ class SyncJob(Document, LogType):
         if reason:
             self.cancel_reason = reason
         self.ended_at = now()
-        self.save(ignore_permissions=True)
+        self.save(ignore_permissions=True, ignore_links=True)
 
     @frappe.whitelist()
     def retry(self):
@@ -187,7 +191,7 @@ class SyncJob(Document, LogType):
         self.status = "Queued"
         self.error_message = None
 
-        self.save(ignore_permissions=True)
+        self.save(ignore_permissions=True, ignore_links=True)
 
         # Re-enqueue
         enqueue(
@@ -205,7 +209,7 @@ class SyncJob(Document, LogType):
 
         # Update status to Queued
         self.status = "Queued"
-        self.save(ignore_permissions=True)
+        self.save(ignore_permissions=True, ignore_links=True)
 
         # Enqueue the job
         enqueue(
@@ -264,8 +268,18 @@ class SyncJob(Document, LogType):
             self._handle_error(e)
 
     def get_source_document(self):
-        """Load source document"""
-        return frappe.get_doc(self.source_document_type, self.source_document_name)
+        """
+        Load source document.
+        Returns None if source_document_name is not set or if document doesn't exist.
+        """
+        if not self.source_document_name:
+            return None
+        
+        try:
+            return frappe.get_doc(self.source_document_type, self.source_document_name)
+        except frappe.DoesNotExistError:
+            # Source document was deleted, return None
+            return None
 
     def get_target_document(self, for_update=False):
         """Load target document"""
@@ -294,7 +308,7 @@ class SyncJob(Document, LogType):
             self.status = "Failed"
             self.error_message = _("Module validation failed: {0}").format(str(e))
             self.ended_at = now()
-            self.save(ignore_permissions=True)
+            self.save(ignore_permissions=True, ignore_links=True)
             frappe.db.commit()
             raise
 
@@ -492,14 +506,14 @@ class SyncJob(Document, LogType):
         self.multiple_target_documents = frappe.as_json(child_jobs)
         self.status = "Finished"
         self.ended_at = now()
-        self.save(ignore_permissions=True)
+        self.save(ignore_permissions=True, ignore_links=True)
         frappe.db.commit()
 
     def _finish_with_no_targets(self):
         """Finish sync job when no targets found"""
         self.status = "Finished"
         self.ended_at = now()
-        self.save(ignore_permissions=True)
+        self.save(ignore_permissions=True, ignore_links=True)
         frappe.db.commit()
 
     def _execute_delete_operation(self, module, source_doc, target_doc):
@@ -587,7 +601,7 @@ class SyncJob(Document, LogType):
         if self.started_at and self.ended_at:
             self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
 
-        self.save(ignore_permissions=True)
+        self.save(ignore_permissions=True, ignore_links=True)
         frappe.db.commit()
 
         # Raise exception to stop execution
@@ -603,7 +617,7 @@ class SyncJob(Document, LogType):
         if self.started_at and self.ended_at:
             self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
 
-        self.save(ignore_permissions=True)
+        self.save(ignore_permissions=True, ignore_links=True)
         frappe.db.commit()
 
     def _handle_error(self, e):
@@ -620,7 +634,7 @@ class SyncJob(Document, LogType):
         if (self.retry_count or 0) < self.max_retries:
             self.retry_after = add_to_date(now(), minutes=self.retry_delay or 5)
 
-        self.save(ignore_permissions=True)
+        self.save(ignore_permissions=True, ignore_links=True)
         frappe.db.commit()
 
 

@@ -47,9 +47,9 @@ def enqueue_sync_job(
         sync_job_type: Name of Sync Job Type
         source_doc: Optional source document object (extracts type and name from it)
         source_document_type: Optional pre-specified source document type (overrides job type default)
-        source_document_name: Name of source document
+        source_document_name: Optional name of source document (can be None if source was deleted)
         operation: Optional pre-specified operation (Insert/Update/Delete)
-        context: Optional context dictionary
+        context: Optional context dictionary (required when source_document_name is None)
         target_doc: Optional target document object (extracts type and name from it)
         target_document_type: Optional pre-specified target document type (overrides job type default)
         target_document_name: Optional pre-specified target document name
@@ -132,7 +132,7 @@ def enqueue_sync_job(
         }
     )
 
-    sync_job.insert(ignore_permissions=True)
+    sync_job.insert(ignore_permissions=True, ignore_links=True)
     frappe.db.commit()
 
     return sync_job
