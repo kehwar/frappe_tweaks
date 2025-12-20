@@ -118,3 +118,58 @@ class TestSyncJob(FrappeTestCase):
         self.assertEqual(
             path, "soldamundo.soldamundo.sync_job.sap_customer_sync.sap_customer_sync"
         )
+
+    def test_create_sync_job_without_source_document(self):
+        """Test creating a sync job without source document"""
+        from tweaks.utils.sync_job import enqueue_sync_job
+
+        # Create sync job without source_document_name
+        sync_job = enqueue_sync_job(
+            sync_job_type="Test Customer Sync",
+            source_document_type="Customer",
+            context={"component_names": ["Item1", "Item2"]},
+            queue_on_insert=False,  # Don't queue to avoid execution
+        )
+
+        self.assertTrue(frappe.db.exists("Sync Job", sync_job.name))
+        self.assertEqual(sync_job.status, "Pending")
+        self.assertEqual(sync_job.source_document_type, "Customer")
+        self.assertIsNone(sync_job.source_document_name)
+        
+        # Check title generation - should be just the document type
+        self.assertEqual(sync_job.title, "Customer")
+        
+        # Check context
+        context = json.loads(sync_job.context)
+        self.assertEqual(context["component_names"], ["Item1", "Item2"])
+
+    def test_get_source_document_handles_missing_document(self):
+        """Test that get_source_document returns None for deleted documents"""
+        from tweaks.utils.sync_job import enqueue_sync_job
+
+        # Create sync job with a non-existent source document
+        sync_job = enqueue_sync_job(
+            sync_job_type="Test Customer Sync",
+            source_document_name="NonExistent Customer",
+            context={"test": "data"},
+            queue_on_insert=False,  # Don't queue to avoid execution
+        )
+
+        # get_source_document should return None for missing document
+        source_doc = sync_job.get_source_document()
+        self.assertIsNone(source_doc)
+
+    def test_get_source_document_returns_none_when_no_name(self):
+        """Test that get_source_document returns None when source_document_name is None"""
+        from tweaks.utils.sync_job import enqueue_sync_job
+
+        sync_job = enqueue_sync_job(
+            sync_job_type="Test Customer Sync",
+            source_document_type="Customer",
+            context={"test": "data"},
+            queue_on_insert=False,  # Don't queue to avoid execution
+        )
+
+        # get_source_document should return None when no name is set
+        source_doc = sync_job.get_source_document()
+        self.assertIsNone(source_doc)

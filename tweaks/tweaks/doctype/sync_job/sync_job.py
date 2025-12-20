@@ -116,6 +116,7 @@ class SyncJob(Document, LogType):
         Format:
         - If target: source_document_type > target_document_type: target_document_name
         - If no target: source_document_type: source_document_name
+        - If no source name: source_document_type
         
         Returns:
             str: Generated title (max 140 chars)
@@ -125,7 +126,10 @@ class SyncJob(Document, LogType):
             return f"{self.source_document_type} > {self.target_document_type}: {self.target_document_name}"[:140]
         
         # No target - use source only
-        return f"{self.source_document_type}: {self.source_document_name}"[:140]
+        if self.source_document_name:
+            return f"{self.source_document_type}: {self.source_document_name}"[:140]
+        else:
+            return self.source_document_type[:140]
 
     def after_insert(self):
         """Enqueue sync job after insert if queue_on_insert is enabled"""
@@ -172,6 +176,7 @@ class SyncJob(Document, LogType):
         if reason:
             self.cancel_reason = reason
         self.ended_at = now()
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
 
     @frappe.whitelist()
@@ -187,6 +192,7 @@ class SyncJob(Document, LogType):
         self.status = "Queued"
         self.error_message = None
 
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
 
         # Re-enqueue
@@ -205,6 +211,7 @@ class SyncJob(Document, LogType):
 
         # Update status to Queued
         self.status = "Queued"
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
 
         # Enqueue the job
@@ -264,8 +271,18 @@ class SyncJob(Document, LogType):
             self._handle_error(e)
 
     def get_source_document(self):
-        """Load source document"""
-        return frappe.get_doc(self.source_document_type, self.source_document_name)
+        """
+        Load source document.
+        Returns None if source_document_name is not set or if document doesn't exist.
+        """
+        if not self.source_document_name:
+            return None
+        
+        try:
+            return frappe.get_doc(self.source_document_type, self.source_document_name)
+        except frappe.DoesNotExistError:
+            # Source document was deleted, return None
+            return None
 
     def get_target_document(self, for_update=False):
         """Load target document"""
@@ -294,6 +311,7 @@ class SyncJob(Document, LogType):
             self.status = "Failed"
             self.error_message = _("Module validation failed: {0}").format(str(e))
             self.ended_at = now()
+            self.flags.ignore_links = True
             self.save(ignore_permissions=True)
             frappe.db.commit()
             raise
@@ -492,6 +510,7 @@ class SyncJob(Document, LogType):
         self.multiple_target_documents = frappe.as_json(child_jobs)
         self.status = "Finished"
         self.ended_at = now()
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
 
@@ -499,6 +518,7 @@ class SyncJob(Document, LogType):
         """Finish sync job when no targets found"""
         self.status = "Finished"
         self.ended_at = now()
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
 
@@ -587,6 +607,7 @@ class SyncJob(Document, LogType):
         if self.started_at and self.ended_at:
             self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
 
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
 
@@ -603,6 +624,7 @@ class SyncJob(Document, LogType):
         if self.started_at and self.ended_at:
             self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
 
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
 
@@ -620,6 +642,7 @@ class SyncJob(Document, LogType):
         if (self.retry_count or 0) < self.max_retries:
             self.retry_after = add_to_date(now(), minutes=self.retry_delay or 5)
 
+        self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
 

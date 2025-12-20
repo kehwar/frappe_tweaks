@@ -591,6 +591,64 @@ def update_target_doc(sync_job, source_doc, target_doc):
         sync_addresses(source_doc, target_doc)
 ```
 
+### Example 5: Sync Without Source Document (Deleted Source)
+
+```python
+def get_multiple_target_documents(sync_job, source_doc):
+    """
+    Handle sync when source document has been deleted.
+    In this case, source_doc will be None, so we rely on context data.
+    """
+    context = sync_job.get_context()
+    
+    # When product bundle is deleted, component names are passed in context
+    component_names = context.get("component_names", [])
+    
+    targets = []
+    for component_name in component_names:
+        targets.append({
+            "target_document_type": "Item",
+            "target_document_name": component_name,
+            "operation": "update",
+            "context": {"clear_bundle_properties": True}
+        })
+    
+    return targets
+
+
+def update_target_doc(sync_job, source_doc, target_doc):
+    """Update target when source_doc is None"""
+    context = sync_job.get_context()
+    
+    # source_doc will be None when the source document was deleted
+    if source_doc is None and context.get("clear_bundle_properties"):
+        # Clear bundle-related properties on the target
+        target_doc.is_bundle_component = 0
+        target_doc.parent_bundle = None
+    elif source_doc:
+        # Normal sync logic when source exists
+        target_doc.field1 = source_doc.field1
+
+
+# Usage: Trigger sync job when product bundle is deleted
+def on_trash_product_bundle(doc, method):
+    from tweaks.utils.sync_job import enqueue_sync_job
+    
+    # Get component item names before bundle is deleted
+    component_names = [item.item_code for item in doc.get("items", [])]
+    
+    # Enqueue sync job without source_document_name
+    # since the bundle will be deleted
+    enqueue_sync_job(
+        sync_job_type="Clear Bundle Component Properties",
+        source_document_type="Product Bundle",
+        # No source_document_name since it's being deleted
+        context={"component_names": component_names},
+        trigger_type="Document Hook"
+    )
+```
+
+
 ## Best Practices
 
 1. **Use Standard Mode** for simple field mappings
@@ -641,8 +699,8 @@ from tweaks.utils.sync_job import enqueue_sync_job
 
 sync_job = enqueue_sync_job(
     sync_job_type,              # Required: Sync Job Type name
-    source_document_name,       # Required: Source document name
-    context=None,               # Optional: Dict of context data
+    source_document_name=None,  # Optional: Source document name (can be None if source was deleted)
+    context=None,               # Optional: Dict of context data (required when source_document_name is None)
     operation=None,             # Optional: "Insert", "Update", or "Delete"
     target_document_name=None,  # Optional: Pre-specify target
     parent_sync_job=None,       # Optional: Parent job name

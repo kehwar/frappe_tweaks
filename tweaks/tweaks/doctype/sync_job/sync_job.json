@@ -117,7 +117,6 @@
    "fieldtype": "Dynamic Link",
    "label": "Source Document",
    "options": "source_document_type",
-   "reqd": 1,
    "set_only_once": 1
   },
   {
