@@ -43,21 +43,26 @@ def parse_authorization_header(auth_header):
     Returns:
         tuple: (username, password) or (None, None) if parsing fails
     """
+    # Split the header into scheme and credentials
+    parts = auth_header.split(" ", 1)
+    if len(parts) != 2:
+        return None, None
+    
+    auth_scheme, auth_token = parts
+    auth_scheme = auth_scheme.lower()
+    
     # Token authentication: "token username:password"
-    if auth_header.startswith("token "):
-        token = auth_header[6:]  # Remove 'token ' prefix
+    if auth_scheme == "token":
         try:
-            username, password = token.split(":", 1)
+            username, password = auth_token.split(":", 1)
             return username, password
         except ValueError:
             return None, None
     
     # Basic authentication: "Basic base64(username:password)"
-    if auth_header.startswith("Basic "):
+    if auth_scheme == "basic":
         try:
-            encoded_credentials = auth_header[6:]  # Remove 'Basic ' prefix
-            decoded_credentials = base64.b64decode(encoded_credentials).decode("utf-8")
-            username, password = decoded_credentials.split(":", 1)
+            username, password = frappe.safe_decode(base64.b64decode(auth_token)).split(":", 1)
             return username, password
         except (ValueError, Exception):
             return None, None
