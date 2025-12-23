@@ -115,7 +115,7 @@ def enqueue_sync_job(
             "target_document_name": target_document_name,
             "triggered_by_document_type": triggered_by_document_type,
             "triggered_by_document_name": triggered_by_document_name,
-            "operation": operation,
+            "operation": operation.title() if operation else None,
             "context": frappe.as_json(context) if context else None,
             "parent_sync_job": parent_sync_job,
             "queue": queue or job_type.queue,
