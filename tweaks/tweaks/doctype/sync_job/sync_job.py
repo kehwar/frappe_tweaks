@@ -79,7 +79,7 @@ class SyncJob(Document, LogType):
 
         # Set trigger document timestamp if trigger document is present
         if self.triggered_by_document_type and self.triggered_by_document_name:
-            trigger_doc = frappe.get_doc(self.triggered_by_document_type, self.triggered_by_document_name)
+            trigger_doc = get_document_even_if_deleted(self.triggered_by_document_type, self.triggered_by_document_name)
             self.trigger_document_timestamp = trigger_doc.modified
 
         # Validate context JSON
@@ -278,11 +278,17 @@ class SyncJob(Document, LogType):
         if not self.source_document_name:
             return None
         
-        try:
-            return frappe.get_doc(self.source_document_type, self.source_document_name)
-        except frappe.DoesNotExistError:
-            # Source document was deleted, return None
+        return get_document_even_if_deleted(self.source_document_type, self.source_document_name)
+    
+    def get_trigger_document(self):
+        """
+        Load trigger document.
+        Returns None if trigger_document_name is not set or if document doesn't exist.
+        """
+        if not self.triggered_by_document_name:
             return None
+        
+        return get_document_even_if_deleted(self.triggered_by_document_type, self.triggered_by_document_name)
 
     def get_target_document(self, for_update=False):
         """Load target document"""
@@ -672,3 +678,34 @@ def execute_sync_job(sync_job_name):
 
     sync_job = frappe.get_doc("Sync Job", sync_job_name, for_update=1)
     sync_job.execute(job_id=job.id if job else None)
+
+
+def get_document_even_if_deleted(doctype, name):
+    """
+    Load document even if it has been deleted.
+
+    Args:
+        doctype: Document type
+        name: Document name
+    """
+
+    try:
+        doc = frappe.db.get_value(doctype, name)
+        if not doc:
+            raise frappe.DoesNotExistError
+        return frappe.get_doc(doctype, name)
+    except frappe.DoesNotExistError:
+        pass
+
+    # Check if document was deleted
+    deleted_doc = frappe.db.get_value("Deleted Document", filters={"deleted_doctype": doctype, "deleted_name": name}, fieldname=["data", "creation"], order_by="creation desc", as_dict=1)
+    if deleted_doc:
+        deleted_doc = frappe.get_doc(json.loads(deleted_doc["data"]))
+        deleted_doc.modified = deleted_doc.creation
+        deleted_doc.flags.is_deleted = True
+        return deleted_doc
+    
+    frappe.throw(
+        _("{0} {1} not found").format(_(doctype), name),
+        frappe.DoesNotExistError(doctype=doctype),
+    )
