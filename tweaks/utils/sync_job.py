@@ -11,11 +11,11 @@ import frappe
 from frappe import _
 from frappe.modules import scrub
 from frappe.utils import now
-
+from frappe.utils.background_jobs import enqueue
 
 @frappe.whitelist()
-def enqueue_sync_job(
-    sync_job_type,
+def create_sync_job(
+    sync_job_type=None,
     source_doc=None,
     source_document_type=None,
     source_document_name=None,
@@ -42,10 +42,12 @@ def enqueue_sync_job(
     update_without_changes_enabled=False,
 ):
     """
-    Create and enqueue a sync job
+    Create a sync job (synchronously)
+
+    Parameters can be passed individually or as a single dictionary in the first argument.
 
     Args:
-        sync_job_type: Name of Sync Job Type
+        sync_job_type: Name of Sync Job Type (or dict containing all parameters)
         source_doc: Optional source document object (extracts type and name from it)
         source_document_type: Optional pre-specified source document type (overrides job type default)
         source_document_name: Optional name of source document (can be None if source was deleted)
@@ -73,7 +75,55 @@ def enqueue_sync_job(
 
     Returns:
         Sync Job document
+
+    Examples:
+        # Individual parameters
+        create_sync_job(
+            sync_job_type="SAP Customer Sync",
+            source_document_name="CUST-00001",
+            context={"force_update": True}
+        )
+
+        # Dictionary of parameters
+        create_sync_job({
+            "sync_job_type": "SAP Customer Sync",
+            "source_document_name": "CUST-00001",
+            "context": {"force_update": True}
+        })
     """
+    # Handle dict parameter format
+    if isinstance(sync_job_type, dict):
+        params = sync_job_type
+        sync_job_type = params.get("sync_job_type")
+        source_doc = params.get("source_doc", source_doc)
+        source_document_type = params.get("source_document_type", source_document_type)
+        source_document_name = params.get("source_document_name", source_document_name)
+        operation = params.get("operation", operation)
+        context = params.get("context", context)
+        target_doc = params.get("target_doc", target_doc)
+        target_document_type = params.get("target_document_type", target_document_type)
+        target_document_name = params.get("target_document_name", target_document_name)
+        parent_sync_job = params.get("parent_sync_job", parent_sync_job)
+        queue = params.get("queue", queue)
+        timeout = params.get("timeout", timeout)
+        retry_delay = params.get("retry_delay", retry_delay)
+        max_retries = params.get("max_retries", max_retries)
+        trigger_type = params.get("trigger_type", trigger_type)
+        triggered_by_doc = params.get("triggered_by_doc", triggered_by_doc)
+        triggered_by_document_type = params.get("triggered_by_document_type", triggered_by_document_type)
+        triggered_by_document_name = params.get("triggered_by_document_name", triggered_by_document_name)
+        trigger_document_timestamp = params.get("trigger_document_timestamp", trigger_document_timestamp)
+        queue_on_insert = params.get("queue_on_insert", queue_on_insert)
+        dry_run = params.get("dry_run", dry_run)
+        insert_enabled = params.get("insert_enabled", insert_enabled)
+        update_enabled = params.get("update_enabled", update_enabled)
+        delete_enabled = params.get("delete_enabled", delete_enabled)
+        update_without_changes_enabled = params.get("update_without_changes_enabled", update_without_changes_enabled)
+
+    # Validate required parameter
+    if not sync_job_type:
+        frappe.throw(_("sync_job_type is required"))
+
     # Get Sync Job Type
     job_type = frappe.get_doc("Sync Job Type", sync_job_type)
 
@@ -140,6 +190,123 @@ def enqueue_sync_job(
     frappe.db.commit()
 
     return sync_job
+
+
+@frappe.whitelist()
+def enqueue_sync_job(
+    sync_job_type=None,
+    source_doc=None,
+    source_document_type=None,
+    source_document_name=None,
+    operation=None,
+    context=None,
+    target_doc=None,
+    target_document_type=None,
+    target_document_name=None,
+    parent_sync_job=None,
+    queue=None,
+    timeout=None,
+    retry_delay=None,
+    max_retries=None,
+    trigger_type="Manual",
+    triggered_by_doc=None,
+    triggered_by_document_type=None,
+    triggered_by_document_name=None,
+    trigger_document_timestamp=None,
+    queue_on_insert=True,
+    dry_run=False,
+    insert_enabled=True,
+    update_enabled=True,
+    delete_enabled=True,
+    update_without_changes_enabled=False,
+):
+    """
+    Enqueue a sync job creation in the background
+
+    Parameters can be passed individually or as a single dictionary in the first argument.
+
+    Args:
+        sync_job_type: Name of Sync Job Type (or dict containing all parameters)
+        source_doc: Optional source document object (extracts type and name from it)
+        source_document_type: Optional pre-specified source document type (overrides job type default)
+        source_document_name: Optional name of source document (can be None if source was deleted)
+        operation: Optional pre-specified operation (Insert/Update/Delete)
+        context: Optional context dictionary (required when source_document_name is None)
+        target_doc: Optional target document object (extracts type and name from it)
+        target_document_type: Optional pre-specified target document type (overrides job type default)
+        target_document_name: Optional pre-specified target document name
+        parent_sync_job: Optional parent sync job name
+        queue: Optional queue override
+        timeout: Optional timeout override
+        retry_delay: Optional retry delay override
+        max_retries: Optional max retries override
+        trigger_type: How the job was triggered (default: Manual)
+        triggered_by_doc: Optional document that triggered this sync job
+        triggered_by_document_type: Optional document type that triggered this sync job
+        triggered_by_document_name: Optional document name that triggered this sync job
+        trigger_document_timestamp: Optional timestamp of the triggering document
+        queue_on_insert: Whether to queue job on insert (default: True)
+        dry_run: Whether to calculate diff only without saving (default: False)
+        insert_enabled: Allow insert operations (default: True)
+        update_enabled: Allow update operations (default: True)
+        delete_enabled: Allow delete operations (default: True)
+        update_without_changes_enabled: Save even if no changes (default: False)
+
+    Returns:
+        Job
+
+    Examples:
+        # Individual parameters
+        enqueue_sync_job(
+            sync_job_type="SAP Customer Sync",
+            source_document_name="CUST-00001",
+            context={"force_update": True}
+        )
+
+        # Dictionary of parameters
+        enqueue_sync_job({
+            "sync_job_type": "SAP Customer Sync",
+            "source_document_name": "CUST-00001",
+            "context": {"force_update": True}
+        })
+    """
+    # Build parameters dict
+    if isinstance(sync_job_type, dict):
+        params = sync_job_type
+    else:
+        params = {
+            "sync_job_type": sync_job_type,
+            "source_doc": source_doc,
+            "source_document_type": source_document_type,
+            "source_document_name": source_document_name,
+            "operation": operation,
+            "context": context,
+            "target_doc": target_doc,
+            "target_document_type": target_document_type,
+            "target_document_name": target_document_name,
+            "parent_sync_job": parent_sync_job,
+            "queue": queue,
+            "timeout": timeout,
+            "retry_delay": retry_delay,
+            "max_retries": max_retries,
+            "trigger_type": trigger_type,
+            "triggered_by_doc": triggered_by_doc,
+            "triggered_by_document_type": triggered_by_document_type,
+            "triggered_by_document_name": triggered_by_document_name,
+            "trigger_document_timestamp": trigger_document_timestamp,
+            "queue_on_insert": queue_on_insert,
+            "dry_run": dry_run,
+            "insert_enabled": insert_enabled,
+            "update_enabled": update_enabled,
+            "delete_enabled": delete_enabled,
+            "update_without_changes_enabled": update_without_changes_enabled,
+        }
+
+    # Enqueue the sync job creation
+    return enqueue(
+        "tweaks.utils.sync_job.create_sync_job",
+        sync_job_type=params,
+    )
 
 
 def get_sync_job_module_dotted_path(module, name):

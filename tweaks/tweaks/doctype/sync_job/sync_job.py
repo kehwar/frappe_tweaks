@@ -480,11 +480,11 @@ class SyncJob(Document, LogType):
 
     def _handle_multiple_targets(self, targets):
         """Handle multiple target documents by spawning child jobs"""
-        from tweaks.utils.sync_job import enqueue_sync_job
+        from tweaks.utils.sync_job import create_sync_job
 
         child_jobs = []
         for target_info in targets:
-            child_job = enqueue_sync_job(
+            child_job = create_sync_job(
                 sync_job_type=self.sync_job_type,
                 source_document_name=self.source_document_name,
                 source_document_type=self.source_document_type,
