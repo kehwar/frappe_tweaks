@@ -33,6 +33,7 @@ def enqueue_sync_job(
     triggered_by_doc=None,
     triggered_by_document_type=None,
     triggered_by_document_name=None,
+    trigger_document_timestamp=None,
     queue_on_insert=True,
     dry_run=False,
     insert_enabled=True,
@@ -62,6 +63,7 @@ def enqueue_sync_job(
         triggered_by_doc: Optional document that triggered this sync job
         triggered_by_document_type: Optional document type that triggered this sync job
         triggered_by_document_name: Optional document name that triggered this sync job
+        trigger_document_timestamp: Optional timestamp of the triggering document
         queue_on_insert: Whether to queue job on insert (default: True)
         dry_run: Whether to calculate diff only without saving (default: False)
         insert_enabled: Allow insert operations (default: True)
@@ -115,6 +117,7 @@ def enqueue_sync_job(
             "target_document_name": target_document_name,
             "triggered_by_document_type": triggered_by_document_type,
             "triggered_by_document_name": triggered_by_document_name,
+            "trigger_document_timestamp": trigger_document_timestamp,
             "operation": operation.title() if operation else None,
             "context": frappe.as_json(context) if context else None,
             "parent_sync_job": parent_sync_job,
