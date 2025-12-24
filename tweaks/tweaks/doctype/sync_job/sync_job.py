@@ -78,7 +78,7 @@ class SyncJob(Document, LogType):
             self.status = "Pending"
 
         # Set trigger document timestamp if trigger document is present
-        if self.triggered_by_document_type and self.triggered_by_document_name:
+        if self.triggered_by_document_type and self.triggered_by_document_name and not self.trigger_document_timestamp:
             trigger_doc = get_document_even_if_deleted(self.triggered_by_document_type, self.triggered_by_document_name)
             self.trigger_document_timestamp = trigger_doc.modified
 
@@ -498,6 +498,9 @@ class SyncJob(Document, LogType):
                 retry_delay=self.retry_delay,
                 max_retries=self.max_retries,
                 trigger_type=self.trigger_type,
+                triggered_by_document_name=self.triggered_by_document_name,
+                triggered_by_document_type=self.triggered_by_document_type,
+                trigger_document_timestamp=self.trigger_document_timestamp,
                 queue_on_insert=self.queue_on_insert,
                 dry_run=self.dry_run,
             )
@@ -622,7 +625,7 @@ class SyncJob(Document, LogType):
 
     def _finalize_sync(self, target_doc, operation, diff):
         """Finalize sync job after successful execution"""
-        self.diff_summary = frappe.as_json(diff or {})
+        self.diff_summary = frappe.as_json(diff or {}) if diff else None
         self.operation = operation.title()
         self.status = "Finished"
         self.ended_at = now()
