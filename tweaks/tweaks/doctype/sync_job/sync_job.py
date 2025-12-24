@@ -517,7 +517,7 @@ class SyncJob(Document, LogType):
 
         # Store child job references
         self.multiple_target_documents = frappe.as_json(child_jobs)
-        self.status = "Finished"
+        self.status = "Relayed"
         self.ended_at = now()
         self.flags.ignore_links = True
         self.save(ignore_permissions=True)
@@ -525,7 +525,7 @@ class SyncJob(Document, LogType):
 
     def _finish_with_no_targets(self):
         """Finish sync job when no targets found"""
-        self.status = "Skipped"
+        self.status = "No Target"
         self.ended_at = now()
         self.flags.ignore_links = True
         self.save(ignore_permissions=True)

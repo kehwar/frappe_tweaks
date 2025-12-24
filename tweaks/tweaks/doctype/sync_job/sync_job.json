@@ -94,7 +94,7 @@
    "in_standard_filter": 1,
    "label": "Status",
    "no_copy": 1,
-   "options": "Pending\nQueued\nStarted\nFinished\nFailed\nCanceled\nSkipped",
+   "options": "Pending\nQueued\nStarted\nFinished\nFailed\nCanceled\nSkipped\nNo Target\nRelayed",
    "read_only": 1
   },
   {
@@ -464,6 +464,14 @@
   {
    "color": "Gray",
    "title": "Skipped"
+  },
+  {
+   "color": "Gray",
+   "title": "No Target"
+  },
+  {
+   "color": "Purple",
+   "title": "Relayed"
   }
  ],
  "title_field": "title",
