@@ -525,7 +525,7 @@ class SyncJob(Document, LogType):
 
     def _finish_with_no_targets(self):
         """Finish sync job when no targets found"""
-        self.status = "Finished"
+        self.status = "Skipped"
         self.ended_at = now()
         self.flags.ignore_links = True
         self.save(ignore_permissions=True)
