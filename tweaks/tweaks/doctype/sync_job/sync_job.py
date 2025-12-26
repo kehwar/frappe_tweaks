@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import json
+from typing import Literal
 
 import frappe
 from frappe import _
@@ -14,6 +15,11 @@ from frappe.utils.background_jobs import enqueue
 
 # Valid sync job operations (immutable)
 VALID_SYNC_OPERATIONS = ("insert", "update", "delete")
+
+# Valid sync job statuses (immutable)
+SyncJobStatus = Literal[
+    "Pending", "Queued", "Started", "Finished", "Failed", "Canceled", "Skipped", "Relayed", "No Target"
+]
 
 
 class SyncJob(Document, LogType):
@@ -544,7 +550,7 @@ class SyncJob(Document, LogType):
 
     def _finish_job(
         self,
-        status: str,
+        status: SyncJobStatus,
         target_doc=None,
         operation: str | None = None,
         diff: dict | None = None,
@@ -568,7 +574,9 @@ class SyncJob(Document, LogType):
         """
         # Set diff and operation if provided
         if diff is not None:
-            self.diff_summary = frappe.as_json(diff)
+            # Only set diff_summary if diff is truthy (non-empty dict)
+            # Empty dicts are treated the same as None
+            self.diff_summary = frappe.as_json(diff) if diff else None
         if operation is not None:
             self.operation = operation.title()
         
