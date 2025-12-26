@@ -173,3 +173,154 @@ class TestSyncJob(FrappeTestCase):
         # get_source_document should return None when no name is set
         source_doc = sync_job.get_source_document()
         self.assertIsNone(source_doc)
+
+    def test_hooks_execution_order(self):
+        """Test that all hooks are called in the correct order"""
+        from tweaks.utils.sync_job import create_sync_job
+        
+        # Create test Sync Job Type with hook-enabled module if not exists
+        if not frappe.db.exists("Sync Job Type", "Test Hooks Sync"):
+            sync_job_type = frappe.get_doc(
+                {
+                    "doctype": "Sync Job Type",
+                    "sync_job_type_name": "Test Hooks Sync",
+                    "module": "Tweaks",
+                    "source_document_type": "Customer",
+                    "target_document_type": "Contact",
+                    "is_standard": "Yes",
+                    "queue": "default",
+                    "timeout": 300,
+                    "retry_delay": 5,
+                    "max_retries": 3,
+                }
+            )
+            sync_job_type.insert(ignore_permissions=True)
+        
+        # Import the test module
+        import tweaks.tweaks.sync_job_type.test_hooks_sync.test_hooks_sync as test_module
+        test_module.reset_hook_calls()
+        
+        # Create and execute sync job directly (not queued)
+        sync_job = create_sync_job(
+            sync_job_type="Test Hooks Sync",
+            source_document_name="Test Customer",
+            queue_on_insert=False,
+        )
+        
+        # Execute the sync job
+        sync_job.execute()
+        
+        # Get hook calls
+        hook_calls = test_module.get_hook_calls()
+        
+        # Verify hooks were called in correct order
+        hook_names = [call[0] for call in hook_calls]
+        
+        # Expected order: after_start, get_target_document, update_target_doc, before_sync, after_sync, finished
+        self.assertIn("after_start", hook_names)
+        self.assertIn("get_target_document", hook_names)
+        self.assertIn("update_target_doc", hook_names)
+        self.assertIn("before_sync", hook_names)
+        self.assertIn("after_sync", hook_names)
+        self.assertIn("finished", hook_names)
+        
+        # Verify order
+        after_start_idx = hook_names.index("after_start")
+        get_target_idx = hook_names.index("get_target_document")
+        update_target_idx = hook_names.index("update_target_doc")
+        before_sync_idx = hook_names.index("before_sync")
+        after_sync_idx = hook_names.index("after_sync")
+        finished_idx = hook_names.index("finished")
+        
+        self.assertLess(after_start_idx, get_target_idx)
+        self.assertLess(get_target_idx, update_target_idx)
+        self.assertLess(update_target_idx, before_sync_idx)
+        self.assertLess(before_sync_idx, after_sync_idx)
+        self.assertLess(after_sync_idx, finished_idx)
+        
+        # Cleanup
+        test_module.reset_hook_calls()
+        frappe.db.delete("Sync Job", {"sync_job_type": "Test Hooks Sync"})
+        frappe.db.delete("Contact", {"first_name": "Test Customer"})
+        if frappe.db.exists("Sync Job Type", "Test Hooks Sync"):
+            frappe.delete_doc("Sync Job Type", "Test Hooks Sync", ignore_permissions=True)
+
+    def test_relay_hooks_with_multiple_targets(self):
+        """Test that relay hooks are called for multiple targets"""
+        from tweaks.utils.sync_job import create_sync_job
+        
+        # Create test Sync Job Type with hook-enabled module if not exists
+        if not frappe.db.exists("Sync Job Type", "Test Hooks Sync Multiple"):
+            sync_job_type = frappe.get_doc(
+                {
+                    "doctype": "Sync Job Type",
+                    "sync_job_type_name": "Test Hooks Sync Multiple",
+                    "module": "Tweaks",
+                    "source_document_type": "Customer",
+                    "target_document_type": "Contact",
+                    "is_standard": "Yes",
+                    "queue": "default",
+                    "timeout": 300,
+                    "retry_delay": 5,
+                    "max_retries": 3,
+                }
+            )
+            sync_job_type.insert(ignore_permissions=True)
+        
+        # Import the test module
+        import tweaks.tweaks.sync_job_type.test_hooks_sync.test_hooks_sync as test_module
+        
+        # Temporarily replace get_target_document with get_multiple_target_documents
+        # by creating a custom execution
+        test_module.reset_hook_calls()
+        
+        # Create a custom sync job module that uses get_multiple_target_documents
+        sync_job = create_sync_job(
+            sync_job_type="Test Hooks Sync Multiple",
+            source_document_name="Test Customer",
+            queue_on_insert=False,
+        )
+        
+        # Mock the module to use get_multiple_target_documents
+        # We need to patch the module loading to use our test module
+        original_get_module = frappe.get_module
+        
+        def mock_get_module(path):
+            if "test_hooks_sync_multiple" in path:
+                return test_module
+            return original_get_module(path)
+        
+        frappe.get_module = mock_get_module
+        
+        try:
+            # Execute the sync job - this should call relay hooks
+            sync_job.execute()
+            
+            # Get hook calls
+            hook_calls = test_module.get_hook_calls()
+            hook_names = [call[0] for call in hook_calls]
+            
+            # Verify relay hooks were called
+            self.assertIn("after_start", hook_names)
+            self.assertIn("get_multiple_target_documents", hook_names)
+            self.assertIn("before_relay", hook_names)
+            self.assertIn("after_relay", hook_names)
+            
+            # Verify before_relay was called with 2 targets
+            before_relay_call = [call for call in hook_calls if call[0] == "before_relay"][0]
+            self.assertEqual(before_relay_call[2], 2)
+            
+            # Verify after_relay was called with 2 child jobs
+            after_relay_call = [call for call in hook_calls if call[0] == "after_relay"][0]
+            self.assertEqual(after_relay_call[2], 2)
+            
+        finally:
+            # Restore original get_module
+            frappe.get_module = original_get_module
+            
+            # Cleanup
+            test_module.reset_hook_calls()
+            frappe.db.delete("Sync Job", {"sync_job_type": "Test Hooks Sync Multiple"})
+            if frappe.db.exists("Sync Job Type", "Test Hooks Sync Multiple"):
+                frappe.delete_doc("Sync Job Type", "Test Hooks Sync Multiple", ignore_permissions=True)
+
