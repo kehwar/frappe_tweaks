@@ -527,14 +527,14 @@ class SyncJob(Document, LogType):
         # Store child job references
         self.multiple_target_documents = frappe.as_json(child_jobs)
         
+        # Get source document once for both hooks
+        source_doc = self.get_source_document()
+        
         # Call after_relay hook before finishing
         if module and hasattr(module, "after_relay"):
-            source_doc = self.get_source_document()
             module.after_relay(self, source_doc, child_jobs)
         
         # Finish job with Relayed status (will also call finished hook)
-        if not source_doc:
-            source_doc = self.get_source_document()
         self._finish_job(
             status="Relayed",
             target_doc=None,
@@ -568,7 +568,7 @@ class SyncJob(Document, LogType):
         """
         # Set diff and operation if provided
         if diff is not None:
-            self.diff_summary = frappe.as_json(diff or {}) if diff else None
+            self.diff_summary = frappe.as_json(diff or {})
         if operation:
             self.operation = operation.title()
         
