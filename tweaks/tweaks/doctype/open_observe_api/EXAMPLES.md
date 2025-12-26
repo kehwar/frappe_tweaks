@@ -71,7 +71,7 @@ In Server Scripts, you can use the safe_exec global:
 
 ```python
 # Send logs directly from a Server Script
-frappe.open_observe_api.send_logs(
+frappe.open_observe.send_logs(
     stream="server-script-logs",
     logs=[{
         "message": "Server script executed",
@@ -86,7 +86,7 @@ frappe.open_observe_api.send_logs(
 
 ```python
 # In a Business Logic script
-frappe.open_observe_api.send_logs(
+frappe.open_observe.send_logs(
     stream="business-logic",
     logs=[{
         "message": "Business logic executed",
@@ -134,7 +134,7 @@ doc_events = {
 
 # In myapp/hooks.py
 def log_sales_order_changes(doc, method):
-    frappe.open_observe_api.send_logs(
+    frappe.open_observe.send_logs(
         stream="sales-order-changes",
         logs=[{
             "doctype": doc.doctype,
@@ -155,7 +155,7 @@ try:
     # Some operation that might fail
     process_complex_operation()
 except Exception as e:
-    frappe.open_observe_api.send_logs(
+    frappe.open_observe.send_logs(
         stream="application-errors",
         logs=[{
             "message": str(e),
@@ -180,7 +180,7 @@ process_data()
 
 duration = time.time() - start_time
 
-frappe.open_observe_api.send_logs(
+frappe.open_observe.send_logs(
     stream="performance-metrics",
     logs=[{
         "operation": "process_data",
@@ -194,7 +194,7 @@ frappe.open_observe_api.send_logs(
 
 ```python
 # After user login
-frappe.open_observe_api.send_logs(
+frappe.open_observe.send_logs(
     stream="user-activity",
     logs=[{
         "event": "login",

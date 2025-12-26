@@ -101,7 +101,7 @@ def safe_exec_globals(out):
                 get_ruc_suc=get_ruc_suc,
                 get_rut=get_rut,
             ),
-            "open_observe_api": NamespaceDict(
+            "open_observe": NamespaceDict(
                 send_logs=send_logs,
             ),
         }

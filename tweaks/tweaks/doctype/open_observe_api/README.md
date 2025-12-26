@@ -39,7 +39,7 @@ result = frappe.call(
 
 ```python
 # Available in safe_exec context
-frappe.open_observe_api.send_logs(
+frappe.open_observe.send_logs(
     stream="my-stream",
     logs=[{"message": "Test log", "level": "info"}]
 )

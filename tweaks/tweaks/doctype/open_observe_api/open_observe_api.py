@@ -27,7 +27,7 @@ import json
 from typing import Any, Dict, List, Optional
 
 import frappe
-import requests
+from frappe.integrations.utils import make_post_request
 from frappe.model.document import Document
 
 
@@ -175,25 +175,21 @@ def send_logs(
     headers["Content-Type"] = "application/json"
 
     try:
-        # Make POST request to OpenObserve API
-        response = requests.post(
+        # Make POST request to OpenObserve API using Frappe's integration utility
+        response = make_post_request(
             url,
-            json=logs,
-            headers=headers,
-            timeout=30
+            data=json.dumps(logs),
+            headers=headers
         )
-
-        # Check for HTTP errors
-        response.raise_for_status()
 
         # Return success response
         return {
             "success": True,
-            "response": response.json() if response.text else {},
-            "status_code": response.status_code
+            "response": response,
+            "status_code": 200
         }
 
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         # Log the error
         frappe.log_error(
             title=f"OpenObserve API Error - Stream: {stream}",
@@ -201,16 +197,8 @@ def send_logs(
         )
 
         # Return error response
-        error_msg = str(e)
-        if hasattr(e, 'response') and e.response is not None:
-            try:
-                error_details = e.response.json()
-                error_msg = f"{error_msg}: {error_details}"
-            except:
-                error_msg = f"{error_msg}: {e.response.text}"
-
         frappe.throw(
-            f"Failed to send logs to OpenObserve: {error_msg}",
+            f"Failed to send logs to OpenObserve: {str(e)}",
             title="API Error"
         )
 

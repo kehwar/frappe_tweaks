@@ -104,7 +104,7 @@ The OpenObserve API is available in safe_exec contexts (Server Scripts, Business
 
 ```python
 # In Server Scripts or Business Logic
-frappe.open_observe_api.send_logs(
+frappe.open_observe.send_logs(
     stream="my-stream",
     logs=[{"message": "Test log", "level": "info"}]
 )
@@ -182,7 +182,7 @@ frappe.ui.form.on('Open Observe API', {
 # In a document hook
 def after_save(doc, method):
     if frappe.session.user == "System Manager":
-        frappe.open_observe_api.send_logs(
+        frappe.open_observe.send_logs(
             stream="document-changes",
             logs=[{
                 "doctype": doc.doctype,
@@ -202,7 +202,7 @@ try:
     # Some operation
     process_data()
 except Exception as e:
-    frappe.open_observe_api.send_logs(
+    frappe.open_observe.send_logs(
         stream="application-errors",
         logs=[{
             "message": str(e),
@@ -226,7 +226,7 @@ for item in items:
         "timestamp": frappe.utils.now()
     })
 
-frappe.open_observe_api.send_logs(
+frappe.open_observe.send_logs(
     stream="batch-processing",
     logs=logs
 )
