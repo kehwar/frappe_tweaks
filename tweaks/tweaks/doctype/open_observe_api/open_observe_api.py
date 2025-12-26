@@ -24,11 +24,13 @@ Example Usage:
 """
 
 import json
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import frappe
 from frappe.integrations.utils import make_get_request, make_post_request
 from frappe.model.document import Document
+from frappe.utils import get_datetime
 
 
 class OpenObserveAPI(Document):
@@ -102,6 +104,34 @@ def get_api_config() -> OpenObserveAPI:
     doc = frappe.get_cached_doc("Open Observe API")
     doc.validate_setup()
     return doc
+
+
+def convert_to_unix_timestamp(time_str: Optional[str]) -> Optional[int]:
+    """
+    Convert ISO format timestamp to Unix timestamp in microseconds.
+
+    OpenObserve expects timestamps in microseconds since Unix epoch.
+
+    Args:
+        time_str: ISO format timestamp string (e.g., "2025-12-26T05:00:00Z")
+
+    Returns:
+        Unix timestamp in microseconds, or None if input is None
+
+    Example:
+        >>> convert_to_unix_timestamp("2025-12-26T05:00:00Z")
+        1735192800000000
+    """
+    if not time_str:
+        return None
+
+    try:
+        # Parse the timestamp string to datetime
+        dt = get_datetime(time_str)
+        # Convert to Unix timestamp in microseconds
+        return int(dt.timestamp() * 1000000)
+    except Exception as e:
+        frappe.throw(f"Invalid timestamp format: {time_str}. Expected ISO format like '2025-12-26T05:00:00Z'. Error: {str(e)}")
 
 
 @frappe.whitelist()
@@ -263,8 +293,10 @@ def search_logs(
         stream: Stream name to search logs from
         query: SQL query or query object for filtering logs (optional)
         org: Organization name (optional, uses default_org from config if not provided)
-        start_time: Start time for log search in ISO format (optional)
-        end_time: End time for log search in ISO format (optional)
+        start_time: Start time for log search in ISO format (e.g., "2025-12-26T05:00:00Z"). 
+                    Will be converted to Unix timestamp in microseconds for the API. (optional)
+        end_time: End time for log search in ISO format (e.g., "2025-12-26T06:00:00Z").
+                  Will be converted to Unix timestamp in microseconds for the API. (optional)
         size: Maximum number of logs to return (default: 100)
 
     Returns:
@@ -319,9 +351,11 @@ def search_logs(
     if size:
         params["size"] = size
     if start_time:
-        params["start_time"] = start_time
+        # Convert ISO timestamp to Unix timestamp in microseconds
+        params["start_time"] = convert_to_unix_timestamp(start_time)
     if end_time:
-        params["end_time"] = end_time
+        # Convert ISO timestamp to Unix timestamp in microseconds
+        params["end_time"] = convert_to_unix_timestamp(end_time)
 
     try:
         # Make GET request to OpenObserve API using Frappe's integration utility

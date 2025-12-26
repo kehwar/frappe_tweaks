@@ -89,8 +89,8 @@ Search logs from an OpenObserve stream.
 - `stream` (str): Stream name to search logs from
 - `query` (dict, optional): SQL query or query object for filtering logs
 - `org` (str, optional): Organization name (uses default_org if not provided)
-- `start_time` (str, optional): Start time for log search in ISO format
-- `end_time` (str, optional): End time for log search in ISO format
+- `start_time` (str, optional): Start time for log search in ISO format (e.g., "2025-12-26T05:00:00Z"). Automatically converted to Unix timestamp in microseconds.
+- `end_time` (str, optional): End time for log search in ISO format (e.g., "2025-12-26T06:00:00Z"). Automatically converted to Unix timestamp in microseconds.
 - `size` (int, optional): Maximum number of logs to return (default: 100)
 
 **Returns:**
@@ -98,6 +98,9 @@ Search logs from an OpenObserve stream.
 
 **Permissions:**
 - Only System Managers can call this function
+
+**Note:**
+- Time parameters accept ISO format strings and are automatically converted to Unix timestamps in microseconds as required by OpenObserve API
 
 **Example Usage:**
 
