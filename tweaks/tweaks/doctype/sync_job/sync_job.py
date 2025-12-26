@@ -572,12 +572,10 @@ class SyncJob(Document, LogType):
             stop_execution: Whether to raise StopIteration to halt execution
             stop_message: Message for StopIteration exception
         """
-        # Set diff and operation if provided
-        if diff is not None:
-            # Only set diff_summary if diff is truthy (non-empty dict)
-            # Empty dicts are treated the same as None
-            self.diff_summary = frappe.as_json(diff) if diff else None
-        if operation is not None:
+        # Set diff and operation if provided (truthy values only)
+        # Empty dicts and None are both treated as no diff
+        self.diff_summary = frappe.as_json(diff) if diff else None
+        if operation:
             self.operation = operation.title()
         
         # Set status and timing
