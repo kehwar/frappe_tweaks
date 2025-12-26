@@ -275,7 +275,15 @@ class SyncJob(Document, LogType):
 
             # Finalize
             if target_doc is not None:
-                self._finalize_sync(target_doc, operation, diff, module, source_doc)
+                # Set operation and diff before finishing
+                self.operation = operation.title()
+                self.diff_summary = frappe.as_json(diff) if diff else None
+                self._finish_job(
+                    status="Finished",
+                    target_doc=target_doc,
+                    module=module,
+                    source_doc=source_doc,
+                )
 
         except Exception as e:
             self._handle_error(e)
@@ -405,7 +413,7 @@ class SyncJob(Document, LogType):
 
             else:
                 # No targets found
-                self._finish_with_no_targets()
+                self._finish_job(status="No Target")
                 return None, None, context
 
         else:
@@ -469,7 +477,7 @@ class SyncJob(Document, LogType):
         # Load the actual document for processing
         if not target_document_type:
             # No target specified - finish job without target
-            self._finish_with_no_targets()
+            self._finish_job(status="No Target")
             return None, None, context
         elif operation_lower == "insert":
             target_doc = frappe.new_doc(target_document_type)
@@ -480,7 +488,7 @@ class SyncJob(Document, LogType):
             except frappe.DoesNotExistError:
                 if operation_lower == "delete":
                     # Target doesn't exist, nothing to delete - finish job
-                    self._finish_with_no_targets()
+                    self._finish_job(status="No Target")
                     return None, None, context
                 else:
                     # For update, target must exist
@@ -597,15 +605,18 @@ class SyncJob(Document, LogType):
         if stop_execution:
             raise StopIteration(stop_message or f"Sync job {status.lower()}")
     
-    def _finish_with_no_targets(self):
-        """Finish sync job when no targets found"""
-        self._finish_job(status="No Target")
-
     def _execute_delete_operation(self, module, source_doc, target_doc):
         """Execute delete operation"""
         # Check if we should skip delete operations
         if not self.get("delete_enabled", True):
-            self._finish_as_skipped(target_doc, module, source_doc)
+            self._finish_job(
+                status="Skipped",
+                target_doc=target_doc,
+                module=module,
+                source_doc=source_doc,
+                stop_execution=True,
+                stop_message="Sync job skipped",
+            )
             return {}
 
         # Capture current state before delete
@@ -629,11 +640,25 @@ class SyncJob(Document, LogType):
         """Execute insert or update operation"""
         # Check if we should skip based on operation type
         if operation.lower() == "insert" and not self.get("insert_enabled", True):
-            self._finish_as_skipped(target_doc, module, source_doc)
+            self._finish_job(
+                status="Skipped",
+                target_doc=target_doc,
+                module=module,
+                source_doc=source_doc,
+                stop_execution=True,
+                stop_message="Sync job skipped",
+            )
             return {}
 
         if operation.lower() == "update" and not self.get("update_enabled", True):
-            self._finish_as_skipped(target_doc, module, source_doc)
+            self._finish_job(
+                status="Skipped",
+                target_doc=target_doc,
+                module=module,
+                source_doc=source_doc,
+                stop_execution=True,
+                stop_message="Sync job skipped",
+            )
             return {}
 
         # Capture current state for existing docs
@@ -666,7 +691,14 @@ class SyncJob(Document, LogType):
 
         # Skip update if no changes detected (unless update_without_changes_enabled is True to force update anyway)
         if operation.lower() == "update" and not self.get("update_without_changes_enabled", False) and not diff:
-            self._finish_as_skipped(target_doc, module, source_doc)
+            self._finish_job(
+                status="Skipped",
+                target_doc=target_doc,
+                module=module,
+                source_doc=source_doc,
+                stop_execution=True,
+                stop_message="Sync job skipped",
+            )
             return {}
 
         # Call before_sync hook
@@ -687,29 +719,6 @@ class SyncJob(Document, LogType):
         self.updated_data = target_doc.as_json()
 
         return diff
-
-    def _finish_as_skipped(self, target_doc=None, module=None, source_doc=None):
-        """Finish sync job as skipped"""
-        self._finish_job(
-            status="Skipped",
-            target_doc=target_doc,
-            module=module,
-            source_doc=source_doc,
-            stop_execution=True,
-            stop_message="Sync job skipped",
-        )
-
-    def _finalize_sync(self, target_doc, operation, diff, module=None, source_doc=None):
-        """Finalize sync job after successful execution"""
-        # Set operation and diff before finishing
-        self.operation = operation.title()
-        self.diff_summary = frappe.as_json(diff) if diff else None
-        self._finish_job(
-            status="Finished",
-            target_doc=target_doc,
-            module=module,
-            source_doc=source_doc,
-        )
 
     def _handle_error(self, e):
         """Handle errors during sync execution"""
