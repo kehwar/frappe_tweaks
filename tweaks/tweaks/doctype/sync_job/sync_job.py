@@ -252,6 +252,10 @@ class SyncJob(Document, LogType):
             context = self.get_context()
             module = self._load_and_validate_module()
 
+            # Call after_start hook if exists
+            if hasattr(module, "after_start"):
+                module.after_start(self, source_doc, context)
+
             # Execute based on mode
             has_execute = hasattr(module, "execute")
             if has_execute:
@@ -265,7 +269,7 @@ class SyncJob(Document, LogType):
 
             # Finalize
             if target_doc is not None:
-                self._finalize_sync(target_doc, operation, diff)
+                self._finalize_sync(target_doc, operation, diff, module, source_doc)
 
         except Exception as e:
             self._handle_error(e)
@@ -386,7 +390,7 @@ class SyncJob(Document, LogType):
             targets = module.get_multiple_target_documents(self, source_doc)
 
             if len(targets) > 1:
-                self._handle_multiple_targets(targets)
+                self._handle_multiple_targets(targets, module)
                 return None, None, context
 
             elif len(targets) == 1:
@@ -478,9 +482,15 @@ class SyncJob(Document, LogType):
         
         return target_doc, operation, context
 
-    def _handle_multiple_targets(self, targets):
+    def _handle_multiple_targets(self, targets, module=None):
         """Handle multiple target documents by spawning child jobs"""
         from tweaks.utils.sync_job import create_sync_job
+
+        # Call before_relay hook if exists
+        if module and hasattr(module, "before_relay"):
+            source_doc = self.get_source_document()
+            context = self.get_context()
+            module.before_relay(self, source_doc, targets, context)
 
         child_jobs = []
         for target_info in targets:
@@ -522,6 +532,12 @@ class SyncJob(Document, LogType):
         self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
+
+        # Call after_relay hook if exists
+        if module and hasattr(module, "after_relay"):
+            source_doc = self.get_source_document()
+            context = self.get_context()
+            module.after_relay(self, source_doc, child_jobs, context)
 
     def _finish_with_no_targets(self):
         """Finish sync job when no targets found"""
@@ -623,7 +639,7 @@ class SyncJob(Document, LogType):
         # Raise exception to stop execution
         raise StopIteration("Sync job skipped")
 
-    def _finalize_sync(self, target_doc, operation, diff):
+    def _finalize_sync(self, target_doc, operation, diff, module=None, source_doc=None):
         """Finalize sync job after successful execution"""
         self.diff_summary = frappe.as_json(diff or {}) if diff else None
         self.operation = operation.title()
@@ -636,6 +652,11 @@ class SyncJob(Document, LogType):
         self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
+
+        # Call finished hook if exists
+        if module and hasattr(module, "finished"):
+            context = self.get_context()
+            module.finished(self, source_doc, target_doc, context)
 
     def _handle_error(self, e):
         """Handle errors during sync execution"""

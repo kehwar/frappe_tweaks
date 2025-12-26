@@ -108,6 +108,57 @@ def update_target_doc(sync_job, source_doc, target_doc):
     pass
 
 
+# Optional: After start hook
+# def after_start(sync_job, source_doc, context):
+# 	"""
+# 	Hook called after job starts (after status changes to "Started")
+#
+# 	NOTE: This hook runs even in dry run mode.
+# 	NOTE: Use this for initialization logic before sync execution begins.
+#
+# 	Args:
+# 		sync_job: Sync Job document
+# 		source_doc: Source document
+# 		context: Dict of context data
+# 	"""
+# 	pass
+
+
+# Optional: Before relay hook (for multiple targets)
+# def before_relay(sync_job, source_doc, targets, context):
+# 	"""
+# 	Hook called before child jobs are queued (when get_multiple_target_documents returns > 1 target)
+#
+# 	NOTE: This hook runs even in dry run mode.
+# 	NOTE: Use this to perform validation or modifications before child jobs are created.
+#
+# 	Args:
+# 		sync_job: Sync Job document (parent job)
+# 		source_doc: Source document
+# 		targets: List of target dicts that will be used to create child jobs
+# 		context: Dict of context data
+# 	"""
+# 	pass
+
+
+# Optional: After relay hook (for multiple targets)
+# def after_relay(sync_job, source_doc, child_jobs, context):
+# 	"""
+# 	Hook called after child jobs are queued (when get_multiple_target_documents returns > 1 target)
+#
+# 	NOTE: This hook runs even in dry run mode.
+# 	NOTE: Use this to perform cleanup or tracking after child jobs are created.
+#
+# 	Args:
+# 		sync_job: Sync Job document (parent job with status "Relayed")
+# 		source_doc: Source document
+# 		child_jobs: List of dicts containing info about created child jobs
+# 			Each dict has: target_document_type, target_document_name, operation, context, sync_job
+# 		context: Dict of context data
+# 	"""
+# 	pass
+
+
 # Optional: Before sync hook
 # def before_sync(sync_job, source_doc, target_doc):
 # 	"""
@@ -134,5 +185,22 @@ def update_target_doc(sync_job, source_doc, target_doc):
 # 		sync_job: Sync Job document (contains operation and context)
 # 		source_doc: Source document
 # 		target_doc: Target document (saved)
+# 	"""
+# 	pass
+
+
+# Optional: Finished hook
+# def finished(sync_job, source_doc, target_doc, context):
+# 	"""
+# 	Hook called when sync job finishes successfully (status = "Finished")
+#
+# 	NOTE: This hook does NOT run in dry run mode.
+# 	NOTE: Use this for post-processing, notifications, or cleanup after successful sync.
+#
+# 	Args:
+# 		sync_job: Sync Job document (status = "Finished")
+# 		source_doc: Source document
+# 		target_doc: Target document (saved)
+# 		context: Dict of context data
 # 	"""
 # 	pass
