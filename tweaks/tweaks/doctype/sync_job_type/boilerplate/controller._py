@@ -108,6 +108,57 @@ def update_target_doc(sync_job, source_doc, target_doc):
     pass
 
 
+# Optional: After start hook
+# def after_start(sync_job, source_doc):
+# 	"""
+# 	Hook called after job starts (after status changes to "Started")
+#
+# 	NOTE: This hook runs even in dry run mode.
+# 	NOTE: Use this for initialization logic before sync execution begins.
+# 	NOTE: Context can be retrieved via sync_job.get_context()
+#
+# 	Args:
+# 		sync_job: Sync Job document
+# 		source_doc: Source document
+# 	"""
+# 	pass
+
+
+# Optional: Before relay hook (for multiple targets)
+# def before_relay(sync_job, source_doc, targets):
+# 	"""
+# 	Hook called before child jobs are queued (when get_multiple_target_documents returns > 1 target)
+#
+# 	NOTE: This hook runs even in dry run mode.
+# 	NOTE: Use this to perform validation or modifications before child jobs are created.
+# 	NOTE: Context can be retrieved via sync_job.get_context()
+#
+# 	Args:
+# 		sync_job: Sync Job document (parent job)
+# 		source_doc: Source document
+# 		targets: List of target dicts that will be used to create child jobs
+# 	"""
+# 	pass
+
+
+# Optional: After relay hook (for multiple targets)
+# def after_relay(sync_job, source_doc, child_jobs):
+# 	"""
+# 	Hook called after child jobs are queued (when get_multiple_target_documents returns > 1 target)
+#
+# 	NOTE: This hook runs even in dry run mode.
+# 	NOTE: Use this to perform cleanup or tracking after child jobs are created.
+# 	NOTE: Context can be retrieved via sync_job.get_context()
+#
+# 	Args:
+# 		sync_job: Sync Job document (parent job with status "Relayed")
+# 		source_doc: Source document
+# 		child_jobs: List of dicts containing info about created child jobs
+# 			Each dict has: target_document_type, target_document_name, operation, context, sync_job
+# 	"""
+# 	pass
+
+
 # Optional: Before sync hook
 # def before_sync(sync_job, source_doc, target_doc):
 # 	"""
@@ -134,5 +185,23 @@ def update_target_doc(sync_job, source_doc, target_doc):
 # 		sync_job: Sync Job document (contains operation and context)
 # 		source_doc: Source document
 # 		target_doc: Target document (saved)
+# 	"""
+# 	pass
+
+
+# Optional: Finished hook
+# def finished(sync_job, source_doc, target_doc):
+# 	"""
+# 	Hook called when sync job finishes successfully (status = "Finished" or "Skipped" or "Relayed")
+#
+# 	NOTE: This hook runs even in dry run mode (when status is "Skipped")
+# 	NOTE: For relayed jobs (multiple targets), target_doc will be None
+# 	NOTE: Use this for post-processing, notifications, or cleanup after sync.
+# 	NOTE: Context can be retrieved via sync_job.get_context()
+#
+# 	Args:
+# 		sync_job: Sync Job document (status = "Finished" or "Skipped" or "Relayed")
+# 		source_doc: Source document
+# 		target_doc: Target document (saved) or None for relayed jobs
 # 	"""
 # 	pass

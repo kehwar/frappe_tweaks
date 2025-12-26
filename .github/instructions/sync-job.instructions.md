@@ -162,6 +162,21 @@ def get_multiple_target_documents(sync_job, source_doc):
     ]
 
 
+def after_start(sync_job, source_doc):
+    """Hook called after job starts (after status changes to "Started")"""
+    pass
+
+
+def before_relay(sync_job, source_doc, targets):
+    """Hook called before child jobs are queued (when get_multiple_target_documents returns > 1 target)"""
+    pass
+
+
+def after_relay(sync_job, source_doc, child_jobs):
+    """Hook called after child jobs are queued (when get_multiple_target_documents returns > 1 target)"""
+    pass
+
+
 def before_sync(sync_job, source_doc, target_doc):
     """Hook called before sync (before save)"""
     pass
@@ -169,6 +184,11 @@ def before_sync(sync_job, source_doc, target_doc):
 
 def after_sync(sync_job, source_doc, target_doc):
     """Hook called after sync (after save)"""
+    pass
+
+
+def finished(sync_job, source_doc, target_doc):
+    """Hook called when sync job finishes successfully (status = "Finished", "Skipped", or "Relayed")"""
     pass
 ```
 
@@ -383,7 +403,7 @@ sync_job = enqueue_sync_job(
     dry_run=True  # Calculate diff but don't save
 )
 
-# After execution, job will have status "Finished"
+# After execution, job will have status "Skipped"
 # Review the diff_summary field to see what changes would be made
 ```
 
@@ -396,9 +416,161 @@ sync_job = enqueue_sync_job(
 **How it works:**
 1. Job executes normally until the diff is calculated
 2. The `diff_summary` field is populated with proposed changes
-3. Job skips the save operation and all hooks (before_sync, after_sync)
-4. Status is set to "Finished" without making any actual changes
+3. Job skips the save operation and hooks (before_sync, after_sync) but runs finished hook
+4. Status is set to "Skipped" without making any actual changes
 5. You can review the diff to see what would have happened
+
+### Hook Lifecycle
+
+The Sync Job framework provides several optional hooks that run at different stages of execution:
+
+#### after_start Hook
+
+Called immediately after the job status changes to "Started", before any sync logic executes.
+
+```python
+def after_start(sync_job, source_doc):
+    """
+    Hook called after job starts
+    
+    Args:
+        sync_job: Sync Job document
+        source_doc: Source document
+    """
+    # Context can be retrieved via sync_job.get_context()
+    context = sync_job.get_context()
+    
+    # Perform initialization logic
+    frappe.log_error(f"Starting sync for {source_doc.name}", "Sync Start")
+```
+
+**Use after_start when:**
+- You need to perform initialization before sync begins
+- You want to log or track sync job execution start
+- You need to validate preconditions before proceeding
+
+**Note:** This hook runs even in dry run mode.
+
+#### before_relay Hook
+
+Called before child jobs are queued when `get_multiple_target_documents()` returns more than one target.
+
+```python
+def before_relay(sync_job, source_doc, targets):
+    """
+    Hook called before child jobs are queued
+    
+    Args:
+        sync_job: Sync Job document (parent job)
+        source_doc: Source document
+        targets: List of target dicts that will be used to create child jobs
+    """
+    # Context can be retrieved via sync_job.get_context()
+    context = sync_job.get_context()
+    
+    # Validate targets before creating child jobs
+    if len(targets) > 100:
+        frappe.throw("Too many targets - limit is 100")
+```
+
+**Use before_relay when:**
+- You need to validate multiple targets before child jobs are created
+- You want to modify or filter the targets list
+- You need to perform setup operations before batch processing
+
+**Note:** This hook runs even in dry run mode.
+
+#### after_relay Hook
+
+Called after child jobs are queued when `get_multiple_target_documents()` returns more than one target.
+
+```python
+def after_relay(sync_job, source_doc, child_jobs):
+    """
+    Hook called after child jobs are queued
+    
+    Args:
+        sync_job: Sync Job document (parent job with status "Relayed")
+        source_doc: Source document
+        child_jobs: List of dicts containing info about created child jobs
+            Each dict has: target_document_type, target_document_name, operation, context, sync_job
+    """
+    # Context can be retrieved via sync_job.get_context()
+    context = sync_job.get_context()
+    
+    # Log child job creation
+    frappe.log_error(
+        f"Created {len(child_jobs)} child jobs for {source_doc.name}",
+        "Batch Sync"
+    )
+```
+
+**Use after_relay when:**
+- You need to track or log child job creation
+- You want to perform cleanup after batch processing setup
+- You need to update parent records with child job references
+
+**Note:** This hook runs even in dry run mode.
+
+#### finished Hook
+
+Called when the sync job finishes successfully (status = "Finished", "Skipped", or "Relayed"), after the target document is saved (or skipped in dry run mode).
+
+```python
+def finished(sync_job, source_doc, target_doc):
+    """
+    Hook called when sync finishes successfully
+    
+    Args:
+        sync_job: Sync Job document (status = "Finished", "Skipped", or "Relayed")
+        source_doc: Source document
+        target_doc: Target document (saved) or None for relayed jobs
+    """
+    # Context can be retrieved via sync_job.get_context()
+    context = sync_job.get_context()
+    
+    # Send notification (handle None target_doc for relayed jobs)
+    if target_doc:
+        frappe.sendmail(
+            recipients=["admin@example.com"],
+            subject=f"Sync completed: {target_doc.name}",
+            message=f"Successfully synced {source_doc.name} to {target_doc.name}"
+        )
+    else:
+        # Relayed job - multiple targets created as child jobs
+        frappe.sendmail(
+            recipients=["admin@example.com"],
+            subject=f"Sync relayed: {sync_job.name}",
+            message=f"Created child jobs for {source_doc.name}"
+        )
+```
+
+**Use finished when:**
+- You need to send notifications after successful sync
+- You want to trigger additional processes after sync completes
+- You need to update related records after sync
+
+**Note:** This hook now runs even in dry run mode (when status is "Skipped") and for relayed jobs (when status is "Relayed").
+
+#### Hook Execution Order
+
+For a typical sync job with a single target:
+1. `after_start` - Job starts
+2. `get_target_document` or `get_multiple_target_documents` - Discover target(s)
+3. `update_target_doc` - Update target fields
+4. `before_sync` - Pre-save hook (not in dry run)
+5. Target document saved (not in dry run)
+6. `after_sync` - Post-save hook (not in dry run)
+7. `finished` - Job completion hook (runs even in dry run)
+
+For a sync job with multiple targets (relayed to child jobs):
+1. `after_start` - Job starts
+2. `get_multiple_target_documents` - Discover targets (returns > 1)
+3. `before_relay` - Before creating child jobs
+4. Child jobs created and queued
+5. `after_relay` - After creating child jobs
+6. Parent job status set to "Relayed"
+7. `finished` - Job completion hook (target_doc is None for relayed jobs)
 
 ## Advanced Features
 
@@ -725,8 +897,13 @@ def update_target_doc(sync_job, source_doc, target_doc) -> None
 
 # Standard Mode - Optional
 def get_multiple_target_documents(sync_job, source_doc) -> list[dict]
+def after_start(sync_job, source_doc) -> None
+def before_relay(sync_job, source_doc, targets) -> None
+def after_relay(sync_job, source_doc, child_jobs) -> None
 def before_sync(sync_job, source_doc, target_doc) -> None
 def after_sync(sync_job, source_doc, target_doc) -> None
+def finished(sync_job, source_doc, target_doc) -> None
+```
 ```
 
 ## Scheduler Integration
