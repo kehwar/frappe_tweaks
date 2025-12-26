@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import json
+from typing import Literal
 
 import frappe
 from frappe import _
@@ -14,6 +15,11 @@ from frappe.utils.background_jobs import enqueue
 
 # Valid sync job operations (immutable)
 VALID_SYNC_OPERATIONS = ("insert", "update", "delete")
+
+# Valid sync job statuses (immutable)
+SyncJobStatus = Literal[
+    "Pending", "Queued", "Started", "Finished", "Failed", "Canceled", "Skipped", "Relayed", "No Target"
+]
 
 
 class SyncJob(Document, LogType):
@@ -50,7 +56,7 @@ class SyncJob(Document, LogType):
         source_document_name: DF.DynamicLink | None
         started_at: DF.Datetime | None
         status: DF.Literal[
-            "Pending", "Queued", "Started", "Finished", "Failed", "Canceled", "Skipped"
+            "Pending", "Queued", "Started", "Finished", "Failed", "Canceled", "Skipped", "Relayed", "No Target"
         ]
         sync_job_type: DF.Link
         target_document_type: DF.Link | None
@@ -269,7 +275,15 @@ class SyncJob(Document, LogType):
 
             # Finalize
             if target_doc is not None:
-                self._finalize_sync(target_doc, operation, diff, module, source_doc)
+                # Set operation and diff before finishing
+                self.operation = operation.title()
+                self.diff_summary = frappe.as_json(diff) if diff else None
+                self._finish_job(
+                    status="Finished",
+                    target_doc=target_doc,
+                    module=module,
+                    source_doc=source_doc,
+                )
 
         except Exception as e:
             self._handle_error(e)
@@ -399,7 +413,7 @@ class SyncJob(Document, LogType):
 
             else:
                 # No targets found
-                self._finish_with_no_targets()
+                self._finish_job(status="No Target")
                 return None, None, context
 
         else:
@@ -463,7 +477,7 @@ class SyncJob(Document, LogType):
         # Load the actual document for processing
         if not target_document_type:
             # No target specified - finish job without target
-            self._finish_with_no_targets()
+            self._finish_job(status="No Target")
             return None, None, context
         elif operation_lower == "insert":
             target_doc = frappe.new_doc(target_document_type)
@@ -474,7 +488,7 @@ class SyncJob(Document, LogType):
             except frappe.DoesNotExistError:
                 if operation_lower == "delete":
                     # Target doesn't exist, nothing to delete - finish job
-                    self._finish_with_no_targets()
+                    self._finish_job(status="No Target")
                     return None, None, context
                 else:
                     # For update, target must exist
@@ -526,35 +540,83 @@ class SyncJob(Document, LogType):
 
         # Store child job references
         self.multiple_target_documents = frappe.as_json(child_jobs)
-        self.status = "Relayed"
-        self.ended_at = now()
-        self.flags.ignore_links = True
-        self.save(ignore_permissions=True)
-        frappe.db.commit()
-
-        # Call after_relay hook if exists
+        
+        # Get source document once for both hooks
+        source_doc = self.get_source_document()
+        
+        # Call after_relay hook before finishing
         if module and hasattr(module, "after_relay"):
-            source_doc = self.get_source_document()
             module.after_relay(self, source_doc, child_jobs)
+        
+        # Finish job with Relayed status (will also call finished hook)
+        self._finish_job(
+            status="Relayed",
+            target_doc=None,
+            module=module,
+            source_doc=source_doc,
+        )
 
-        # Call finished hook for relayed jobs
-        if module and hasattr(module, "finished"):
-            source_doc = self.get_source_document()
-            module.finished(self, source_doc, None)
-
-    def _finish_with_no_targets(self):
-        """Finish sync job when no targets found"""
-        self.status = "No Target"
+    def _finish_job(
+        self,
+        status: SyncJobStatus,
+        target_doc=None,
+        module=None,
+        source_doc=None,
+        stop_execution: bool = False,
+        stop_message: str | None = None,
+    ):
+        """
+        Unified method to finish sync job with various statuses.
+        
+        This method handles the common finishing logic:
+        - Sets job status and timing
+        - Saves and commits the job
+        - Calls the finished hook if applicable
+        - Optionally raises StopIteration to halt execution
+        
+        Note: Callers should set self.operation and self.diff_summary before calling this method.
+        
+        Args:
+            status: Job status to set (e.g., "Finished", "Skipped", "Relayed", "No Target")
+            target_doc: Target document (optional)
+            module: Sync job module (optional)
+            source_doc: Source document (optional)
+            stop_execution: Whether to raise StopIteration to halt execution
+            stop_message: Message for StopIteration exception
+        """
+        # Set status and timing
+        self.status = status
         self.ended_at = now()
+        
+        # Calculate time taken if started_at is set
+        if self.started_at and self.ended_at:
+            self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
+        
+        # Save and commit
         self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
-
+        
+        # Call finished hook if module is provided and has the hook
+        if module and hasattr(module, "finished"):
+            module.finished(self, source_doc, target_doc)
+        
+        # Stop execution if requested
+        if stop_execution:
+            raise StopIteration(stop_message or f"Sync job {status.lower()}")
+    
     def _execute_delete_operation(self, module, source_doc, target_doc):
         """Execute delete operation"""
         # Check if we should skip delete operations
         if not self.get("delete_enabled", True):
-            self._finish_as_skipped(target_doc, module, source_doc)
+            self._finish_job(
+                status="Skipped",
+                target_doc=target_doc,
+                module=module,
+                source_doc=source_doc,
+                stop_execution=True,
+                stop_message="Sync job skipped",
+            )
             return {}
 
         # Capture current state before delete
@@ -578,11 +640,25 @@ class SyncJob(Document, LogType):
         """Execute insert or update operation"""
         # Check if we should skip based on operation type
         if operation.lower() == "insert" and not self.get("insert_enabled", True):
-            self._finish_as_skipped(target_doc, module, source_doc)
+            self._finish_job(
+                status="Skipped",
+                target_doc=target_doc,
+                module=module,
+                source_doc=source_doc,
+                stop_execution=True,
+                stop_message="Sync job skipped",
+            )
             return {}
 
         if operation.lower() == "update" and not self.get("update_enabled", True):
-            self._finish_as_skipped(target_doc, module, source_doc)
+            self._finish_job(
+                status="Skipped",
+                target_doc=target_doc,
+                module=module,
+                source_doc=source_doc,
+                stop_execution=True,
+                stop_message="Sync job skipped",
+            )
             return {}
 
         # Capture current state for existing docs
@@ -601,28 +677,28 @@ class SyncJob(Document, LogType):
 
         # Dry run mode: finish without saving, set status to Skipped
         if self.get("dry_run"):
-            self.diff_summary = frappe.as_json(diff or {}) if diff else None
+            # Set operation and diff before finishing
             self.operation = operation.title()
-            self.status = "Skipped"
-            self.ended_at = now()
-
-            if self.started_at and self.ended_at:
-                self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
-
-            self.flags.ignore_links = True
-            self.save(ignore_permissions=True)
-            frappe.db.commit()
-
-            # Call finished hook even in dry run
-            if hasattr(module, "finished"):
-                module.finished(self, source_doc, target_doc)
-
-            # Raise exception to stop execution
-            raise StopIteration("Sync job skipped (dry run)")
+            self.diff_summary = frappe.as_json(diff) if diff else None
+            self._finish_job(
+                status="Skipped",
+                target_doc=target_doc,
+                module=module,
+                source_doc=source_doc,
+                stop_execution=True,
+                stop_message="Sync job skipped (dry run)",
+            )
 
         # Skip update if no changes detected (unless update_without_changes_enabled is True to force update anyway)
         if operation.lower() == "update" and not self.get("update_without_changes_enabled", False) and not diff:
-            self._finish_as_skipped(target_doc, module, source_doc)
+            self._finish_job(
+                status="Skipped",
+                target_doc=target_doc,
+                module=module,
+                source_doc=source_doc,
+                stop_execution=True,
+                stop_message="Sync job skipped",
+            )
             return {}
 
         # Call before_sync hook
@@ -643,43 +719,6 @@ class SyncJob(Document, LogType):
         self.updated_data = target_doc.as_json()
 
         return diff
-
-    def _finish_as_skipped(self, target_doc=None, module=None, source_doc=None):
-        """Finish sync job as skipped"""
-        self.status = "Skipped"
-        self.ended_at = now()
-
-        if self.started_at and self.ended_at:
-            self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
-
-        self.flags.ignore_links = True
-        self.save(ignore_permissions=True)
-        frappe.db.commit()
-
-        # Call finished hook for skipped jobs
-        if module and hasattr(module, "finished"):
-            module.finished(self, source_doc, target_doc)
-
-        # Raise exception to stop execution
-        raise StopIteration("Sync job skipped")
-
-    def _finalize_sync(self, target_doc, operation, diff, module=None, source_doc=None):
-        """Finalize sync job after successful execution"""
-        self.diff_summary = frappe.as_json(diff or {}) if diff else None
-        self.operation = operation.title()
-        self.status = "Finished"
-        self.ended_at = now()
-
-        if self.started_at and self.ended_at:
-            self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
-
-        self.flags.ignore_links = True
-        self.save(ignore_permissions=True)
-        frappe.db.commit()
-
-        # Call finished hook if exists
-        if module and hasattr(module, "finished"):
-            module.finished(self, source_doc, target_doc)
 
     def _handle_error(self, e):
         """Handle errors during sync execution"""
