@@ -18,7 +18,10 @@ from frappe.utils.xlsxutils import (
 
 from tweaks.custom.utils.formatter import to_snake_case
 from tweaks.custom.utils.naming import setseries
-from tweaks.tweaks.doctype.open_observe_api.open_observe_api import send_logs
+from tweaks.tweaks.doctype.open_observe_api.open_observe_api import (
+    search_logs,
+    send_logs,
+)
 from tweaks.tweaks.doctype.peru_api_com.peru_api_com import (
     get_dni,
     get_ruc,
@@ -103,6 +106,7 @@ def safe_exec_globals(out):
             ),
             "open_observe": NamespaceDict(
                 send_logs=send_logs,
+                search_logs=search_logs,
             ),
         }
     )

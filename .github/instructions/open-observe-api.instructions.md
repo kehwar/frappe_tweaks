@@ -81,6 +81,59 @@ result = send_logs(
 )
 ```
 
+### search_logs(stream, query=None, org=None, start_time=None, end_time=None, size=100)
+
+Search logs from an OpenObserve stream.
+
+**Parameters:**
+- `stream` (str): Stream name to search logs from
+- `query` (dict, optional): SQL query or query object for filtering logs
+- `org` (str, optional): Organization name (uses default_org if not provided)
+- `start_time` (str, optional): Start time for log search in ISO format
+- `end_time` (str, optional): End time for log search in ISO format
+- `size` (int, optional): Maximum number of logs to return (default: 100)
+
+**Returns:**
+- Dictionary with `success`, `response`, and `status_code`
+
+**Permissions:**
+- Only System Managers can call this function
+
+**Example Usage:**
+
+```python
+# Search logs from last hour
+result = search_logs(
+    stream="application-logs",
+    start_time="2025-12-26T05:00:00Z",
+    end_time="2025-12-26T06:00:00Z",
+    size=50
+)
+
+# Search with custom SQL query
+result = search_logs(
+    stream="error-logs",
+    query={"sql": "SELECT * FROM error_logs WHERE level='error'"},
+    size=100
+)
+
+# Search with filters
+result = search_logs(
+    stream="sales-orders",
+    query={
+        "query": {
+            "bool": {
+                "must": [
+                    {"term": {"status": "completed"}},
+                    {"range": {"grand_total": {"gte": 1000}}}
+                ]
+            }
+        }
+    },
+    org="production"
+)
+```
+
 ### test_connection()
 
 Test connection to OpenObserve API by sending a test log entry.
@@ -98,15 +151,163 @@ else:
     print(f"Connection failed: {result['error']}")
 ```
 
+## Usage Examples
+
+### From Python Code
+
+#### Send a single log entry
+
+```python
+import frappe
+
+# Direct call
+result = frappe.call(
+    "tweaks.tweaks.doctype.open_observe_api.open_observe_api.send_logs",
+    stream="application-logs",
+    logs=[{
+        "message": "User login successful",
+        "level": "info",
+        "user": "john@example.com",
+        "timestamp": frappe.utils.now()
+    }]
+)
+```
+
+#### Send multiple logs
+
+```python
+import frappe
+
+logs = [
+    {"message": "Process started", "level": "info", "step": 1},
+    {"message": "Processing item 1", "level": "info", "step": 2},
+    {"message": "Processing item 2", "level": "info", "step": 3},
+    {"message": "Process completed", "level": "info", "step": 4}
+]
+
+result = frappe.call(
+    "tweaks.tweaks.doctype.open_observe_api.open_observe_api.send_logs",
+    stream="batch-processing",
+    logs=logs
+)
+```
+
+#### Search logs
+
+```python
+import frappe
+
+# Search logs from a specific time range
+result = frappe.call(
+    "tweaks.tweaks.doctype.open_observe_api.open_observe_api.search_logs",
+    stream="application-logs",
+    start_time="2025-12-26T00:00:00Z",
+    end_time="2025-12-26T23:59:59Z",
+    size=100
+)
+
+if result["success"]:
+    logs = result["response"]
+    for log in logs.get("hits", []):
+        print(log)
+```
+
+### From Server Scripts
+
+In Server Scripts, you can use the safe_exec global:
+
+```python
+# Send logs directly from a Server Script
+frappe.open_observe.send_logs(
+    stream="server-script-logs",
+    logs=[{
+        "message": "Server script executed",
+        "script_name": "My Server Script",
+        "user": frappe.session.user,
+        "timestamp": frappe.utils.now()
+    }]
+)
+
+# Search logs from a Server Script
+results = frappe.open_observe.search_logs(
+    stream="server-script-logs",
+    start_time="2025-12-26T00:00:00Z",
+    end_time="2025-12-26T23:59:59Z"
+)
+```
+
+### From Business Logic
+
+```python
+# In a Business Logic script
+frappe.open_observe.send_logs(
+    stream="business-logic",
+    logs=[{
+        "message": "Business logic executed",
+        "doctype": doc.doctype,
+        "name": doc.name,
+        "action": "validate"
+    }]
+)
+```
+
+### From JavaScript (Client-side)
+
+```javascript
+// Send logs from client-side
+frappe.call({
+    method: 'tweaks.tweaks.doctype.open_observe_api.open_observe_api.send_logs',
+    args: {
+        stream: 'client-events',
+        logs: [{
+            message: 'Form submitted',
+            level: 'info',
+            user: frappe.session.user,
+            timestamp: frappe.datetime.now_datetime()
+        }]
+    },
+    callback: function(r) {
+        if (r.message && r.message.success) {
+            console.log('Logs sent successfully');
+        }
+    }
+});
+
+// Search logs from client-side
+frappe.call({
+    method: 'tweaks.tweaks.doctype.open_observe_api.open_observe_api.search_logs',
+    args: {
+        stream: 'client-events',
+        start_time: '2025-12-26T00:00:00Z',
+        end_time: '2025-12-26T23:59:59Z',
+        size: 50
+    },
+    callback: function(r) {
+        if (r.message && r.message.success) {
+            console.log('Search results:', r.message.response);
+        }
+    }
+});
+```
+
 ## Safe Exec Global
 
 The OpenObserve API is available in safe_exec contexts (Server Scripts, Business Logic, etc.) via:
 
 ```python
 # In Server Scripts or Business Logic
+
+# Send logs
 frappe.open_observe.send_logs(
     stream="my-stream",
     logs=[{"message": "Test log", "level": "info"}]
+)
+
+# Search logs
+results = frappe.open_observe.search_logs(
+    stream="my-stream",
+    start_time="2025-12-26T00:00:00Z",
+    end_time="2025-12-26T23:59:59Z"
 )
 ```
 
@@ -137,16 +338,24 @@ except Exception as e:
     print(f"Failed: {e}")
 ```
 
-## API Endpoint Format
+## API Endpoint Formats
 
-OpenObserve API endpoint format:
+OpenObserve API endpoint formats:
+
+**Send Logs:**
 ```
 {url}/api/{org}/{stream}/_json
+```
+
+**Search Logs:**
+```
+{url}/api/{org}/{stream}/_search
 ```
 
 Example:
 ```
 https://api.openobserve.ai/api/default/application-logs/_json
+https://api.openobserve.ai/api/default/application-logs/_search
 ```
 
 ## Testing
@@ -174,33 +383,41 @@ frappe.ui.form.on('Open Observe API', {
 });
 ```
 
-## Common Patterns
+## Common Use Cases
 
-### Logging Application Events
+### 1. Logging Document Changes
 
 ```python
-# In a document hook
-def after_save(doc, method):
-    if frappe.session.user == "System Manager":
-        frappe.open_observe.send_logs(
-            stream="document-changes",
-            logs=[{
-                "doctype": doc.doctype,
-                "name": doc.name,
-                "action": "saved",
-                "user": frappe.session.user,
-                "timestamp": frappe.utils.now()
-            }]
-        )
+# In a document hook (hooks.py)
+doc_events = {
+    "Sales Order": {
+        "after_save": "myapp.hooks.log_sales_order_changes"
+    }
+}
+
+# In myapp/hooks.py
+def log_sales_order_changes(doc, method):
+    frappe.open_observe.send_logs(
+        stream="sales-order-changes",
+        logs=[{
+            "doctype": doc.doctype,
+            "name": doc.name,
+            "grand_total": doc.grand_total,
+            "status": doc.status,
+            "customer": doc.customer,
+            "user": frappe.session.user,
+            "timestamp": frappe.utils.now()
+        }]
+    )
 ```
 
-### Logging Errors
+### 2. Logging Errors with Traceback
 
 ```python
 # In error handling
 try:
-    # Some operation
-    process_data()
+    # Some operation that might fail
+    process_complex_operation()
 except Exception as e:
     frappe.open_observe.send_logs(
         stream="application-errors",
@@ -212,24 +429,102 @@ except Exception as e:
             "timestamp": frappe.utils.now()
         }]
     )
+    raise
 ```
 
-### Batch Logging
+### 3. Performance Monitoring
 
 ```python
-# Send multiple logs at once
-logs = []
-for item in items:
-    logs.append({
-        "item": item.name,
-        "quantity": item.qty,
-        "timestamp": frappe.utils.now()
-    })
+import time
+
+start_time = time.time()
+
+# Do some work
+process_data()
+
+duration = time.time() - start_time
 
 frappe.open_observe.send_logs(
-    stream="batch-processing",
-    logs=logs
+    stream="performance-metrics",
+    logs=[{
+        "operation": "process_data",
+        "duration_seconds": duration,
+        "timestamp": frappe.utils.now()
+    }]
 )
+```
+
+### 4. User Activity Tracking
+
+```python
+# After user login
+frappe.open_observe.send_logs(
+    stream="user-activity",
+    logs=[{
+        "event": "login",
+        "user": frappe.session.user,
+        "ip_address": frappe.local.request_ip,
+        "timestamp": frappe.utils.now()
+    }]
+)
+```
+
+### 5. Searching and Analyzing Logs
+
+```python
+# Search for errors in the last 24 hours
+from datetime import datetime, timedelta
+
+end_time = datetime.utcnow()
+start_time = end_time - timedelta(hours=24)
+
+result = frappe.open_observe.search_logs(
+    stream="application-errors",
+    start_time=start_time.isoformat() + "Z",
+    end_time=end_time.isoformat() + "Z",
+    size=100
+)
+
+if result["success"]:
+    errors = result["response"]
+    print(f"Found {len(errors.get('hits', []))} errors in the last 24 hours")
+    
+    # Analyze error patterns
+    for error in errors.get('hits', []):
+        print(f"Error: {error.get('message')} at {error.get('timestamp')}")
+```
+
+### 6. Audit Trail Implementation
+
+```python
+# In a document hook for audit logging
+def log_document_changes(doc, method):
+    """Log all changes to important documents"""
+    if doc.doctype in ["Sales Invoice", "Purchase Order", "Payment Entry"]:
+        # Get changes if updating
+        changes = {}
+        if method == "on_update" and hasattr(doc, "_doc_before_save"):
+            old_doc = doc._doc_before_save
+            for field in doc.meta.get_valid_columns():
+                old_value = getattr(old_doc, field, None)
+                new_value = getattr(doc, field, None)
+                if old_value != new_value:
+                    changes[field] = {
+                        "old": old_value,
+                        "new": new_value
+                    }
+        
+        frappe.open_observe.send_logs(
+            stream="audit-trail",
+            logs=[{
+                "doctype": doc.doctype,
+                "name": doc.name,
+                "action": method,
+                "changes": changes,
+                "user": frappe.session.user,
+                "timestamp": frappe.utils.now()
+            }]
+        )
 ```
 
 ## Best Practices
@@ -241,6 +536,7 @@ frappe.open_observe.send_logs(
 5. **Handle Errors Gracefully**: Don't let logging failures break your application
 6. **Use Appropriate Log Levels**: Use standard levels (info, warning, error, debug)
 7. **Respect Permissions**: Only System Managers can send logs - don't try to bypass this
+8. **Use Search for Analytics**: Leverage search_logs to analyze patterns and trends in your logs
 
 ## Maintenance
 

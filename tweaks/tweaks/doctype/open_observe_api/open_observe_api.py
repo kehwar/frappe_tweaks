@@ -27,7 +27,7 @@ import json
 from typing import Any, Dict, List, Optional
 
 import frappe
-from frappe.integrations.utils import make_post_request
+from frappe.integrations.utils import make_get_request, make_post_request
 from frappe.model.document import Document
 
 
@@ -242,3 +242,121 @@ def test_connection() -> Dict[str, Any]:
             "message": "Connection test failed",
             "error": str(e)
         }
+
+
+@frappe.whitelist()
+def search_logs(
+    stream: str,
+    query: Optional[Dict[str, Any]] = None,
+    org: Optional[str] = None,
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None,
+    size: int = 100
+) -> Dict[str, Any]:
+    """
+    Search logs in OpenObserve stream.
+
+    This function is whitelisted and can only be called by System Managers.
+    It searches log data from an OpenObserve stream based on query parameters.
+
+    Args:
+        stream: Stream name to search logs from
+        query: SQL query or query object for filtering logs (optional)
+        org: Organization name (optional, uses default_org from config if not provided)
+        start_time: Start time for log search in ISO format (optional)
+        end_time: End time for log search in ISO format (optional)
+        size: Maximum number of logs to return (default: 100)
+
+    Returns:
+        Dictionary containing API response with keys:
+        - success: Boolean indicating if the operation was successful
+        - response: The API response data with search results
+        - status_code: HTTP status code
+
+    Raises:
+        frappe.PermissionError: If the current user is not a System Manager
+        Exception: If the API call fails
+
+    Example:
+        >>> # Search logs from last hour
+        >>> search_logs(
+        ...     stream="application-logs",
+        ...     start_time="2025-12-26T05:00:00Z",
+        ...     end_time="2025-12-26T06:00:00Z",
+        ...     size=50
+        ... )
+
+        >>> # Search with custom query
+        >>> search_logs(
+        ...     stream="error-logs",
+        ...     query={"sql": "SELECT * FROM error_logs WHERE level='error'"},
+        ...     size=100
+        ... )
+    """
+    # Only System Managers can search logs
+    frappe.only_for("System Manager")
+
+    # Parse query if it's a JSON string (from client-side calls)
+    if isinstance(query, str):
+        query = json.loads(query)
+
+    # Get API configuration
+    config = get_api_config()
+
+    # Use provided org or default from config
+    organization = org or config.default_org or "default"
+
+    # Build API URL for search
+    # OpenObserve API format: {url}/api/{org}/{stream}/_search
+    url = f"{config.url.rstrip('/')}/api/{organization}/{stream}/_search"
+
+    # Get authentication header
+    headers = config.get_auth_header()
+    headers["Content-Type"] = "application/json"
+
+    # Build search parameters
+    params = {}
+    if size:
+        params["size"] = size
+    if start_time:
+        params["start_time"] = start_time
+    if end_time:
+        params["end_time"] = end_time
+
+    try:
+        # Make GET request to OpenObserve API using Frappe's integration utility
+        if query:
+            # If query is provided, use POST request
+            response = make_post_request(
+                url,
+                data=json.dumps(query),
+                headers=headers,
+                params=params
+            )
+        else:
+            # Otherwise use GET request with params
+            response = make_get_request(
+                url,
+                headers=headers,
+                params=params
+            )
+
+        # Return success response
+        return {
+            "success": True,
+            "response": response,
+            "status_code": 200
+        }
+
+    except Exception as e:
+        # Log the error
+        frappe.log_error(
+            title=f"OpenObserve API Error - Search Stream: {stream}",
+            message=frappe.get_traceback()
+        )
+
+        # Return error response
+        frappe.throw(
+            f"Failed to search logs in OpenObserve: {str(e)}",
+            title="API Error"
+        )
