@@ -50,7 +50,7 @@ class SyncJob(Document, LogType):
         source_document_name: DF.DynamicLink | None
         started_at: DF.Datetime | None
         status: DF.Literal[
-            "Pending", "Queued", "Started", "Finished", "Failed", "Canceled", "Skipped"
+            "Pending", "Queued", "Started", "Finished", "Failed", "Canceled", "Skipped", "Relayed", "No Target"
         ]
         sync_job_type: DF.Link
         target_document_type: DF.Link | None
@@ -568,7 +568,7 @@ class SyncJob(Document, LogType):
         """
         # Set diff and operation if provided
         if diff is not None:
-            self.diff_summary = frappe.as_json(diff or {})
+            self.diff_summary = frappe.as_json(diff)
         if operation:
             self.operation = operation.title()
         
