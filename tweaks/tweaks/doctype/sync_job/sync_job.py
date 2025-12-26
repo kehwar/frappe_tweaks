@@ -254,7 +254,7 @@ class SyncJob(Document, LogType):
 
             # Call after_start hook if exists
             if hasattr(module, "after_start"):
-                module.after_start(self, source_doc, context)
+                module.after_start(self, source_doc)
 
             # Execute based on mode
             has_execute = hasattr(module, "execute")
@@ -489,8 +489,7 @@ class SyncJob(Document, LogType):
         # Call before_relay hook if exists
         if module and hasattr(module, "before_relay"):
             source_doc = self.get_source_document()
-            context = self.get_context()
-            module.before_relay(self, source_doc, targets, context)
+            module.before_relay(self, source_doc, targets)
 
         child_jobs = []
         for target_info in targets:
@@ -536,8 +535,12 @@ class SyncJob(Document, LogType):
         # Call after_relay hook if exists
         if module and hasattr(module, "after_relay"):
             source_doc = self.get_source_document()
-            context = self.get_context()
-            module.after_relay(self, source_doc, child_jobs, context)
+            module.after_relay(self, source_doc, child_jobs)
+
+        # Call finished hook for relayed jobs
+        if module and hasattr(module, "finished"):
+            source_doc = self.get_source_document()
+            module.finished(self, source_doc, None)
 
     def _finish_with_no_targets(self):
         """Finish sync job when no targets found"""
@@ -596,9 +599,26 @@ class SyncJob(Document, LogType):
         # Get diff after mapping but before saving
         diff = target_doc.get_diff() if not target_doc.is_new() else {}
 
-        # Dry run mode: finish without saving
+        # Dry run mode: finish without saving, set status to Skipped
         if self.get("dry_run"):
-            return diff
+            self.diff_summary = frappe.as_json(diff or {}) if diff else None
+            self.operation = operation.title()
+            self.status = "Skipped"
+            self.ended_at = now()
+
+            if self.started_at and self.ended_at:
+                self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
+
+            self.flags.ignore_links = True
+            self.save(ignore_permissions=True)
+            frappe.db.commit()
+
+            # Call finished hook even in dry run
+            if hasattr(module, "finished"):
+                module.finished(self, source_doc, target_doc)
+
+            # Raise exception to stop execution
+            raise StopIteration("Sync job skipped (dry run)")
 
         # Skip update if no changes detected (unless update_without_changes_enabled is True to force update anyway)
         if operation.lower() == "update" and not self.get("update_without_changes_enabled", False) and not diff:
@@ -655,8 +675,7 @@ class SyncJob(Document, LogType):
 
         # Call finished hook if exists
         if module and hasattr(module, "finished"):
-            context = self.get_context()
-            module.finished(self, source_doc, target_doc, context)
+            module.finished(self, source_doc, target_doc)
 
     def _handle_error(self, e):
         """Handle errors during sync execution"""

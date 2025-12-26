@@ -26,7 +26,7 @@ def update_target_doc(sync_job, source_doc, target_doc):
         target_doc.first_name = source_doc.customer_name
 
 
-def after_start(sync_job, source_doc, context):
+def after_start(sync_job, source_doc):
     """Hook called after job starts"""
     hook_calls.append(("after_start", sync_job.name))
 
@@ -41,7 +41,7 @@ def after_sync(sync_job, source_doc, target_doc):
     hook_calls.append(("after_sync", sync_job.name))
 
 
-def finished(sync_job, source_doc, target_doc, context):
+def finished(sync_job, source_doc, target_doc):
     """Hook called when sync finishes"""
     hook_calls.append(("finished", sync_job.name))
 
@@ -67,12 +67,12 @@ def get_multiple_target_documents(sync_job, source_doc):
     ]
 
 
-def before_relay(sync_job, source_doc, targets, context):
+def before_relay(sync_job, source_doc, targets):
     """Hook called before child jobs are queued"""
     hook_calls.append(("before_relay", sync_job.name, len(targets)))
 
 
-def after_relay(sync_job, source_doc, child_jobs, context):
+def after_relay(sync_job, source_doc, child_jobs):
     """Hook called after child jobs are queued"""
     hook_calls.append(("after_relay", sync_job.name, len(child_jobs)))
 
