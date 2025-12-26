@@ -403,7 +403,7 @@ sync_job = enqueue_sync_job(
     dry_run=True  # Calculate diff but don't save
 )
 
-# After execution, job will have status "Finished"
+# After execution, job will have status "Skipped"
 # Review the diff_summary field to see what changes would be made
 ```
 
@@ -416,8 +416,8 @@ sync_job = enqueue_sync_job(
 **How it works:**
 1. Job executes normally until the diff is calculated
 2. The `diff_summary` field is populated with proposed changes
-3. Job skips the save operation and all hooks (before_sync, after_sync)
-4. Status is set to "Finished" without making any actual changes
+3. Job skips the save operation and hooks (before_sync, after_sync) but runs finished hook
+4. Status is set to "Skipped" without making any actual changes
 5. You can review the diff to see what would have happened
 
 ### Hook Lifecycle

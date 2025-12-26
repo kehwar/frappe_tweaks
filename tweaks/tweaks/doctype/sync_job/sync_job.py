@@ -554,7 +554,7 @@ class SyncJob(Document, LogType):
         """Execute delete operation"""
         # Check if we should skip delete operations
         if not self.get("delete_enabled", True):
-            self._finish_as_skipped(target_doc)
+            self._finish_as_skipped(target_doc, module, source_doc)
             return {}
 
         # Capture current state before delete
@@ -578,11 +578,11 @@ class SyncJob(Document, LogType):
         """Execute insert or update operation"""
         # Check if we should skip based on operation type
         if operation.lower() == "insert" and not self.get("insert_enabled", True):
-            self._finish_as_skipped(target_doc)
+            self._finish_as_skipped(target_doc, module, source_doc)
             return {}
 
         if operation.lower() == "update" and not self.get("update_enabled", True):
-            self._finish_as_skipped(target_doc)
+            self._finish_as_skipped(target_doc, module, source_doc)
             return {}
 
         # Capture current state for existing docs
@@ -622,7 +622,7 @@ class SyncJob(Document, LogType):
 
         # Skip update if no changes detected (unless update_without_changes_enabled is True to force update anyway)
         if operation.lower() == "update" and not self.get("update_without_changes_enabled", False) and not diff:
-            self._finish_as_skipped(target_doc)
+            self._finish_as_skipped(target_doc, module, source_doc)
             return {}
 
         # Call before_sync hook
@@ -644,7 +644,7 @@ class SyncJob(Document, LogType):
 
         return diff
 
-    def _finish_as_skipped(self, target_doc=None):
+    def _finish_as_skipped(self, target_doc=None, module=None, source_doc=None):
         """Finish sync job as skipped"""
         self.status = "Skipped"
         self.ended_at = now()
@@ -655,6 +655,10 @@ class SyncJob(Document, LogType):
         self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
+
+        # Call finished hook for skipped jobs
+        if module and hasattr(module, "finished"):
+            module.finished(self, source_doc, target_doc)
 
         # Raise exception to stop execution
         raise StopIteration("Sync job skipped")
