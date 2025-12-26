@@ -544,14 +544,14 @@ class SyncJob(Document, LogType):
 
     def _finish_job(
         self,
-        status,
+        status: str,
         target_doc=None,
-        operation=None,
-        diff=None,
+        operation: str | None = None,
+        diff: dict | None = None,
         module=None,
         source_doc=None,
-        stop_execution=False,
-        stop_message=None,
+        stop_execution: bool = False,
+        stop_message: str | None = None,
     ):
         """
         Unified method to finish sync job with various statuses.
@@ -559,7 +559,7 @@ class SyncJob(Document, LogType):
         Args:
             status: Job status to set (e.g., "Finished", "Skipped", "Relayed", "No Target")
             target_doc: Target document (optional)
-            operation: Operation performed (optional)
+            operation: Operation performed - "insert", "update", or "delete" (optional)
             diff: Changes made (optional)
             module: Sync job module (optional)
             source_doc: Source document (optional)
@@ -569,7 +569,7 @@ class SyncJob(Document, LogType):
         # Set diff and operation if provided
         if diff is not None:
             self.diff_summary = frappe.as_json(diff)
-        if operation:
+        if operation is not None:
             self.operation = operation.title()
         
         # Set status and timing
