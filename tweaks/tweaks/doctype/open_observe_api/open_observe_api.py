@@ -105,34 +105,6 @@ def get_api_config() -> OpenObserveAPI:
     return doc
 
 
-def convert_to_unix_timestamp(time_str: Optional[str]) -> Optional[int]:
-    """
-    Convert ISO format timestamp to Unix timestamp in microseconds.
-
-    OpenObserve expects timestamps in microseconds since Unix epoch.
-
-    Args:
-        time_str: ISO format timestamp string (e.g., "2025-12-26T05:00:00Z")
-
-    Returns:
-        Unix timestamp in microseconds, or None if input is None
-
-    Example:
-        >>> convert_to_unix_timestamp("2025-12-26T05:00:00Z")
-        1735192800000000
-    """
-    if not time_str:
-        return None
-
-    try:
-        # Parse the timestamp string to datetime
-        dt = get_datetime(time_str)
-        # Convert to Unix timestamp in microseconds
-        return int(dt.timestamp() * 1000000)
-    except Exception as e:
-        frappe.throw(f"Invalid timestamp format: {time_str}. Expected ISO format like '2025-12-26T05:00:00Z'. Error: {str(e)}")
-
-
 @frappe.whitelist()
 def send_logs(
     stream: str,
@@ -350,11 +322,13 @@ def search_logs(
     if size:
         params["size"] = size
     if start_time:
-        # Convert ISO timestamp to Unix timestamp in microseconds
-        params["start_time"] = convert_to_unix_timestamp(start_time)
+        # Convert ISO timestamp to Unix timestamp in microseconds using frappe utils
+        # get_datetime() accepts strings or datetime objects and handles timezone conversions
+        params["start_time"] = int(get_datetime(start_time).timestamp() * 1000000)
     if end_time:
-        # Convert ISO timestamp to Unix timestamp in microseconds
-        params["end_time"] = convert_to_unix_timestamp(end_time)
+        # Convert ISO timestamp to Unix timestamp in microseconds using frappe utils
+        # get_datetime() accepts strings or datetime objects and handles timezone conversions
+        params["end_time"] = int(get_datetime(end_time).timestamp() * 1000000)
 
     try:
         # Make GET request to OpenObserve API using Frappe's integration utility
