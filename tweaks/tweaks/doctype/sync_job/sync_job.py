@@ -344,7 +344,7 @@ class SyncJob(Document, LogType):
 
     def _execute_bypass_mode(self, module, source_doc, context):
         """Execute in bypass mode"""
-        result = module.execute(self, source_doc, context)
+        result = module.execute(self, source_doc)
         target_doc = result["target_doc"]
         operation = result["operation"]
         

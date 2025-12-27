@@ -41,14 +41,13 @@ The Sync Job framework provides a robust, queue-based system for synchronizing d
 Implement a single `execute()` function for complete control over the sync process.
 
 ```python
-def execute(sync_job, source_doc, context):
+def execute(sync_job, source_doc):
     """
     Execute sync job with full control
     
     Args:
         sync_job: Sync Job document
         source_doc: Source document
-        context: Dict of context data
     
     Returns:
         Dict with keys:
@@ -56,6 +55,9 @@ def execute(sync_job, source_doc, context):
             operation: "insert", "update", or "delete"
             diff: Dict of changes (optional)
     """
+    # Context can be retrieved via sync_job.get_context()
+    context = sync_job.get_context()
+    
     # Your custom logic here
     target_doc = frappe.get_doc("Target DocType", filters)
     
@@ -693,9 +695,12 @@ def update_target_doc(sync_job, source_doc, target_doc):
 ### Example 3: Bypass Mode with External API
 
 ```python
-def execute(sync_job, source_doc, context):
+def execute(sync_job, source_doc):
     """Sync to external API"""
     import requests
+    
+    # Context can be retrieved via sync_job.get_context()
+    context = sync_job.get_context()
     
     # Call external API
     response = requests.post(
@@ -889,7 +894,7 @@ sync_job = enqueue_sync_job(
 
 ```python
 # Bypass Mode
-def execute(sync_job, source_doc, context) -> dict
+def execute(sync_job, source_doc) -> dict
 
 # Standard Mode - Required
 def get_target_document(sync_job, source_doc) -> dict
