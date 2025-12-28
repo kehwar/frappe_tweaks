@@ -774,6 +774,20 @@ def get_document_even_if_deleted(doctype, name):
         doctype: Document type
         name: Document name
     """
+    # Check if doctype is virtual
+    meta = frappe.get_meta(doctype)
+    is_virtual = meta.get("is_virtual")
+    
+    # For virtual doctypes, use frappe.get_doc directly
+    # as frappe.db.get_value will fail for them
+    if is_virtual:
+        try:
+            return frappe.get_doc(doctype, name)
+        except frappe.DoesNotExistError:
+            frappe.throw(
+                _("{0} {1} not found").format(_(doctype), name),
+                frappe.DoesNotExistError(doctype=doctype),
+            )
 
     try:
         doc = frappe.db.get_value(doctype, name)
