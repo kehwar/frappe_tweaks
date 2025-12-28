@@ -418,6 +418,12 @@ class SyncJob(Document, LogType):
 
         else:
             target_info = module.get_target_document(self, source_doc)
+
+            if not target_info:
+                # No target found
+                self._finish_job(status="No Target")
+                return None, None, context
+
             return self._process_target_info(target_info, context)
 
     def _process_target_info(self, target_info, context):
