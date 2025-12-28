@@ -367,6 +367,8 @@ class SyncJob(Document, LogType):
         # Determine target document and operation
         if self.target_document_name:
             target_doc, operation = self._get_predefined_target()
+        elif self.operation and self.operation.lower() == 'insert':
+            target_doc, operation, context = self._process_target_info({"operation": "insert"}, context)
         else:
             target_doc, operation, context = self._discover_target(
                 module, source_doc, context
