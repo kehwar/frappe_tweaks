@@ -623,6 +623,20 @@ class SyncJob(Document, LogType):
         if target_doc:
             self.current_data = target_doc.as_json()
 
+        # Dry run mode: finish without saving, set status to Skipped
+        if self.get("dry_run"):
+            # Set operation and diff before finishing
+            self.operation = operation.title()
+            self.diff_summary = frappe.as_json(diff) if diff else None
+            self._finish_job(
+                status="Skipped",
+                target_doc=target_doc,
+                module=module,
+                source_doc=source_doc,
+                stop_execution=True,
+                stop_message="Sync job skipped (dry run)",
+            )
+
         # Call before_sync hook
         if hasattr(module, "before_sync"):
             module.before_sync(self, source_doc, target_doc)
