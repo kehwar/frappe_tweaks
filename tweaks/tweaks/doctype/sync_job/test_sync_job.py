@@ -363,3 +363,53 @@ class TestSyncJob(FrappeTestCase):
         with self.assertRaises(frappe.DoesNotExistError):
             get_document_even_if_deleted("Customer", "NonExistentCustomer123456")
 
+    def test_insert_operation_check_priority(self):
+        """Test that insert operation check comes before target_document_type check"""
+        from tweaks.utils.sync_job import create_sync_job
+        
+        # Create test Sync Job Type with hook-enabled module if not exists
+        if not frappe.db.exists("Sync Job Type", "Test Insert Priority"):
+            sync_job_type = frappe.get_doc(
+                {
+                    "doctype": "Sync Job Type",
+                    "sync_job_type_name": "Test Insert Priority",
+                    "module": "Tweaks",
+                    "source_document_type": "Customer",
+                    "target_document_type": "Contact",
+                    "is_standard": "Yes",
+                    "queue": "default",
+                    "timeout": 300,
+                    "retry_delay": 5,
+                    "max_retries": 3,
+                }
+            )
+            sync_job_type.insert(ignore_permissions=True)
+        
+        # Create sync job
+        sync_job = create_sync_job(
+            sync_job_type="Test Insert Priority",
+            source_document_name="Test Customer",
+            queue_on_insert=False,
+        )
+        
+        try:
+            # Execute the sync job - should succeed with insert operation
+            sync_job.execute()
+            
+            # Verify the job completed successfully
+            sync_job.reload()
+            self.assertEqual(sync_job.status, "Finished")
+            self.assertEqual(sync_job.operation, "Insert")
+            
+            # Verify target document was created
+            self.assertIsNotNone(sync_job.target_document_name)
+            self.assertTrue(frappe.db.exists("Contact", sync_job.target_document_name))
+            
+        finally:
+            # Cleanup
+            frappe.db.delete("Sync Job", {"sync_job_type": "Test Insert Priority"})
+            if sync_job.target_document_name and frappe.db.exists("Contact", sync_job.target_document_name):
+                frappe.delete_doc("Contact", sync_job.target_document_name, ignore_permissions=True)
+            if frappe.db.exists("Sync Job Type", "Test Insert Priority"):
+                frappe.delete_doc("Sync Job Type", "Test Insert Priority", ignore_permissions=True)
+

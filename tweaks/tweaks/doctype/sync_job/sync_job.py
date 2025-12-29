@@ -484,12 +484,18 @@ class SyncJob(Document, LogType):
             self.target_document_name = target_document_name
         
         # Load the actual document for processing
-        if not target_document_type:
-            # No target specified - finish job without target
+        # Check insert operation first before checking for target_document_type
+        if operation_lower == "insert":
+            # For insert operations, we need target_document_type
+            if not target_document_type:
+                # No target specified - finish job without target
+                self._finish_job(status="No Target")
+                return None, None, context
+            target_doc = frappe.new_doc(target_document_type)
+        elif not target_document_type:
+            # No target specified for update/delete - finish job without target
             self._finish_job(status="No Target")
             return None, None, context
-        elif operation_lower == "insert":
-            target_doc = frappe.new_doc(target_document_type)
         else:
             # Load the target document for update or delete
             try:
