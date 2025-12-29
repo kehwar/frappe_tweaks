@@ -159,6 +159,7 @@ class SyncJob(Document, LogType):
         if self.status == "Queued":
             self.cancel_sync()
 
+    @frappe.whitelist()
     def cancel_sync(self, reason=None):
         """
         Cancel sync job (only Pending, Queued or Failed)
