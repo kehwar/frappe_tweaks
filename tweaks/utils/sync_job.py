@@ -34,7 +34,7 @@ def create_sync_job(
     triggered_by_document_type=None,
     triggered_by_document_name=None,
     trigger_document_timestamp=None,
-    queue_on_insert=True,
+    queue_on_insert=None,
     dry_run=False,
     insert_enabled=True,
     update_enabled=True,
@@ -66,7 +66,7 @@ def create_sync_job(
         triggered_by_document_type: Optional document type that triggered this sync job
         triggered_by_document_name: Optional document name that triggered this sync job
         trigger_document_timestamp: Optional timestamp of the triggering document
-        queue_on_insert: Whether to queue job on insert (default: True)
+        queue_on_insert: Whether to queue job on insert (default: None - False in dev, True in production)
         dry_run: Whether to calculate diff only without saving (default: False)
         insert_enabled: Allow insert operations (default: True)
         update_enabled: Allow update operations (default: True)
@@ -119,6 +119,11 @@ def create_sync_job(
         update_enabled = params.get("update_enabled", update_enabled)
         delete_enabled = params.get("delete_enabled", delete_enabled)
         update_without_changes_enabled = params.get("update_without_changes_enabled", update_without_changes_enabled)
+
+    # Set queue_on_insert default based on environment
+    if queue_on_insert is None:
+        # In dev mode, default to False; in production, default to True
+        queue_on_insert = not frappe.conf.get("developer_mode", False)
 
     # Validate required parameter
     if not sync_job_type:
@@ -213,7 +218,7 @@ def enqueue_sync_job(
     triggered_by_document_type=None,
     triggered_by_document_name=None,
     trigger_document_timestamp=None,
-    queue_on_insert=True,
+    queue_on_insert=None,
     dry_run=False,
     insert_enabled=True,
     update_enabled=True,
@@ -245,7 +250,7 @@ def enqueue_sync_job(
         triggered_by_document_type: Optional document type that triggered this sync job
         triggered_by_document_name: Optional document name that triggered this sync job
         trigger_document_timestamp: Optional timestamp of the triggering document
-        queue_on_insert: Whether to queue job on insert (default: True)
+        queue_on_insert: Whether to queue job on insert (default: None - False in dev, True in production)
         dry_run: Whether to calculate diff only without saving (default: False)
         insert_enabled: Allow insert operations (default: True)
         update_enabled: Allow update operations (default: True)
