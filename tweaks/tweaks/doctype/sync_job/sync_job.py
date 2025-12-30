@@ -366,10 +366,10 @@ class SyncJob(Document, LogType):
     def _execute_standard_mode(self, module, source_doc, context):
         """Execute in standard mode"""
         # Determine target document and operation
-        if self.target_document_name:
-            target_doc, operation = self._get_predefined_target()
-        elif self.operation and self.operation.lower() == 'insert':
+        if self.operation and self.operation.lower() == 'insert':
             target_doc, operation, context = self._process_target_info({"operation": "insert"}, context)
+        elif self.target_document_name:
+            target_doc, operation = self._get_predefined_target()
         else:
             target_doc, operation, context = self._discover_target(
                 module, source_doc, context
@@ -489,6 +489,7 @@ class SyncJob(Document, LogType):
             self._finish_job(status="No Target")
             return None, None, context
         elif operation_lower == "insert":
+            self.target_document_name = None  # Will be set after insert
             target_doc = frappe.new_doc(target_document_type)
         else:
             # Load the target document for update or delete
