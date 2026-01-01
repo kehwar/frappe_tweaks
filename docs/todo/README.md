@@ -15,23 +15,23 @@ The `docs/todo/` directory serves as the central location for:
 ### High Priority
 
 #### 1. Test Infrastructure Overhaul
-**Status**: In Progress (2025-12-31)  
+**Status**: Planned  
 **Priority**: High  
 **Description**: Clean up and recreate test files with proper CI/CD integration
 
 **Tasks**:
-- [x] Delete all current test files in the repository (2025-12-31)
+- [ ] Delete all current test files in the repository
   - Location: `tweaks/tweaks/doctype/*/test_*.py`
   - Location: `tweaks/tweaks/sync_job_type/*/test_*.py`
   - Reason: Test files will be recreated with improved structure and coverage
   
-- [x] Implement GitHub Actions CI workflow (2025-12-31)
-  - [x] Create `.github/workflows/tests.yml` for automated testing
-  - [x] Configure test environment with Frappe bench setup
-  - [x] Add test job for Python unit tests
-  - [x] Add linting job (ruff, black, isort)
-  - [x] Configure test coverage reporting (codecov integration)
-  - [x] Add status badge to README.md
+- [ ] Implement GitHub Actions CI workflow
+  - [ ] Create `.github/workflows/tests.yml` for automated testing
+  - [ ] Configure test environment with Frappe bench setup
+  - [ ] Add test job for Python unit tests
+  - [ ] Add linting job (if applicable)
+  - [ ] Configure test coverage reporting
+  - [ ] Add status badge to README.md
   
 - [ ] Recreate test files with improved structure
   - [ ] Follow Frappe test framework best practices
