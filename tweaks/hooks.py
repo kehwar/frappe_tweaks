@@ -11,6 +11,7 @@ app_publisher = "Erick W.R."
 app_description = "Tweaks for Frappe"
 app_email = "erickkwr@gmail.com"
 app_license = "mit"
+required_apps = ["kehwar/frappe", "kehwar/erpnext"]
 
 # Hooks
 
