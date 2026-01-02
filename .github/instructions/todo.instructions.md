@@ -24,6 +24,23 @@ The `docs/todo/` directory serves as the central location for:
 
 ## Conventions
 
+### Task File Format
+
+Each task file in `docs/todo/` should start with a YAML frontmatter block containing task properties:
+
+```yaml
+---
+status: 'In Progress'
+priority: 'High'
+description: 'Brief description of the task or feature'
+---
+```
+
+**Frontmatter Fields:**
+- **status**: Current state (Planned, In Progress, Blocked, Completed, Deprecated)
+- **priority**: Priority level (High, Medium, Low)
+- **description**: Clear description of the task or feature
+
 ### Task Tracking Format
 
 - Use `[ ]` for pending tasks
@@ -41,26 +58,34 @@ Tasks should be organized by priority:
 - **Medium Priority**: Important improvements and documentation
 - **Low Priority**: Nice-to-have features and optimizations
 
-#### Status Indicators
+#### Status Values
 
-Each major task should include:
-- **Status**: Current state (Planned, In Progress, Blocked, Completed, Deprecated)
-- **Priority**: Priority level (High, Medium, Low)
-- **Description**: Clear description of the task or feature
+Common status values:
+- **Planned**: Task is defined but work hasn't started
+- **In Progress**: Task is currently being worked on
+- **Blocked**: Task is blocked by dependencies or issues
+- **Completed**: Task is finished
+- **Deprecated**: Task is no longer relevant
 
 #### Task Structure
 
-```markdown
-#### Task Name
-**Status**: Current Status
-**Priority**: Priority Level
-**Description**: Brief description
+After the frontmatter block, structure your task content:
 
-**Tasks**:
+```markdown
+# Task Name
+
+Brief overview of the task (optional if description in frontmatter is sufficient)
+
+## Tasks
+
 - [ ] Subtask 1
   - Additional details if needed
 - [ ] Subtask 2
 - [x] Completed subtask (YYYY-MM-DD)
+
+## Notes
+
+Additional context, decisions, or links to related resources
 ```
 
 ### Documentation Guidelines
@@ -123,15 +148,23 @@ Each major task should include:
 
 ## Examples
 
-### Example Task Entry
+### Example Task File
+
+A complete task file (`test-infrastructure-overhaul.md`) would look like:
 
 ```markdown
-#### Test Infrastructure Overhaul
-**Status**: In Progress (2026-01-01)
-**Priority**: High
-**Description**: Clean up and recreate test files with proper CI/CD integration
+---
+status: 'In Progress'
+priority: 'High'
+description: 'Clean up and recreate test files with proper CI/CD integration'
+---
 
-**Tasks**:
+# Test Infrastructure Overhaul
+
+This task focuses on improving the test infrastructure with better organization and CI/CD integration.
+
+## Tasks
+
 - [x] Delete all current test files in the repository (2026-01-01)
   - Location: `tweaks/tweaks/doctype/*/test_*.py`
   - Location: `tweaks/tweaks/sync_job_type/*/test_*.py`
@@ -150,9 +183,28 @@ Each major task should include:
   - [ ] Ensure proper test isolation
   - [ ] Add comprehensive test coverage for core features
   - [ ] Document testing conventions in main instructions
+
+## Notes
+
+- Test files should follow Frappe test framework conventions
+- All tests must be isolated and not depend on execution order
+- Coverage reporting will help identify gaps
 ```
 
-### Example Completed Section
+### Example Completed Task Section
+
+When a task is completed, update the frontmatter:
+
+```markdown
+---
+status: 'Completed'
+priority: 'High'
+description: 'Clean up and recreate test files with proper CI/CD integration'
+completed_date: '2026-02-15'
+---
+```
+
+Or move completed tasks to a dedicated section in the file:
 
 ```markdown
 ## Completed Items
