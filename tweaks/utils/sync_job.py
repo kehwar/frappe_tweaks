@@ -311,6 +311,7 @@ def enqueue_sync_job(
     return enqueue(
         "tweaks.utils.sync_job.create_sync_job",
         sync_job_type=params,
+        enqueue_after_commit=1
     )
 
 
