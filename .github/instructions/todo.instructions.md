@@ -108,6 +108,13 @@ Additional context, decisions, or links to related resources
 - Feature-specific files: `feature-name-todo.md` (if needed)
 - Keep file names lowercase with hyphens
 
+### Archiving Completed Tasks
+
+- Non-pending (completed, deprecated, or obsolete) tasks should be moved to `docs/todo/archive/`
+- Maintain the original filename when moving to archive
+- Update the `completed` date in the frontmatter before archiving
+- Archive tasks periodically to keep the main `docs/todo/` directory focused on active work
+
 ## Best Practices
 
 1. **Keep It Updated**: Regularly update task status to reflect current progress
@@ -228,7 +235,7 @@ Or move completed tasks to a dedicated section in the file:
 ## Maintenance
 
 - Review and update TODO files during sprint planning
-- Archive completed tasks periodically (monthly or quarterly)
+- Move completed tasks to `docs/todo/archive/` (monthly or quarterly)
 - Remove or update outdated tasks
 - Ensure all active tasks have clear owners or assignees
 - Update linked documentation when tasks are completed
