@@ -33,6 +33,9 @@ Each task file in `docs/todo/` should start with a YAML frontmatter block contai
 status: 'In Progress'
 priority: 'High'
 description: 'Brief description of the task or feature'
+creation: '2026-01-01'
+modified: '2026-01-02'
+completed: ''
 ---
 ```
 
@@ -40,6 +43,9 @@ description: 'Brief description of the task or feature'
 - **status**: Current state (Planned, In Progress, Blocked, Completed, Deprecated)
 - **priority**: Priority level (High, Medium, Low)
 - **description**: Clear description of the task or feature
+- **creation**: Date when the task was created (YYYY-MM-DD format)
+- **modified**: Date when the task was last modified (YYYY-MM-DD format)
+- **completed**: Date when the task was completed (YYYY-MM-DD format, empty if not completed)
 
 ### Task Tracking Format
 
@@ -157,6 +163,9 @@ A complete task file (`test-infrastructure-overhaul.md`) would look like:
 status: 'In Progress'
 priority: 'High'
 description: 'Clean up and recreate test files with proper CI/CD integration'
+creation: '2026-01-01'
+modified: '2026-01-02'
+completed: ''
 ---
 
 # Test Infrastructure Overhaul
@@ -200,7 +209,9 @@ When a task is completed, update the frontmatter:
 status: 'Completed'
 priority: 'High'
 description: 'Clean up and recreate test files with proper CI/CD integration'
-completed_date: '2026-02-15'
+creation: '2026-01-01'
+modified: '2026-02-15'
+completed: '2026-02-15'
 ---
 ```
 
