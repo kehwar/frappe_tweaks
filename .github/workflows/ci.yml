@@ -114,12 +114,4 @@ jobs:
       - name: Run tests
         working-directory: ./frappe-bench
         run: |
-          bench --site test.localhost run-tests --app tweaks --coverage
-
-      - name: Upload coverage reports
-        if: always()
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./frappe-bench/sites/coverage.xml
-          flags: unittests
-          fail_ci_if_error: false
+          bench --site test.localhost run-tests --app tweaks
