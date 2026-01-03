@@ -27,8 +27,6 @@ tweaks/
 ├── custom/          # Customizations to core Frappe doctypes
 │   ├── doctype/    # Custom doctype implementations (Client Script, Server Script, etc.)
 │   └── utils/      # Utility modules for customizations
-├── docs/            # Project documentation
-│   └── todo/       # TODO tracking and implementation planning
 ├── hooks.py         # Frappe app hooks and configurations
 ├── patches/         # Database migration patches
 ├── public/          # Frontend assets (JS, CSS)
@@ -198,26 +196,8 @@ This app uses `flit` for packaging (see `pyproject.toml`). However, in practice:
 - No separate build step is required
 - Frontend assets are bundled by Frappe's build system
 
-## Project Planning and TODO Tracking
-
-The project uses a centralized TODO tracking system located in `docs/todo/`:
-
-- **Main TODO File**: `docs/todo/README.md` - Central location for tracking current and future implementations
-- **Purpose**: Track development tasks, feature planning, technical debt, and roadmap items
-- **Convention**: Use markdown checklists with clear status indicators
-- **Scope**: Includes high-level tasks, implementation plans, and completed work
-
-Key areas tracked:
-- Test infrastructure and CI/CD setup
-- Documentation improvements
-- Code quality enhancements
-- Feature implementations and deprecations
-
-When planning new features or modifications, always check and update the TODO documentation to maintain project visibility.
-
 ## Additional Resources
 
 - Frappe Documentation: https://frappeframework.com/docs
 - ERPNext Documentation: https://docs.erpnext.com
 - Frappe Forum: https://discuss.frappe.io
-- Project TODO: `docs/todo/README.md`
