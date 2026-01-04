@@ -18,13 +18,13 @@ Guidelines for working with the AC (Access Control) Rule and Query Filter system
 
 **Current State**:
 - ✅ **Reports**: Fully functional - Reports must manually call `get_resource_filter_query()` to get the SQL WHERE clause and inject it into the report query
-- ⚠️ **DocTypes**: Not yet implemented - Automatic permission enforcement for DocTypes is planned but not currently available
-- 🔄 **Migration Plan**: Once DocType integration is complete, the system will migrate away from deprecated approaches
+- ✅ **DocTypes**: Fully implemented - Automatic permission enforcement for DocTypes via Frappe permission hooks
+- 🔄 **Migration Plan**: Now that DocType integration is complete, migration from deprecated systems can begin
 
 **Deprecated Systems** (Do Not Use):
 - ❌ **Event Scripts** - Legacy system, deprecated in favor of AC Rules
 - ❌ **Server Script Permission Policy** - Legacy permission system, deprecated in favor of AC Rules
-- These will be removed after DocType integration is complete
+- These will be removed as users migrate to AC Rules
 
 ## Overview
 
@@ -319,21 +319,60 @@ def execute(filters=None):
 
 **Important**: Each report must explicitly call `get_resource_filter_query()` and inject the returned SQL into its query.
 
-### DocTypes (Not Yet Implemented)
+### DocTypes (Implemented)
 
-DocType integration is **not yet available**. Future implementation will automatically enforce AC Rules through Frappe's permission hooks:
+DocType integration is **now available** and automatically enforces AC Rules through Frappe's permission hooks:
 
 ```python
-# Future implementation (not yet active)
-permission_hooks = {
-    "permission_query_conditions": {
-        "*": ["tweaks.tweaks.doctype.ac_rule.ac_rule_utils.get_permission_query_conditions"]
-    },
-    "has_permission": {
-        "*": ["tweaks.tweaks.doctype.ac_rule.ac_rule_utils.has_permission"]
-    },
+# Implemented in tweaks/hooks.py
+has_permission = {
+    "*": (
+        event_script_hooks["has_permission"]["*"]
+        + permission_hooks["has_permission"]["*"]
+        + ["tweaks.tweaks.doctype.ac_rule.ac_rule_utils.has_permission"]
+    )
+}
+
+permission_query_conditions = {
+    "*": (
+        event_script_hooks["permission_query_conditions"]["*"]
+        + permission_hooks["permission_query_conditions"]["*"]
+        + ["tweaks.tweaks.doctype.ac_rule.ac_rule_utils.get_permission_query_conditions"]
+    )
 }
 ```
+
+**How It Works**:
+
+1. **Permission Query Conditions Hook**: Filters list views and queries
+   - Called by Frappe when loading list views
+   - Returns SQL WHERE clause to filter records
+   - Administrator always has full access
+   - Unmanaged resources return empty string (fall through to standard Frappe permissions)
+
+2. **Has Permission Hook**: Checks single document permissions
+   - Called by Frappe when accessing individual documents
+   - Maps Frappe permission types (ptype) to AC Actions
+   - Evaluates resource filters for the specific document
+   - Returns True/False/None (None = unmanaged, fall through to standard permissions)
+
+**Permission Type Mapping**:
+- `read` → "Read"
+- `write` → "Write"
+- `create` → "Create"
+- `delete` → "Delete"
+- `submit` → "Submit"
+- `cancel` → "Cancel"
+- `amend` → "Amend"
+- etc.
+
+**Key Features**:
+- Works alongside existing permission systems (Event Scripts, Server Script Permission Policy)
+- Administrator always has full access
+- Unmanaged doctypes fall through to standard Frappe permissions
+- Supports Permit/Forbid rule logic
+- Handles resource filters for both list views and single documents
+- No manual integration required for DocTypes (unlike Reports)
 
 ### Deprecated Systems (Do Not Use)
 
@@ -355,9 +394,9 @@ permission_hooks = {
 **2. Event Scripts** (Deprecated):
 - Location: `tweaks/tweaks/doctype/event_script/`
 - Status: Deprecated in favor of AC Rules
-- These will be removed after DocType AC Rule integration is complete
+- These will be removed as users migrate to AC Rules
 
-**Migration Path**: Once DocType AC Rules are implemented, all permission logic should migrate to use AC Rules exclusively.
+**Migration Path**: With DocType AC Rules now implemented, all permission logic should migrate to use AC Rules exclusively.
 
 ## API Endpoints
 
@@ -532,11 +571,11 @@ def execute(filters=None):
     return columns, data
 ```
 
-### Example 2: Sales Team Read Access (DocType - Future)
+### Example 2: Sales Team Read Access (DocType)
 
 **Goal**: Allow sales team members to read customers they manage.
 
-**Note**: This example shows future DocType integration. Currently not implemented.
+**Note**: This example uses DocType integration which is now implemented and works automatically.
 
 **Step 1**: Create Query Filter for Sales Team Users
 ```
@@ -573,7 +612,7 @@ Principal Filters: Sales Team Members
 Resource Filters: My Managed Customers
 ```
 
-**Step 5**: (Future) Automatic enforcement through Frappe permission hooks
+**Result**: Permission is automatically enforced through Frappe permission hooks. No additional code needed!
 
 ### Example 3: Restrict Archive Access
 
@@ -1183,20 +1222,15 @@ conditions = f"owner = {frappe.db.escape(user_input)}"  # Safe
 - ✅ Rule map generation and evaluation
 - ✅ Report integration (manual)
 - ✅ API endpoints for permission queries
+- ✅ DocType integration via Frappe permission hooks
 
-### Phase 2: In Progress
-- 🔄 **DocType Integration**: Automatic enforcement via Frappe permission hooks
-  - Implement `has_permission` hook
-  - Implement `permission_query_conditions` hook
-  - Test with various DocTypes and permission scenarios
-
-### Phase 3: Migration (Planned)
-- 📋 Migrate from deprecated systems:
+### Phase 2: Migration (In Progress)
+- 🔄 Migrate from deprecated systems:
   - Remove Event Scripts
   - Remove Server Script Permission Policy
   - Convert existing implementations to AC Rules
 
-### Phase 4: Future Enhancements
+### Phase 3: Future Enhancements
 1. **Rule Caching**: Implement site-level caching for rule map with proper invalidation
 2. **Rule Testing**: Built-in test framework for validating rules before deployment
 3. **Audit Logging**: Track when rules are applied and access is granted/denied
@@ -1215,15 +1249,15 @@ The AC Rule and Query Filter system provides a powerful, flexible framework for 
 - ✅ Fully functional for Reports (with manual integration)
 - ✅ Complete API for permission queries
 - ✅ Flexible filter system (JSON, SQL, Python)
-- ⚠️ DocType integration pending
+- ✅ DocType integration complete (automatic enforcement)
 
 **Key Takeaways**:
 - Use Query Filters for reusable, flexible filtering
 - Understand the Permit/Forbid rule logic
 - Always escape user input in SQL filters
 - For Reports: Manually call `get_resource_filter_query()` and inject SQL
-- For DocTypes: Wait for automatic integration (Phase 2)
-- Avoid deprecated systems (Event Scripts, Server Script Permission Policy)
+- For DocTypes: Automatic enforcement via permission hooks (no manual integration needed)
+- Migrate from deprecated systems (Event Scripts, Server Script Permission Policy)
 - Test rules thoroughly before deployment
 - Monitor performance with complex rule sets
 - Follow the established code patterns and conventions
