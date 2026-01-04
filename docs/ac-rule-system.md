@@ -82,12 +82,10 @@ Defines the resource being protected (what is being accessed).
 **Resource Types**:
 - **DocType**: A Frappe DocType (e.g., "Customer", "Sales Order")
 - **Report**: A Frappe Report
-- **Custom**: Custom resource with API name
-- **Child**: Hierarchical sub-resource
 
 **Managed Actions**:
 - Specify which actions this resource manages (read, write, etc.)
-- Can inherit actions from parent resources
+- Choose between "All Actions" or "Select" specific actions
 
 ### 4. AC Action
 
@@ -455,8 +453,8 @@ A: Yes, AC Rules work with any doctype, custom or standard.
 **Q: What happens if no rules match?**  
 A: The resource is "unmanaged" and Frappe's standard permissions apply.
 
-**Q: How do I migrate from AC Principal to Query Filters?**  
-A: Query Filters are the current approach. See the instructions file for migration guidance.
+**Q: How do I debug why a user can't access something?**  
+A: Use the `debug=True` parameter in API calls to see detailed information.
 
 ## Contributing
 

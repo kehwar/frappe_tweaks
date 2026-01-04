@@ -2,12 +2,6 @@ import frappe
 from frappe import _, scrub
 from frappe.utils.nestedset import rebuild_tree
 
-from tweaks.tweaks.doctype.ac_principal.ac_principal import (
-    run_script as run_principal_script,
-)
-from tweaks.tweaks.doctype.ac_resource.ac_resource import (
-    run_script as run_resource_script,
-)
 from tweaks.tweaks.doctype.query_filter.query_filter import get_sql
 from tweaks.utils.access_control import allow_value
 

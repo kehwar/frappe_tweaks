@@ -122,37 +122,16 @@ Defines what is being accessed (the "resource").
 **Resource Types**:
 - **DocType**: Access control for a specific DocType
 - **Report**: Access control for a specific Report
-- **Custom**: Custom resource type with API name
-- **Child**: Hierarchical child resource (inherits from parent)
 
 **Key Fields**:
 - `type`: Type of resource
 - `document_type`: DocType name (for DocType resources)
 - `report`: Report name (for Report resources)
 - `fieldname`: Optional field-level access control
-- `managed_actions`: "All Actions", "Select", or "Inherit from parent"
+- `managed_actions`: "All Actions" or "Select"
 - `actions`: Table of specific actions (if "Select" is chosen)
-- `condition_script`: Optional script for conditional resource matching
 
-**NestedSet Structure**: 
-- AC Resources use NestedSet for hierarchical organization
-- Child resources can inherit actions from parent resources
-
-### 4. AC Principal (Deprecated - Legacy)
-
-**Location**: `tweaks/tweaks/doctype/ac_principal/`
-
-**Note**: This is a legacy component. The new approach uses Query Filters directly for principal filtering.
-
-The old system used AC Principal with types:
-- User
-- User Group  
-- Role
-- User Script
-
-**New Approach**: Use Query Filter with `reference_doctype` = "User", "User Group", or "Role" instead.
-
-### 5. AC Action
+### 4. AC Action
 
 **Location**: `tweaks/tweaks/doctype/ac_action/`
 
@@ -1047,38 +1026,6 @@ conditions = f"owner = '{user_input}'"  # DANGEROUS!
 user_input = "'; DROP TABLE Customer; --"
 conditions = f"owner = {frappe.db.escape(user_input)}"  # Safe
 ```
-
-## Migration from Legacy AC Principal
-
-The system previously used AC Principal directly. New implementations should use Query Filters:
-
-**Old Approach** (Deprecated):
-```python
-# AC Principal with type "User"
-principal = frappe.get_doc({
-    "doctype": "AC Principal",
-    "type": "User",
-    "user": "john@example.com"
-})
-```
-
-**New Approach** (Current):
-```python
-# Query Filter with reference_doctype "User"
-principal_filter = frappe.get_doc({
-    "doctype": "Query Filter",
-    "filter_name": "John User",
-    "reference_doctype": "User",
-    "filters_type": "JSON",
-    "filters": frappe.as_json([["name", "=", "john@example.com"]])
-})
-```
-
-**Benefits of New Approach**:
-- More flexible filtering
-- Reusable filters across rules
-- Better performance with caching
-- Consistent with resource filtering
 
 ## Related Documentation
 
