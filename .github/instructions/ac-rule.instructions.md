@@ -12,7 +12,19 @@ Guidelines for working with the AC (Access Control) Rule and Query Filter system
 - **Technology**: Frappe Framework (Python + JavaScript)
 - **Location**: `tweaks/tweaks/doctype/ac_*` and `tweaks/tweaks/doctype/query_filter`
 - **Module**: Tweaks
-- **Integration**: Hooks into Frappe's permission system via `has_permission` and `permission_query_conditions`
+- **Integration**: Manual integration required (automatic hooks not yet implemented)
+
+## Implementation Status
+
+**Current State**:
+- ✅ **Reports**: Fully functional - Reports must manually call `get_resource_filter_query()` to get the SQL WHERE clause and inject it into the report query
+- ⚠️ **DocTypes**: Not yet implemented - Automatic permission enforcement for DocTypes is planned but not currently available
+- 🔄 **Migration Plan**: Once DocType integration is complete, the system will migrate away from deprecated approaches
+
+**Deprecated Systems** (Do Not Use):
+- ❌ **Event Scripts** - Legacy system, deprecated in favor of AC Rules
+- ❌ **Server Script Permission Policy** - Legacy permission system, deprecated in favor of AC Rules
+- These will be removed after DocType integration is complete
 
 ## Overview
 
@@ -272,13 +284,64 @@ return "1=0"  # Match nothing
 
 ## Integration with Frappe Permissions
 
-The AC Rule system integrates with Frappe's permission system via hooks:
+**Current Implementation Status**:
 
-**File**: `tweaks/custom/utils/permissions.py`
+### Reports (Implemented)
 
-### Permission Hooks
+Reports must **manually** integrate AC Rules by calling the API to get filter queries:
 
 ```python
+# In your report's get_data() or execute() function
+from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import get_resource_filter_query
+
+def execute(filters=None):
+    # Get AC Rule filter query for this report
+    result = get_resource_filter_query(
+        report="Your Report Name",
+        action="read",
+        user=frappe.session.user
+    )
+    
+    # Build your SQL query with the AC Rule filter
+    if result.get("access") == "none":
+        return [], []  # User has no access
+    
+    ac_filter = result.get("query", "1=1")
+    
+    data = frappe.db.sql(f"""
+        SELECT * FROM `tabYourDocType`
+        WHERE {ac_filter}
+        AND your_other_conditions
+    """, as_dict=True)
+    
+    return columns, data
+```
+
+**Important**: Each report must explicitly call `get_resource_filter_query()` and inject the returned SQL into its query.
+
+### DocTypes (Not Yet Implemented)
+
+DocType integration is **not yet available**. Future implementation will automatically enforce AC Rules through Frappe's permission hooks:
+
+```python
+# Future implementation (not yet active)
+permission_hooks = {
+    "permission_query_conditions": {
+        "*": ["tweaks.tweaks.doctype.ac_rule.ac_rule_utils.get_permission_query_conditions"]
+    },
+    "has_permission": {
+        "*": ["tweaks.tweaks.doctype.ac_rule.ac_rule_utils.has_permission"]
+    },
+}
+```
+
+### Deprecated Systems (Do Not Use)
+
+The following systems in `tweaks/custom/utils/permissions.py` are **deprecated** and will be removed:
+
+**1. Server Script Permission Policy** (Deprecated):
+```python
+# DEPRECATED - Do not use
 permission_hooks = {
     "permission_query_conditions": {
         "*": ["tweaks.custom.utils.permissions.get_permission_policy_query_conditions"]
@@ -289,7 +352,12 @@ permission_hooks = {
 }
 ```
 
-**Note**: The permission hooks in `permissions.py` are for Server Script-based permissions, not directly for AC Rules. AC Rules would need similar hooks to fully integrate with Frappe's permission system.
+**2. Event Scripts** (Deprecated):
+- Location: `tweaks/tweaks/doctype/event_script/`
+- Status: Deprecated in favor of AC Rules
+- These will be removed after DocType AC Rule integration is complete
+
+**Migration Path**: Once DocType AC Rules are implemented, all permission logic should migrate to use AC Rules exclusively.
 
 ## API Endpoints
 
@@ -396,9 +464,79 @@ Checks if a user has any access to a resource/action.
 
 ## Usage Examples
 
-### Example 1: Sales Team Read Access
+**Note**: Currently, AC Rules work for Reports only (manual integration required). DocType integration is not yet implemented.
+
+### Example 1: Report with AC Rule Access Control
+
+**Goal**: Create a Sales Report that only shows customers based on AC Rules.
+
+**Step 1**: Create Query Filter for Sales Team Users
+```
+Filter Name: Sales Team Members
+Reference Doctype: User
+Filters Type: JSON
+Filters: [["email", "like", "%@sales.company.com"]]
+```
+
+**Step 2**: Create Query Filter for Managed Customers
+```
+Filter Name: My Managed Customers
+Reference Doctype: Customer
+Filters Type: Python
+Filters:
+conditions = f"`tabCustomer`.`account_manager` = {frappe.db.escape(frappe.session.user)}"
+```
+
+**Step 3**: Create AC Resource
+```
+Type: Report
+Report: Sales Customer Report
+Managed Actions: Select
+Actions: Read
+```
+
+**Step 4**: Create AC Rule
+```
+Title: Sales Team Read Managed Customers
+Type: Permit
+Resource: Sales Customer Report
+Actions: Read
+Principal Filters: Sales Team Members
+Resource Filters: My Managed Customers
+```
+
+**Step 5**: Integrate in Report Code
+```python
+# In your report's execute() function
+from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import get_resource_filter_query
+
+def execute(filters=None):
+    # Get AC Rule filter
+    result = get_resource_filter_query(
+        report="Sales Customer Report",
+        action="read"
+    )
+    
+    if result.get("access") == "none":
+        return [], []
+    
+    ac_filter = result.get("query", "1=1")
+    
+    # Use the filter in your query
+    data = frappe.db.sql(f"""
+        SELECT name, customer_name, account_manager
+        FROM `tabCustomer`
+        WHERE {ac_filter}
+    """, as_dict=True)
+    
+    return columns, data
+```
+
+### Example 2: Sales Team Read Access (DocType - Future)
 
 **Goal**: Allow sales team members to read customers they manage.
+
+**Note**: This example shows future DocType integration. Currently not implemented.
 
 **Step 1**: Create Query Filter for Sales Team Users
 ```
@@ -435,7 +573,9 @@ Principal Filters: Sales Team Members
 Resource Filters: My Managed Customers
 ```
 
-### Example 2: Restrict Archive Access
+**Step 5**: (Future) Automatic enforcement through Frappe permission hooks
+
+### Example 3: Restrict Archive Access
 
 **Goal**: Prevent all users from reading archived records.
 
@@ -1035,29 +1175,55 @@ conditions = f"owner = {frappe.db.escape(user_input)}"  # Safe
 - Instructions Guidelines: `.github/instructions/instructions.instructions.md`
 - TODO Tracking: `docs/todo/README.md`
 
-## Future Enhancements
+## Implementation Roadmap
 
-Potential areas for improvement:
+### Phase 1: Current State (Completed)
+- ✅ Core AC Rule framework
+- ✅ Query Filter system (JSON, SQL, Python)
+- ✅ Rule map generation and evaluation
+- ✅ Report integration (manual)
+- ✅ API endpoints for permission queries
 
-1. **Full Frappe Integration**: Complete hooks for `has_permission` and `permission_query_conditions`
-2. **Rule Caching**: Implement site-level caching for rule map with proper invalidation
-3. **Rule Testing**: Built-in test framework for validating rules before deployment
-4. **Audit Logging**: Track when rules are applied and access is granted/denied
-5. **Rule Conflict Detection**: Detect and warn about conflicting Permit/Forbid rules
-6. **Performance Profiling**: Built-in tools to identify slow rules and filters
-7. **Visual Rule Builder**: UI for building complex rules without writing SQL/Python
-8. **Rule Templates**: Pre-built rule templates for common scenarios
-9. **Bulk Operations**: API for bulk rule creation/updates
-10. **Rule Versioning**: Track changes to rules over time
+### Phase 2: In Progress
+- 🔄 **DocType Integration**: Automatic enforcement via Frappe permission hooks
+  - Implement `has_permission` hook
+  - Implement `permission_query_conditions` hook
+  - Test with various DocTypes and permission scenarios
+
+### Phase 3: Migration (Planned)
+- 📋 Migrate from deprecated systems:
+  - Remove Event Scripts
+  - Remove Server Script Permission Policy
+  - Convert existing implementations to AC Rules
+
+### Phase 4: Future Enhancements
+1. **Rule Caching**: Implement site-level caching for rule map with proper invalidation
+2. **Rule Testing**: Built-in test framework for validating rules before deployment
+3. **Audit Logging**: Track when rules are applied and access is granted/denied
+4. **Rule Conflict Detection**: Detect and warn about conflicting Permit/Forbid rules
+5. **Performance Profiling**: Built-in tools to identify slow rules and filters
+6. **Visual Rule Builder**: UI for building complex rules without writing SQL/Python
+7. **Rule Templates**: Pre-built rule templates for common scenarios
+8. **Bulk Operations**: API for bulk rule creation/updates
+9. **Rule Versioning**: Track changes to rules over time
 
 ## Conclusion
 
-The AC Rule and Query Filter system provides a powerful, flexible framework for implementing fine-grained access control in Frappe applications. By understanding the core components, evaluation flow, and best practices outlined in this guide, you can effectively implement complex access control requirements while maintaining security and performance.
+The AC Rule and Query Filter system provides a powerful, flexible framework for implementing fine-grained access control in Frappe applications.
 
-Key Takeaways:
+**Current Capabilities**:
+- ✅ Fully functional for Reports (with manual integration)
+- ✅ Complete API for permission queries
+- ✅ Flexible filter system (JSON, SQL, Python)
+- ⚠️ DocType integration pending
+
+**Key Takeaways**:
 - Use Query Filters for reusable, flexible filtering
 - Understand the Permit/Forbid rule logic
 - Always escape user input in SQL filters
+- For Reports: Manually call `get_resource_filter_query()` and inject SQL
+- For DocTypes: Wait for automatic integration (Phase 2)
+- Avoid deprecated systems (Event Scripts, Server Script Permission Policy)
 - Test rules thoroughly before deployment
 - Monitor performance with complex rule sets
 - Follow the established code patterns and conventions
