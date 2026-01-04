@@ -47,7 +47,7 @@ def execute(sync_job, source_doc):
     
     Args:
         sync_job: Sync Job document
-        source_doc: Source document
+        source_doc: Source document (may be None if source was deleted)
     
     Returns:
         Dict with keys:
@@ -90,7 +90,7 @@ def get_target_document(sync_job, source_doc):
     
     Args:
         sync_job: Sync Job document (contains operation, context, flags)
-        source_doc: Source document
+        source_doc: Source document (may be None if source was deleted)
     
     Returns:
         Dict with keys:
@@ -98,6 +98,8 @@ def get_target_document(sync_job, source_doc):
             target_document_type: DocType name of target (optional - uses sync_job_type default if not provided)
             target_document_name: Name of target document (required for update/delete, optional for insert)
             context: Dict of context for this target (optional - overrides existing context)
+        
+        Or None to skip sync (job will finish with status "No Target")
     """
     target_name = frappe.db.get_value("Target DocType", {"link_field": source_doc.name})
     
@@ -121,7 +123,7 @@ def update_target_doc(sync_job, source_doc, target_doc):
     
     Args:
         sync_job: Sync Job document (contains operation and context)
-        source_doc: Source document
+        source_doc: Source document (may be None if source was deleted)
         target_doc: Target document to update
     """
     target_doc.field1 = source_doc.field1
@@ -138,12 +140,18 @@ def get_multiple_target_documents(sync_job, source_doc):
     
     NOTE: Do not return the doc object itself, as this will be serialized to new jobs.
     
+    Args:
+        sync_job: Sync Job document
+        source_doc: Source document (may be None if source was deleted)
+    
     Returns:
         List of dicts with keys:
             target_document_type: DocType name of target
             target_document_name: Name of target document (None for insert operations)
             operation: "insert", "update", or "delete"
             context: Dict of context for this target (optional)
+        
+        Or empty list to finish with status "No Target"
     """
     # Find existing target
     target1_name = frappe.db.get_value("Target DocType", {"link_field": source_doc.name})
@@ -165,32 +173,74 @@ def get_multiple_target_documents(sync_job, source_doc):
 
 
 def after_start(sync_job, source_doc):
-    """Hook called after job starts (after status changes to "Started")"""
+    """
+    Hook called after job starts (after status changes to "Started")
+    
+    Args:
+        sync_job: Sync Job document
+        source_doc: Source document (may be None if source was deleted)
+    """
     pass
 
 
 def before_relay(sync_job, source_doc, targets):
-    """Hook called before child jobs are queued (when get_multiple_target_documents returns > 1 target)"""
+    """
+    Hook called before child jobs are queued (when get_multiple_target_documents returns > 1 target)
+    
+    Args:
+        sync_job: Sync Job document (parent job)
+        source_doc: Source document (may be None if source was deleted)
+        targets: List of target dicts that will be used to create child jobs
+    """
     pass
 
 
 def after_relay(sync_job, source_doc, child_jobs):
-    """Hook called after child jobs are queued (when get_multiple_target_documents returns > 1 target)"""
+    """
+    Hook called after child jobs are queued (when get_multiple_target_documents returns > 1 target)
+    
+    Args:
+        sync_job: Sync Job document (parent job with status "Relayed")
+        source_doc: Source document (may be None if source was deleted)
+        child_jobs: List of dicts containing info about created child jobs
+            Each dict has: target_document_type, target_document_name, operation, context, sync_job
+    """
     pass
 
 
 def before_sync(sync_job, source_doc, target_doc):
-    """Hook called before sync (before save)"""
+    """
+    Hook called before sync (before save)
+    
+    Args:
+        sync_job: Sync Job document
+        source_doc: Source document (may be None if source was deleted)
+        target_doc: Target document
+    """
     pass
 
 
 def after_sync(sync_job, source_doc, target_doc):
-    """Hook called after sync (after save)"""
+    """
+    Hook called after sync (after save)
+    
+    Args:
+        sync_job: Sync Job document
+        source_doc: Source document (may be None if source was deleted)
+        target_doc: Target document (saved)
+    """
     pass
 
 
 def finished(sync_job, source_doc, target_doc):
-    """Hook called when sync job finishes successfully (status = "Finished", "Skipped", or "Relayed")"""
+    """
+    Hook called when sync job finishes successfully (status = "Finished", "Skipped", or "Relayed")
+    
+    Args:
+        sync_job: Sync Job document (status = "Finished", "Skipped", or "Relayed")
+        source_doc: Source document (may be None if source was deleted)
+        target_doc: Target document (saved) or None for relayed jobs
+    """
     pass
 ```
 
@@ -331,6 +381,18 @@ Available on the `sync_job` object in your controller:
 - `sync_job.delete_enabled` - Allow delete operations (default: True)
 - `sync_job.update_without_changes_enabled` - Save even if no changes (default: False)
 
+These flags can be set when enqueueing a sync job to control which operations are allowed. If an operation is disabled, the job will finish with status "Skipped".
+
+```python
+enqueue_sync_job(
+    sync_job_type="SAP Customer Sync",
+    source_document_name="CUST-00001",
+    insert_enabled=False,  # Disallow insert operations
+    update_enabled=True,   # Allow update operations
+    delete_enabled=False   # Disallow delete operations
+)
+```
+
 ### Context Data
 
 Pass custom data to your sync logic:
@@ -354,6 +416,37 @@ def update_target_doc(sync_job, source_doc, target_doc):
         pass
 ```
 
+### Trigger Tracking
+
+Sync jobs can track what triggered them for auditing and debugging purposes:
+
+```python
+# Track triggering document
+enqueue_sync_job(
+    sync_job_type="SAP Customer Sync",
+    source_document_name="CUST-00001",
+    trigger_type="Document Hook",
+    triggered_by_doc=some_document,  # Document that triggered this sync
+)
+
+# Or specify directly
+enqueue_sync_job(
+    sync_job_type="SAP Customer Sync",
+    source_document_name="CUST-00001",
+    trigger_type="API",
+    triggered_by_document_type="Sales Order",
+    triggered_by_document_name="SO-00001",
+    trigger_document_timestamp="2025-01-04 10:30:00"
+)
+
+# Access trigger document in controller
+def update_target_doc(sync_job, source_doc, target_doc):
+    trigger_doc = sync_job.get_trigger_document()  # May be None
+    if trigger_doc:
+        # Use trigger document info
+        pass
+```
+
 ## Job Lifecycle
 
 ### Status Flow
@@ -364,7 +457,9 @@ def update_target_doc(sync_job, source_doc, target_doc):
 4. **Finished** - Completed successfully
 5. **Failed** - Error occurred (can retry if under max_retries)
 6. **Canceled** - Manually canceled (only from Pending, Queued, or Failed status)
-7. **Skipped** - No action taken (no changes detected or operation disabled)
+7. **Skipped** - No action taken (no changes detected, operation disabled, or dry run mode)
+8. **Relayed** - Multiple targets discovered; child jobs created and queued
+9. **No Target** - No target document found or target not applicable
 
 ### Automatic Retry
 
@@ -437,13 +532,16 @@ def after_start(sync_job, source_doc):
     
     Args:
         sync_job: Sync Job document
-        source_doc: Source document
+        source_doc: Source document (may be None if source was deleted)
     """
     # Context can be retrieved via sync_job.get_context()
     context = sync_job.get_context()
     
     # Perform initialization logic
-    frappe.log_error(f"Starting sync for {source_doc.name}", "Sync Start")
+    if source_doc:
+        frappe.log_error(f"Starting sync for {source_doc.name}", "Sync Start")
+    else:
+        frappe.log_error(f"Starting sync (source deleted)", "Sync Start")
 ```
 
 **Use after_start when:**
@@ -464,7 +562,7 @@ def before_relay(sync_job, source_doc, targets):
     
     Args:
         sync_job: Sync Job document (parent job)
-        source_doc: Source document
+        source_doc: Source document (may be None if source was deleted)
         targets: List of target dicts that will be used to create child jobs
     """
     # Context can be retrieved via sync_job.get_context()
@@ -493,7 +591,7 @@ def after_relay(sync_job, source_doc, child_jobs):
     
     Args:
         sync_job: Sync Job document (parent job with status "Relayed")
-        source_doc: Source document
+        source_doc: Source document (may be None if source was deleted)
         child_jobs: List of dicts containing info about created child jobs
             Each dict has: target_document_type, target_document_name, operation, context, sync_job
     """
@@ -501,8 +599,9 @@ def after_relay(sync_job, source_doc, child_jobs):
     context = sync_job.get_context()
     
     # Log child job creation
+    source_name = source_doc.name if source_doc else "deleted source"
     frappe.log_error(
-        f"Created {len(child_jobs)} child jobs for {source_doc.name}",
+        f"Created {len(child_jobs)} child jobs for {source_name}",
         "Batch Sync"
     )
 ```
@@ -525,25 +624,27 @@ def finished(sync_job, source_doc, target_doc):
     
     Args:
         sync_job: Sync Job document (status = "Finished", "Skipped", or "Relayed")
-        source_doc: Source document
+        source_doc: Source document (may be None if source was deleted)
         target_doc: Target document (saved) or None for relayed jobs
     """
     # Context can be retrieved via sync_job.get_context()
     context = sync_job.get_context()
     
-    # Send notification (handle None target_doc for relayed jobs)
+    # Send notification (handle None source_doc and target_doc)
     if target_doc:
+        source_name = source_doc.name if source_doc else "deleted source"
         frappe.sendmail(
             recipients=["admin@example.com"],
             subject=f"Sync completed: {target_doc.name}",
-            message=f"Successfully synced {source_doc.name} to {target_doc.name}"
+            message=f"Successfully synced {source_name} to {target_doc.name}"
         )
     else:
         # Relayed job - multiple targets created as child jobs
+        source_name = source_doc.name if source_doc else "deleted source"
         frappe.sendmail(
             recipients=["admin@example.com"],
             subject=f"Sync relayed: {sync_job.name}",
-            message=f"Created child jobs for {source_doc.name}"
+            message=f"Created child jobs for {source_name}"
         )
 ```
 
@@ -573,6 +674,60 @@ For a sync job with multiple targets (relayed to child jobs):
 5. `after_relay` - After creating child jobs
 6. Parent job status set to "Relayed"
 7. `finished` - Job completion hook (target_doc is None for relayed jobs)
+
+## Sync Job Methods
+
+The `sync_job` object passed to your controller functions provides several useful methods:
+
+### get_context()
+
+Parse and return the context dictionary:
+
+```python
+def update_target_doc(sync_job, source_doc, target_doc):
+    context = sync_job.get_context()  # Returns dict
+    if context.get("force_update"):
+        # Handle force update
+        pass
+```
+
+### get_source_document()
+
+Load the source document (even if deleted):
+
+```python
+def after_start(sync_job, source_doc):
+    # Alternative way to get source document
+    source = sync_job.get_source_document()  # May be None
+    if source:
+        # Use source document
+        pass
+```
+
+### get_trigger_document()
+
+Load the document that triggered this sync job:
+
+```python
+def update_target_doc(sync_job, source_doc, target_doc):
+    trigger_doc = sync_job.get_trigger_document()  # May be None
+    if trigger_doc:
+        # Access triggering document info
+        target_doc.triggered_by = trigger_doc.name
+```
+
+### get_target_document()
+
+Load the target document (for pre-specified targets):
+
+```python
+def after_start(sync_job, source_doc):
+    if sync_job.target_document_name:
+        target = sync_job.get_target_document(for_update=True)
+        # Validate target before processing
+```
+
+**Note**: In standard mode, the framework loads the target document automatically. This method is mainly useful in bypass mode or hooks.
 
 ## Advanced Features
 
@@ -875,18 +1030,31 @@ def on_trash_product_bundle(doc, method):
 from tweaks.utils.sync_job import enqueue_sync_job
 
 sync_job = enqueue_sync_job(
-    sync_job_type,              # Required: Sync Job Type name
-    source_document_name=None,  # Optional: Source document name (can be None if source was deleted)
-    context=None,               # Optional: Dict of context data (required when source_document_name is None)
-    operation=None,             # Optional: "Insert", "Update", or "Delete"
-    target_document_name=None,  # Optional: Pre-specify target
-    parent_sync_job=None,       # Optional: Parent job name
-    queue=None,                 # Optional: Override queue
-    timeout=None,               # Optional: Override timeout
-    retry_delay=None,           # Optional: Override retry delay
-    max_retries=None,           # Optional: Override max retries
-    trigger_type="Manual",      # Optional: Trigger source
-    dry_run=False               # Optional: Calculate diff without saving
+    sync_job_type,                      # Required: Sync Job Type name
+    source_doc=None,                    # Optional: Source document object (extracts type and name)
+    source_document_type=None,          # Optional: Source document type (overrides job type default)
+    source_document_name=None,          # Optional: Source document name (can be None if source was deleted)
+    operation=None,                     # Optional: "Insert", "Update", or "Delete"
+    context=None,                       # Optional: Dict of context data (required when source_document_name is None)
+    target_doc=None,                    # Optional: Target document object (extracts type and name)
+    target_document_type=None,          # Optional: Target document type (overrides job type default)
+    target_document_name=None,          # Optional: Pre-specify target
+    parent_sync_job=None,               # Optional: Parent job name
+    queue=None,                         # Optional: Override queue
+    timeout=None,                       # Optional: Override timeout
+    retry_delay=None,                   # Optional: Override retry delay
+    max_retries=None,                   # Optional: Override max retries
+    trigger_type="Manual",              # Optional: Trigger source ("Manual", "Scheduler", "Webhook", "API", "Document Hook")
+    triggered_by_doc=None,              # Optional: Document that triggered this sync
+    triggered_by_document_type=None,    # Optional: DocType that triggered this sync
+    triggered_by_document_name=None,    # Optional: Document name that triggered this sync
+    trigger_document_timestamp=None,    # Optional: Timestamp of triggering document
+    queue_on_insert=None,               # Optional: Queue on insert (None = False in dev, True in prod)
+    dry_run=False,                      # Optional: Calculate diff without saving
+    insert_enabled=True,                # Optional: Allow insert operations
+    update_enabled=True,                # Optional: Allow update operations
+    delete_enabled=True,                # Optional: Allow delete operations
+    update_without_changes_enabled=False # Optional: Save even if no changes detected
 )
 ```
 
@@ -895,19 +1063,39 @@ sync_job = enqueue_sync_job(
 ```python
 # Bypass Mode
 def execute(sync_job, source_doc) -> dict
+# source_doc may be None if source was deleted
 
 # Standard Mode - Required
-def get_target_document(sync_job, source_doc) -> dict
+def get_target_document(sync_job, source_doc) -> dict | None
+# source_doc may be None if source was deleted
+# Return None or dict with target_document_type=None to finish with "No Target" status
+
 def update_target_doc(sync_job, source_doc, target_doc) -> None
+# source_doc may be None if source was deleted
 
 # Standard Mode - Optional
 def get_multiple_target_documents(sync_job, source_doc) -> list[dict]
+# source_doc may be None if source was deleted
+# Return empty list to finish with "No Target" status
+
 def after_start(sync_job, source_doc) -> None
+# source_doc may be None if source was deleted
+
 def before_relay(sync_job, source_doc, targets) -> None
+# source_doc may be None if source was deleted
+
 def after_relay(sync_job, source_doc, child_jobs) -> None
+# source_doc may be None if source was deleted
+
 def before_sync(sync_job, source_doc, target_doc) -> None
+# source_doc may be None if source was deleted
+
 def after_sync(sync_job, source_doc, target_doc) -> None
+# source_doc may be None if source was deleted
+
 def finished(sync_job, source_doc, target_doc) -> None
+# source_doc may be None if source was deleted
+# target_doc may be None for relayed jobs
 ```
 ```
 
