@@ -1,6 +1,6 @@
 import frappe
+import frappe.handler as handler
 import frappe.model
-from frappe import handler
 from frappe.core.doctype.server_script import server_script_utils
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.custom.doctype.property_setter.property_setter import make_property_setter
