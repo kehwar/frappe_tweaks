@@ -54,21 +54,12 @@ def create_custom_server_script_fields():
                     "depends_on": "eval:['DocType Event', 'Permission Policy'].includes(doc.script_type)",
                     "in_list_view": 1,
                 },
-                {
-                    "fieldname": "description",
-                    "label": "Description",
-                    "fieldtype": "Text Editor",
-                    "insert_after": "script",
-                },
             ]
         },
     )
 
 
 def set_custom_server_script_properties():
-    make_property_setter(
-        "Server Script", None, "autoname", "hash", "Data", for_doctype=True
-    )
     make_property_setter(
         "Server Script",
         None,
