@@ -472,23 +472,6 @@ def has_resource_access(
     return frappe._dict({"access": access})
 
 
-def ptype_to_action(ptype):
-    """
-    Map Frappe permission type to AC Action name.
-    
-    Args:
-        ptype: Frappe permission type (e.g., "read", "write", "create", etc.)
-    
-    Returns:
-        str: AC Action name (e.g., "Read", "Write", "Create", etc.)
-    """
-    if not ptype:
-        return "Read"
-    
-    # Map ptype to AC Action - capitalize first letter to match AC Action naming
-    return ptype.capitalize()
-
-
 def get_permission_query_conditions(doctype, user=None):
     """
     Hook for Frappe's permission_query_conditions.
@@ -565,8 +548,8 @@ def has_permission(doc, ptype=None, user=None, debug=False):
     else:
         doctype = doc.doctype
     
-    # Map ptype to AC Action
-    action = ptype_to_action(ptype)
+    # Map ptype to AC Action - capitalize first letter to match AC Action naming
+    action = (ptype or "read").capitalize()
     
     # Get rules for this resource/action/user
     result = get_resource_rules(
