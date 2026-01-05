@@ -477,7 +477,7 @@ def get_permission_query_conditions(doctype, user=None):
     Hook for Frappe's permission_query_conditions.
     Returns SQL WHERE clause to filter records based on AC Rules.
     
-    This is called by Frappe to filter list views and queries.
+    This is called by Frappe to filter list views and queries for read/select operations.
     
     Args:
         doctype: DocType name
@@ -520,146 +520,51 @@ def get_permission_query_conditions(doctype, user=None):
     return query if query else ""
 
 
-def has_permission(doc, ptype=None, user=None, debug=False):
+def get_write_permission_query_conditions(doctype, user=None, ptype=None):
     """
-    Hook for Frappe's has_permission.
-    Checks if user has permission to access a specific document.
+    Hook for Frappe's write_permission_query_conditions.
+    Returns SQL WHERE clause to filter records based on AC Rules for write operations.
     
-    This is called by Frappe for single document permission checks.
+    This is called by Frappe to filter queries for write operations (write, create, submit, cancel, delete).
     
     Args:
-        doc: Document object or dict with doctype and name
-        ptype: Permission type (read, write, create, delete, submit, cancel, etc.)
+        doctype: DocType name
         user: User name (defaults to current user)
-        debug: Debug mode flag
+        ptype: Permission type (write, create, submit, cancel, delete)
     
     Returns:
-        bool or None: True if allowed, False if denied, None if unmanaged
+        str: SQL WHERE clause or empty string if unmanaged/full access
     """
     # Administrator always has full access
     if user == "Administrator" or frappe.session.user == "Administrator":
-        return True
+        return ""
     
     user = user or frappe.session.user
     
-    # Extract doctype from doc
-    if isinstance(doc, dict):
-        doctype = doc.get("doctype")
-    else:
-        doctype = doc.doctype
-    
     # Map ptype to AC Action - capitalize first letter to match AC Action naming
-    action = (ptype or "read").capitalize()
+    action = (ptype or "write").capitalize()
     
-    # Get rules for this resource/action/user
-    result = get_resource_rules(
+    # Get filter query from AC Rules
+    result = get_resource_filter_query(
         doctype=doctype,
         action=scrub(action),
         user=user,
         debug=False
     )
     
-    # If unmanaged, return None (fall through to standard Frappe permissions)
+    # If unmanaged, return empty string (fall through to standard Frappe permissions)
     if result.get("unmanaged"):
-        return None
+        return ""
     
-    rules = result.get("rules", [])
+    # If no access, return impossible condition
+    if result.get("access") == "none":
+        return "1=0"
     
-    # If no rules, deny access
-    if not rules:
-        return False
+    # If total access, return empty string
+    if result.get("access") == "total":
+        return ""
     
-    # Get document name
-    if isinstance(doc, dict):
-        doc_name = doc.get("name")
-    else:
-        doc_name = doc.name
-    
-    # If doc is new (no name yet), check if Create action is allowed
-    if not doc_name and ptype == "create":
-        # Has rules for create action, so allow
-        return True
-    
-    # For existing documents, check if document matches any rule's resource filters
-    if doc_name:
-        # Build query to check if document matches any rule
-        resource_filter_queries = []
-        
-        for rule in rules:
-            allowed = [
-                get_resource_filter_sql(r)
-                for r in rule.get("resources", [])
-                if r.get("exception", 0) == 0
-            ]
-            denied = [
-                get_resource_filter_sql(r)
-                for r in rule.get("resources", [])
-                if r.get("exception", 0) == 1
-            ]
-            
-            allowed = (
-                " OR ".join([f"({q})" for q in allowed])
-                if len(allowed) != 1
-                else (allowed[0] if allowed else "")
-            )
-            denied = (
-                " OR ".join([f"({q})" for q in denied])
-                if len(denied) != 1
-                else (denied[0] if denied else "")
-            )
-            
-            q = {"rule": rule.get("name"), "type": rule.get("type")}
-            
-            if allowed and denied:
-                resource_filter_queries.append(
-                    q | {"sql": f"({allowed}) AND NOT ({denied})"}
-                )
-            elif allowed:
-                resource_filter_queries.append(q | {"sql": f"{allowed}"})
-            elif denied:
-                resource_filter_queries.append(q | {"sql": f"NOT ({denied})"})
-        
-        # Separate Permit and Forbid rules
-        permit_queries = [
-            r.get("sql") for r in resource_filter_queries if r.get("type") == "Permit"
-        ]
-        forbid_queries = [
-            r.get("sql") for r in resource_filter_queries if r.get("type") == "Forbid"
-        ]
-        
-        # Build final query
-        permit_sql = (
-            " OR ".join([f"({q})" for q in permit_queries])
-            if len(permit_queries) != 1
-            else (permit_queries[0] if permit_queries else "")
-        )
-        forbid_sql = (
-            " OR ".join([f"({q})" for q in forbid_queries])
-            if len(forbid_queries) != 1
-            else (forbid_queries[0] if forbid_queries else "")
-        )
-        
-        # Check if document matches filters
-        if permit_sql or forbid_sql:
-            check_sql = f"""
-                SELECT COUNT(*) 
-                FROM `tab{doctype}` 
-                WHERE `tab{doctype}`.`name` = %s
-            """
-            
-            if permit_sql and forbid_sql:
-                check_sql += f" AND ({permit_sql}) AND NOT ({forbid_sql})"
-            elif permit_sql:
-                check_sql += f" AND ({permit_sql})"
-            elif forbid_sql:
-                check_sql += f" AND NOT ({forbid_sql})"
-            
-            count = frappe.db.sql(check_sql, (doc_name,))[0][0]
-            return count > 0
-        else:
-            # No filters means all records are allowed (if we have permit rules)
-            has_permit = any(r.get("type") == "Permit" for r in rules)
-            return has_permit
-    
-    # Default: if we have rules, allow (they passed principal checks)
-    return True
+    # Return the filter query
+    query = result.get("query", "")
+    return query if query else ""
+
