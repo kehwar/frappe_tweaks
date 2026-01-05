@@ -39,12 +39,6 @@ def create_custom_server_script_fields():
         {
             "Server Script": [
                 {
-                    "fieldname": "title",
-                    "label": "Title",
-                    "fieldtype": "Data",
-                    "reqd": 1,
-                },
-                {
                     "fieldname": "reference_script",
                     "label": "Reference Script",
                     "fieldtype": "Link",
@@ -74,17 +68,6 @@ def create_custom_server_script_fields():
 def set_custom_server_script_properties():
     make_property_setter(
         "Server Script", None, "autoname", "hash", "Data", for_doctype=True
-    )
-    make_property_setter(
-        "Server Script", None, "title_field", "title", "Data", for_doctype=True
-    )
-    make_property_setter(
-        "Server Script",
-        None,
-        "show_title_field_in_link",
-        "1",
-        "Check",
-        for_doctype=True,
     )
     make_property_setter(
         "Server Script",
