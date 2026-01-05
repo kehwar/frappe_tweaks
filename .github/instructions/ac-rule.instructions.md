@@ -321,18 +321,10 @@ def execute(filters=None):
 
 ### DocTypes (Implemented)
 
-DocType integration is **now available** and automatically enforces AC Rules through Frappe's permission hooks:
+DocType integration is **now available** and automatically enforces AC Rules through Frappe's permission query condition hooks:
 
 ```python
 # Implemented in tweaks/hooks.py
-has_permission = {
-    "*": (
-        event_script_hooks["has_permission"]["*"]
-        + permission_hooks["has_permission"]["*"]
-        + ["tweaks.tweaks.doctype.ac_rule.ac_rule_utils.has_permission"]
-    )
-}
-
 permission_query_conditions = {
     "*": (
         event_script_hooks["permission_query_conditions"]["*"]
@@ -340,38 +332,38 @@ permission_query_conditions = {
         + ["tweaks.tweaks.doctype.ac_rule.ac_rule_utils.get_permission_query_conditions"]
     )
 }
+
+write_permission_query_conditions = {
+    "*": ["tweaks.tweaks.doctype.ac_rule.ac_rule_utils.get_write_permission_query_conditions"]
+}
 ```
 
 **How It Works**:
 
-1. **Permission Query Conditions Hook**: Filters list views and queries
-   - Called by Frappe when loading list views
-   - Returns SQL WHERE clause to filter records
+1. **Permission Query Conditions Hook**: Filters list views and queries for read/select operations
+   - Called by Frappe when loading list views and performing read queries
+   - Returns SQL WHERE clause to filter records based on AC Rules with action="read"
    - Administrator always has full access
    - Unmanaged resources return empty string (fall through to standard Frappe permissions)
 
-2. **Has Permission Hook**: Checks single document permissions
-   - Called by Frappe when accessing individual documents
-   - Maps Frappe permission types (ptype) to AC Actions
-   - Evaluates resource filters for the specific document
-   - Returns True/False/None (None = unmanaged, fall through to standard permissions)
+2. **Write Permission Query Conditions Hook**: Filters queries for write operations
+   - Called by Frappe when performing write operations
+   - Accepts `ptype` parameter with actions: write, create, submit, cancel, delete
+   - Returns SQL WHERE clause to filter records based on AC Rules for the specified action
+   - Administrator always has full access
+   - Unmanaged resources return empty string (fall through to standard Frappe permissions)
 
-**Permission Type Mapping**:
-- `read` → "Read"
-- `write` → "Write"
-- `create` → "Create"
-- `delete` → "Delete"
-- `submit` → "Submit"
-- `cancel` → "Cancel"
-- `amend` → "Amend"
-- etc.
+**Implementation Details**:
+- Both hooks use a shared internal helper function `_get_permission_query_conditions_for_doctype(doctype, user, action)`
+- Actions are normalized using `scrub()` to ensure consistent formatting
+- The write hook maps the ptype parameter to the appropriate AC Action using `scrub(ptype or "write")`
 
 **Key Features**:
 - Works alongside existing permission systems (Event Scripts, Server Script Permission Policy)
 - Administrator always has full access
 - Unmanaged doctypes fall through to standard Frappe permissions
 - Supports Permit/Forbid rule logic
-- Handles resource filters for both list views and single documents
+- Handles resource filters for both read and write operations
 - No manual integration required for DocTypes (unlike Reports)
 
 ### Deprecated Systems (Do Not Use)
@@ -1214,33 +1206,6 @@ conditions = f"owner = {frappe.db.escape(user_input)}"  # Safe
 - Instructions Guidelines: `.github/instructions/instructions.instructions.md`
 - TODO Tracking: `docs/todo/README.md`
 
-## Implementation Roadmap
-
-### Phase 1: Current State (Completed)
-- ✅ Core AC Rule framework
-- ✅ Query Filter system (JSON, SQL, Python)
-- ✅ Rule map generation and evaluation
-- ✅ Report integration (manual)
-- ✅ API endpoints for permission queries
-- ✅ DocType integration via Frappe permission hooks
-
-### Phase 2: Migration (In Progress)
-- 🔄 Migrate from deprecated systems:
-  - Remove Event Scripts
-  - Remove Server Script Permission Policy
-  - Convert existing implementations to AC Rules
-
-### Phase 3: Future Enhancements
-1. **Rule Caching**: Implement site-level caching for rule map with proper invalidation
-2. **Rule Testing**: Built-in test framework for validating rules before deployment
-3. **Audit Logging**: Track when rules are applied and access is granted/denied
-4. **Rule Conflict Detection**: Detect and warn about conflicting Permit/Forbid rules
-5. **Performance Profiling**: Built-in tools to identify slow rules and filters
-6. **Visual Rule Builder**: UI for building complex rules without writing SQL/Python
-7. **Rule Templates**: Pre-built rule templates for common scenarios
-8. **Bulk Operations**: API for bulk rule creation/updates
-9. **Rule Versioning**: Track changes to rules over time
-
 ## Conclusion
 
 The AC Rule and Query Filter system provides a powerful, flexible framework for implementing fine-grained access control in Frappe applications.
@@ -1256,7 +1221,7 @@ The AC Rule and Query Filter system provides a powerful, flexible framework for 
 - Understand the Permit/Forbid rule logic
 - Always escape user input in SQL filters
 - For Reports: Manually call `get_resource_filter_query()` and inject SQL
-- For DocTypes: Automatic enforcement via permission hooks (no manual integration needed)
+- For DocTypes: Automatic enforcement via permission query condition hooks (no manual integration needed)
 - Migrate from deprecated systems (Event Scripts, Server Script Permission Policy)
 - Test rules thoroughly before deployment
 - Monitor performance with complex rule sets
