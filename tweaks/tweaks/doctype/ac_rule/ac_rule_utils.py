@@ -470,3 +470,84 @@ def has_resource_access(
         )
 
     return frappe._dict({"access": access})
+
+
+def _get_permission_query_conditions_for_doctype(doctype, user=None, action="read"):
+    """
+    Internal helper to get permission query conditions for a specific action.
+    
+    Args:
+        doctype: DocType name
+        user: User name (defaults to current user)
+        action: Action name (e.g., "read", "Write", "Create", etc.)
+    
+    Returns:
+        str: SQL WHERE clause or empty string if unmanaged/full access
+    """
+    # Administrator always has full access
+    if user == "Administrator" or frappe.session.user == "Administrator":
+        return ""
+    
+    user = user or frappe.session.user
+    
+    # Get filter query from AC Rules
+    result = get_resource_filter_query(
+        doctype=doctype,
+        action=action,
+        user=user,
+        debug=False
+    )
+    
+    # If unmanaged, return empty string (fall through to standard Frappe permissions)
+    if result.get("unmanaged"):
+        return ""
+    
+    # If no access, return impossible condition
+    if result.get("access") == "none":
+        return "1=0"
+    
+    # If total access, return empty string
+    if result.get("access") == "total":
+        return ""
+    
+    # Return the filter query
+    query = result.get("query", "")
+    return query if query else ""
+
+
+def get_permission_query_conditions(doctype, user=None):
+    """
+    Hook for Frappe's permission_query_conditions.
+    Returns SQL WHERE clause to filter records based on AC Rules.
+    
+    This is called by Frappe to filter list views and queries for read/select operations.
+    
+    Args:
+        doctype: DocType name
+        user: User name (defaults to current user)
+    
+    Returns:
+        str: SQL WHERE clause or empty string if unmanaged/full access
+    """
+    return _get_permission_query_conditions_for_doctype(doctype, user, action="read")
+
+
+def get_write_permission_query_conditions(doctype, user=None, ptype=None):
+    """
+    Hook for Frappe's write_permission_query_conditions.
+    Returns SQL WHERE clause to filter records based on AC Rules for write operations.
+    
+    This is called by Frappe to filter queries for write operations (write, create, submit, cancel, delete).
+    
+    Args:
+        doctype: DocType name
+        user: User name (defaults to current user)
+        ptype: Permission type (write, create, submit, cancel, delete)
+    
+    Returns:
+        str: SQL WHERE clause or empty string if unmanaged/full access
+    """
+    # Map ptype to AC Action using scrub
+    action = scrub(ptype or "write")
+    return _get_permission_query_conditions_for_doctype(doctype, user, action=action)
+
