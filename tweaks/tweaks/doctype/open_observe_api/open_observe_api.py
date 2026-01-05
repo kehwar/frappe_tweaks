@@ -66,15 +66,13 @@ class OpenObserveAPI(Document):
         password = self.get_password("password")
         # OpenObserve uses Basic Auth with user:password encoded in base64
         import base64
+
         credentials = f"{self.user}:{password}"
         encoded = base64.b64encode(credentials.encode()).decode()
         return {"Authorization": f"Basic {encoded}"}
 
     def send_logs(
-        self,
-        stream: str,
-        logs: List[Dict[str, Any]],
-        org: Optional[str] = None
+        self, stream: str, logs: List[Dict[str, Any]], org: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Send logs to OpenObserve stream.
@@ -107,9 +105,7 @@ def get_api_config() -> OpenObserveAPI:
 
 @frappe.whitelist()
 def send_logs(
-    stream: str,
-    logs: List[Dict[str, Any]],
-    org: Optional[str] = None
+    stream: str, logs: List[Dict[str, Any]], org: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Send logs to OpenObserve stream.
@@ -167,6 +163,12 @@ def send_logs(
     # Use provided org or default from config
     organization = org or config.default_org or "default"
 
+    # Add environment suffix to organization
+    if frappe.conf.developer_mode:
+        organization = f"{organization}.dev"
+    elif frappe.flags.in_test:
+        organization = f"{organization}.test"
+
     # Build API URL
     # OpenObserve API format: {url}/api/{org}/{stream}/_json
     url = f"{config.url.rstrip('/')}/api/{organization}/{stream}/_json"
@@ -177,31 +179,20 @@ def send_logs(
 
     try:
         # Make POST request to OpenObserve API using Frappe's integration utility
-        response = make_post_request(
-            url,
-            data=json.dumps(logs),
-            headers=headers
-        )
+        response = make_post_request(url, data=json.dumps(logs), headers=headers)
 
         # Return success response
-        return {
-            "success": True,
-            "response": response,
-            "status_code": 200
-        }
+        return {"success": True, "response": response, "status_code": 200}
 
     except Exception as e:
         # Log the error
         frappe.log_error(
             title=f"OpenObserve API Error - Stream: {stream}",
-            message=frappe.get_traceback()
+            message=frappe.get_traceback(),
         )
 
         # Return error response
-        frappe.throw(
-            f"Failed to send logs to OpenObserve: {str(e)}",
-            title="API Error"
-        )
+        frappe.throw(f"Failed to send logs to OpenObserve: {str(e)}", title="API Error")
 
 
 @frappe.whitelist()
@@ -224,25 +215,23 @@ def test_connection() -> Dict[str, Any]:
         # Send a test log entry
         result = send_logs(
             stream="test-connection",
-            logs=[{
-                "message": "Test connection from Frappe Tweaks",
-                "timestamp": frappe.utils.now(),
-                "level": "info"
-            }]
+            logs=[
+                {
+                    "message": "Test connection from Frappe Tweaks",
+                    "timestamp": frappe.utils.now(),
+                    "level": "info",
+                }
+            ],
         )
 
         return {
             "success": True,
             "message": "Connection test successful",
-            "details": result
+            "details": result,
         }
 
     except Exception as e:
-        return {
-            "success": False,
-            "message": "Connection test failed",
-            "error": str(e)
-        }
+        return {"success": False, "message": "Connection test failed", "error": str(e)}
 
 
 @frappe.whitelist()
@@ -252,7 +241,7 @@ def search_logs(
     org: Optional[str] = None,
     start_time: Optional[str] = None,
     end_time: Optional[str] = None,
-    size: int = 100
+    size: int = 100,
 ) -> Dict[str, Any]:
     """
     Search logs in OpenObserve stream.
@@ -264,7 +253,7 @@ def search_logs(
         stream: Stream name to search logs from
         query: SQL query or query object for filtering logs (optional)
         org: Organization name (optional, uses default_org from config if not provided)
-        start_time: Start time for log search in ISO format (e.g., "2025-12-26T05:00:00Z"). 
+        start_time: Start time for log search in ISO format (e.g., "2025-12-26T05:00:00Z").
                     Will be converted to Unix timestamp in microseconds for the API. (optional)
         end_time: End time for log search in ISO format (e.g., "2025-12-26T06:00:00Z").
                   Will be converted to Unix timestamp in microseconds for the API. (optional)
@@ -335,35 +324,23 @@ def search_logs(
         if query:
             # If query is provided, use POST request
             response = make_post_request(
-                url,
-                data=json.dumps(query),
-                headers=headers,
-                params=params
+                url, data=json.dumps(query), headers=headers, params=params
             )
         else:
             # Otherwise use GET request with params
-            response = make_get_request(
-                url,
-                headers=headers,
-                params=params
-            )
+            response = make_get_request(url, headers=headers, params=params)
 
         # Return success response
-        return {
-            "success": True,
-            "response": response,
-            "status_code": 200
-        }
+        return {"success": True, "response": response, "status_code": 200}
 
     except Exception as e:
         # Log the error
         frappe.log_error(
             title=f"OpenObserve API Error - Search Stream: {stream}",
-            message=frappe.get_traceback()
+            message=frappe.get_traceback(),
         )
 
         # Return error response
         frappe.throw(
-            f"Failed to search logs in OpenObserve: {str(e)}",
-            title="API Error"
+            f"Failed to search logs in OpenObserve: {str(e)}", title="API Error"
         )
