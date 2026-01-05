@@ -515,7 +515,7 @@ def _get_permission_query_conditions_for_doctype(doctype, user=None, action="rea
     return query if query else ""
 
 
-def get_permission_query_conditions(doctype, user=None):
+def get_permission_query_conditions(user=None, doctype=None):
     """
     Hook for Frappe's permission_query_conditions.
     Returns SQL WHERE clause to filter records based on AC Rules.
@@ -523,8 +523,8 @@ def get_permission_query_conditions(doctype, user=None):
     This is called by Frappe to filter list views and queries for read/select operations.
     
     Args:
-        doctype: DocType name
         user: User name (defaults to current user)
+        doctype: DocType name
     
     Returns:
         str: SQL WHERE clause or empty string if unmanaged/full access
@@ -532,7 +532,7 @@ def get_permission_query_conditions(doctype, user=None):
     return _get_permission_query_conditions_for_doctype(doctype, user, action="read")
 
 
-def get_write_permission_query_conditions(doctype, user=None, ptype=None):
+def get_write_permission_query_conditions(user=None, doctype=None, ptype=None):
     """
     Hook for Frappe's write_permission_query_conditions.
     Returns SQL WHERE clause to filter records based on AC Rules for write operations.
@@ -540,8 +540,8 @@ def get_write_permission_query_conditions(doctype, user=None, ptype=None):
     This is called by Frappe to filter queries for write operations (write, create, submit, cancel, delete).
     
     Args:
-        doctype: DocType name
         user: User name (defaults to current user)
+        doctype: DocType name
         ptype: Permission type (write, create, submit, cancel, delete)
     
     Returns:
