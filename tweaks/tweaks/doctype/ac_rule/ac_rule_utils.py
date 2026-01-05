@@ -547,7 +547,7 @@ def get_write_permission_query_conditions(doctype, user=None, ptype=None):
     Returns:
         str: SQL WHERE clause or empty string if unmanaged/full access
     """
-    # Map ptype to AC Action - capitalize first letter to match AC Action naming
-    action = scrub((ptype or "write").capitalize())
+    # Map ptype to AC Action using scrub
+    action = scrub(ptype or "write")
     return _get_permission_query_conditions_for_doctype(doctype, user, action=action)
 
