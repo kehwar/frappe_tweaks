@@ -31,7 +31,9 @@ class SyncJobType(Document):
         """Validate sync job type"""
         # Set module from source doctype if not set
         if not self.module:
-            self.module = frappe.db.get_value("DocType", self.source_document_type, "module")
+            self.module = frappe.db.get_value(
+                "DocType", self.source_document_type, "module"
+            )
 
         # Set is_standard based on developer mode
         if not self.is_standard:

@@ -45,12 +45,16 @@ permission_query_conditions = {
     "*": (
         event_script_hooks["permission_query_conditions"]["*"]
         + permission_hooks["permission_query_conditions"]["*"]
-        + ["tweaks.tweaks.doctype.ac_rule.ac_rule_utils.get_permission_query_conditions"]
+        + [
+            "tweaks.tweaks.doctype.ac_rule.ac_rule_utils.get_permission_query_conditions"
+        ]
     )
 }
 
 write_permission_query_conditions = {
-    "*": ["tweaks.tweaks.doctype.ac_rule.ac_rule_utils.get_write_permission_query_conditions"]
+    "*": [
+        "tweaks.tweaks.doctype.ac_rule.ac_rule_utils.get_write_permission_query_conditions"
+    ]
 }
 
 override_doctype_class = {

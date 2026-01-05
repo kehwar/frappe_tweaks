@@ -13,6 +13,7 @@ from frappe.modules import scrub
 from frappe.utils import now
 from frappe.utils.background_jobs import enqueue
 
+
 @frappe.whitelist()
 def create_sync_job(
     sync_job_type=None,
@@ -110,15 +111,23 @@ def create_sync_job(
         max_retries = params.get("max_retries", max_retries)
         trigger_type = params.get("trigger_type", trigger_type)
         triggered_by_doc = params.get("triggered_by_doc", triggered_by_doc)
-        triggered_by_document_type = params.get("triggered_by_document_type", triggered_by_document_type)
-        triggered_by_document_name = params.get("triggered_by_document_name", triggered_by_document_name)
-        trigger_document_timestamp = params.get("trigger_document_timestamp", trigger_document_timestamp)
+        triggered_by_document_type = params.get(
+            "triggered_by_document_type", triggered_by_document_type
+        )
+        triggered_by_document_name = params.get(
+            "triggered_by_document_name", triggered_by_document_name
+        )
+        trigger_document_timestamp = params.get(
+            "trigger_document_timestamp", trigger_document_timestamp
+        )
         queue_on_insert = params.get("queue_on_insert", queue_on_insert)
         dry_run = params.get("dry_run", dry_run)
         insert_enabled = params.get("insert_enabled", insert_enabled)
         update_enabled = params.get("update_enabled", update_enabled)
         delete_enabled = params.get("delete_enabled", delete_enabled)
-        update_without_changes_enabled = params.get("update_without_changes_enabled", update_without_changes_enabled)
+        update_without_changes_enabled = params.get(
+            "update_without_changes_enabled", update_without_changes_enabled
+        )
 
     # Set queue_on_insert default based on environment
     if queue_on_insert is None:
@@ -311,7 +320,7 @@ def enqueue_sync_job(
     return enqueue(
         "tweaks.utils.sync_job.create_sync_job",
         sync_job_type=params,
-        enqueue_after_commit=1
+        enqueue_after_commit=1,
     )
 
 
