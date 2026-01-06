@@ -48,8 +48,8 @@ class ACResource(Document):
                     )
                 )
 
-    def on_change(self):
-        """Clear AC rule cache when resource is modified"""
+    def clear_cache(self):
+        """Clear AC rule cache"""
         from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import clear_ac_rule_cache
 
         clear_ac_rule_cache()
