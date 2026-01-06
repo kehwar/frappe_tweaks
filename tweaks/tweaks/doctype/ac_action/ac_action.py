@@ -17,14 +17,16 @@ class ACAction(Document):
 
     def clear_cache(self):
         """Clear AC rule cache"""
-        super().clear_cache()
+        if hasattr(super(), 'clear_cache'):
+            super().clear_cache()
         from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import clear_ac_rule_cache
 
         clear_ac_rule_cache()
 
     def on_trash(self):
         """Clear AC rule cache when action is deleted"""
-        super().on_trash()
+        if hasattr(super(), 'on_trash'):
+            super().on_trash()
         from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import clear_ac_rule_cache
 
         clear_ac_rule_cache()
