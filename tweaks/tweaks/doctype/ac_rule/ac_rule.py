@@ -15,6 +15,22 @@ class ACRule(Document):
             frappe.throw(_("At least one principal filter must not be an exception."))
         self.validate_resource_filters()
 
+    def clear_cache(self):
+        """Clear AC rule cache"""
+        if hasattr(super(), 'clear_cache'):
+            super().clear_cache()
+        from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import clear_ac_rule_cache
+
+        clear_ac_rule_cache()
+
+    def on_trash(self):
+        """Clear AC rule cache when rule is deleted"""
+        if hasattr(super(), 'on_trash'):
+            super().on_trash()
+        from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import clear_ac_rule_cache
+
+        clear_ac_rule_cache()
+
     def validate_resource_filters(self):
 
         resource = frappe.get_doc("AC Resource", self.resource)
