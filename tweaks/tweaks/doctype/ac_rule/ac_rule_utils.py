@@ -37,10 +37,11 @@ def get_rule_map(debug=False):
     if frappe.flags.in_migrate:
         return {}
 
-    # Check cache first
-    rule_map = frappe.cache.get_value("ac_rule_map")
-    if rule_map is not None:
-        return rule_map
+    # Check cache first (skip cache if debug mode)
+    if not debug:
+        rule_map = frappe.cache.get_value("ac_rule_map")
+        if rule_map is not None:
+            return rule_map
 
     rules = frappe.get_all(
         "AC Rule",
@@ -142,8 +143,9 @@ def get_rule_map(debug=False):
 
             folder.setdefault(action, []).append(r)
 
-    # Cache the rule map
-    frappe.cache.set_value("ac_rule_map", rule_map)
+    # Cache the rule map (skip cache if debug mode)
+    if not debug:
+        frappe.cache.set_value("ac_rule_map", rule_map)
 
     return rule_map
 
