@@ -2,9 +2,9 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("AC Resource", {
-	setup(frm) {
+    setup(frm) {
         frm.trigger('setup_help');
-	},
+    },
     setup_help(frm) {
         frm.get_field('actions_html').html(`
             <p class="help-box small text-muted">

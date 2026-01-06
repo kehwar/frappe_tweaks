@@ -139,9 +139,13 @@ Defines what is being accessed (the "resource").
 - `type`: Type of resource
 - `document_type`: DocType name (for DocType resources)
 - `report`: Report name (for Report resources)
-- `fieldname`: Optional field-level access control
+- `fieldname`: Optional field-level access control (Reports only)
 - `managed_actions`: "All Actions" or "Select"
 - `actions`: Table of specific actions (if "Select" is chosen)
+
+**Important Limitations**:
+
+⚠️ **Fieldname is NOT supported for DocType resources** - The `fieldname` field is automatically hidden when creating a DocType resource. Field-level access control is only available for Report resources. When type is set to "DocType", access control applies to the entire doctype, not individual fields.
 
 ### 4. AC Action
 

@@ -21,30 +21,28 @@
  ],
  "fields": [
   {
-   "depends_on": "eval:!doc.parent_ac_resource",
    "fieldname": "type",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Type",
-   "mandatory_depends_on": "eval:!doc.parent_ac_resource",
    "options": "DocType\nReport",
    "read_only_depends_on": "eval:doc.is_standard"
   },
   {
-   "depends_on": "eval:doc.type==='DocType' && !doc.parent_ac_resource",
+   "depends_on": "eval:doc.type==='DocType'",
    "fieldname": "document_type",
    "fieldtype": "Link",
    "label": "Document Type",
-   "mandatory_depends_on": "eval:doc.type==='DocType' && !doc.parent_ac_resource",
+   "mandatory_depends_on": "eval:doc.type==='DocType'",
    "options": "DocType",
    "read_only_depends_on": "eval:doc.is_standard"
   },
   {
-   "depends_on": "eval:doc.type==='Report' && !doc.parent_ac_resource",
+   "depends_on": "eval:doc.type==='Report'",
    "fieldname": "report",
    "fieldtype": "Link",
    "label": "Report",
-   "mandatory_depends_on": "eval:doc.type==='Report' && !doc.parent_ac_resource",
+   "mandatory_depends_on": "eval:doc.type==='Report'",
    "options": "Report",
    "read_only_depends_on": "eval:doc.is_standard"
   },
@@ -53,7 +51,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval:doc.managed_actions==='Select' && !doc.parent_ac_resource",
+   "depends_on": "eval:doc.managed_actions==='Select'",
    "fieldname": "actions",
    "fieldtype": "Table MultiSelect",
    "label": "Actions",
@@ -61,12 +59,11 @@
    "options": "AC Resource Action"
   },
   {
-   "default": "Inherit from parent",
-   "depends_on": "eval:!doc.parent_ac_resource",
+   "default": "All",
    "fieldname": "managed_actions",
    "fieldtype": "Select",
    "label": "Managed Actions",
-   "options": "Inherit from parent\nSelect\nAll"
+   "options": "Select\nAll"
   },
   {
    "fieldname": "column_break_evjf",
@@ -94,7 +91,7 @@
    "read_only_depends_on": "eval:frappe.is_standard && !frappe.boot.developer_mode"
   },
   {
-   "depends_on": "eval:!doc.parent_ac_resource && (doc.document_type || doc.report)",
+   "depends_on": "eval:doc.type==='Report'",
    "fieldname": "fieldname",
    "fieldtype": "Data",
    "label": "Fieldname",
