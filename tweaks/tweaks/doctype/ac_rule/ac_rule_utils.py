@@ -18,8 +18,30 @@ def after_install():
     insert_standard_actions()
 
 
+def clear_ac_rule_cache():
+    """
+    Clear AC rule cache.
+    """
+    frappe.cache.delete_value("ac_rule_map")
+
+
 @frappe.whitelist()
 def get_rule_map(debug=False):
+
+    # Early returns for system states
+    if frappe.flags.in_patch and not frappe.db.table_exists("AC Rule"):
+        return {}
+
+    if frappe.flags.in_install:
+        return {}
+
+    if frappe.flags.in_migrate:
+        return {}
+
+    # Check cache first
+    rule_map = frappe.cache.get_value("ac_rule_map")
+    if rule_map is not None:
+        return rule_map
 
     rules = frappe.get_all(
         "AC Rule",
@@ -120,6 +142,9 @@ def get_rule_map(debug=False):
                 r.pop("title")
 
             folder.setdefault(action, []).append(r)
+
+    # Cache the rule map
+    frappe.cache.set_value("ac_rule_map", rule_map)
 
     return rule_map
 
