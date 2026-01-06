@@ -3,12 +3,10 @@ from tweaks.custom.doctype.server_script_customization import (
     apply_server_script_patches,
 )
 from tweaks.custom.doctype.workflow import apply_workflow_patches
-from tweaks.custom.utils.db_query import apply_db_query_patches
 
 
 def apply_patches():
 
-    apply_db_query_patches()
     apply_document_patches()
     apply_server_script_patches()
     apply_workflow_patches()
