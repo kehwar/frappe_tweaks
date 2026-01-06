@@ -27,7 +27,6 @@ def clear_ac_rule_cache():
 
 @frappe.whitelist()
 def get_rule_map(debug=False):
-
     # Early returns for system states
     if frappe.flags.in_patch and not frappe.db.table_exists("AC Rule"):
         return {}
