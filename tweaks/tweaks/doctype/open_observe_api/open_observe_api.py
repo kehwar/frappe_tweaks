@@ -164,10 +164,11 @@ def send_logs(
     organization = org or config.default_org or "default"
 
     # Add environment suffix to organization
-    if frappe.conf.developer_mode:
-        organization = f"{organization}.dev"
-    elif frappe.flags.in_test:
-        organization = f"{organization}.test"
+    if not org:
+        if frappe.conf.developer_mode:
+            organization = f"{organization}.dev"
+        elif frappe.flags.in_test:
+            organization = f"{organization}.test"
 
     # Build API URL
     # OpenObserve API format: {url}/api/{org}/{stream}/_json
