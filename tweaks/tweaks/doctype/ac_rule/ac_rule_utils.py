@@ -484,11 +484,12 @@ def _get_permission_query_conditions_for_doctype(doctype, user=None, action="rea
     Returns:
         str: SQL WHERE clause or empty string if unmanaged/full access
     """
-    # Administrator always has full access
-    if user == "Administrator" or frappe.session.user == "Administrator":
-        return ""
 
     user = user or frappe.session.user
+
+    # Administrator always has full access
+    if user == "Administrator":
+        return ""
 
     # Get filter query from AC Rules
     result = get_resource_filter_query(
