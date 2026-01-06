@@ -179,7 +179,9 @@ def send_logs(
 
     try:
         # Make POST request to OpenObserve API using Frappe's integration utility
-        response = make_post_request(url, data=json.dumps(logs), headers=headers)
+        response = make_post_request(
+            url, data=frappe.as_json(logs, indent=0), headers=headers
+        )
 
         # Return success response
         return {"success": True, "response": response, "status_code": 200}
