@@ -184,8 +184,32 @@ def send_logs(
             url, data=frappe.as_json(logs, indent=0), headers=headers
         )
 
-        # Return success response
-        return {"success": True, "response": response, "status_code": 200}
+        status = response.get("status") or []
+        successful = 0
+        failed = 0
+        error_message = None
+        for item in status:
+            if item.get("successful", 0) > 0:
+                successful += item.get("successful", 0)
+            if item.get("failed", 0) > 0:
+                failed += item.get("failed", 0)
+                error_message = item.get("error", "Unknown error")
+
+        if failed > 0:
+            return {
+                "success": False,
+                "response": response,
+                "error": error_message,
+                "successful": successful,
+                "failed": failed,
+            }
+
+        return {
+            "success": True,
+            "response": response,
+            "successful": successful,
+            "failed": failed,
+        }
 
     except Exception as e:
         # Log the error
