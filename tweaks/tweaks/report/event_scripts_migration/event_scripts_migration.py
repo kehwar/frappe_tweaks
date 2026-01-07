@@ -28,7 +28,11 @@ def execute(filters=None):
     Execute the Event Scripts Migration report.
     
     Args:
-        filters: Dictionary of filter values (currently not used)
+        filters: Dictionary of filter values including:
+            - disabled: Filter by disabled status (0, 1, or None for all)
+            - document_type: Filter by specific document type
+            - doctype_event: Filter by specific doctype event
+            - migration_target: Filter by migration recommendation
     
     Returns:
         Tuple of (columns, data):
@@ -173,14 +177,29 @@ def get_data(filters=None):
     Retrieve and process Event Script data for the report.
     
     Args:
-        filters: Dictionary of filter values (currently not used)
+        filters: Dictionary of filter values including:
+            - disabled: Filter by disabled status (0, 1, or None for all)
+            - document_type: Filter by specific document type
+            - doctype_event: Filter by specific doctype event
+            - migration_target: Filter by migration recommendation
     
     Returns:
         List of dictionaries, each representing a row in the report
     """
+    # Build filter conditions
+    filter_conditions = {}
+    if filters:
+        if filters.get("disabled") is not None:
+            filter_conditions["disabled"] = filters.get("disabled")
+        if filters.get("document_type"):
+            filter_conditions["document_type"] = filters.get("document_type")
+        if filters.get("doctype_event"):
+            filter_conditions["doctype_event"] = filters.get("doctype_event")
+    
     # Fetch all Event Scripts with relevant fields
     event_scripts = frappe.get_all(
         "Event Script",
+        filters=filter_conditions,
         fields=[
             "name",
             "title",
@@ -240,6 +259,11 @@ def get_data(filters=None):
             "migration_target": migration_target,
             "migration_notes": migration_notes
         })
+    
+    # Apply post-processing filters
+    if filters and filters.get("migration_target"):
+        target_filter = filters.get("migration_target")
+        data = [row for row in data if target_filter in row["migration_target"]]
     
     return data
 
