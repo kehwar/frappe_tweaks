@@ -97,17 +97,6 @@ def safe_exec_globals(out):
                 ),
             ),
             "get_diff": get_diff,
-            "peru_api_com": NamespaceDict(
-                get_ruc=get_ruc,
-                get_dni=get_dni,
-                get_tc=get_tc,
-                get_ruc_suc=get_ruc_suc,
-                get_rut=get_rut,
-            ),
-            "open_observe": NamespaceDict(
-                send_logs=send_logs,
-                search_logs=search_logs,
-            ),
         }
     )
 
@@ -136,6 +125,17 @@ def safe_exec_globals(out):
                 read_xls_file_from_attached_file=read_xls_file_from_attached_file,
             ),
             "yaml": NamespaceDict(load=yaml.safe_load, dump=yaml.safe_dump),
+            "peru_api_com": NamespaceDict(
+                get_ruc=get_ruc,
+                get_dni=get_dni,
+                get_tc=get_tc,
+                get_ruc_suc=get_ruc_suc,
+                get_rut=get_rut,
+            ),
+            "open_observe": NamespaceDict(
+                send_logs=send_logs,
+                search_logs=search_logs,
+            ),
         }
     )
 
