@@ -25,12 +25,6 @@ def get_columns():
             "width": 200,
         },
         {
-            "fieldname": "doctype_type",
-            "label": _("Type"),
-            "fieldtype": "Data",
-            "width": 80,
-        },
-        {
             "fieldname": "role",
             "label": _("Role"),
             "fieldtype": "Link",
@@ -67,6 +61,19 @@ def get_columns():
             "fieldtype": "Data",
             "width": 300,
         },
+        {
+            "fieldname": "doctype_type",
+            "label": _("Type"),
+            "fieldtype": "Data",
+            "width": 80,
+        },
+        {
+            "fieldname": "module",
+            "label": _("Module"),
+            "fieldtype": "Link",
+            "options": "Module Def",
+            "width": 120,
+        },
     ]
 
 
@@ -77,6 +84,7 @@ def get_data(filters):
     role_filter = filters.get("role") if filters else None
     status_filter = filters.get("status") if filters else None
     doctype_type_filter = filters.get("doctype_type") if filters else None
+    module_filter = filters.get("module") if filters else None
 
     # Permission fields to compare
     permission_fields = [
@@ -153,6 +161,7 @@ def get_data(filters):
         metadata_query = """
             SELECT 
                 name,
+                module,
                 custom,
                 is_virtual
             FROM `tabDocType`
@@ -168,7 +177,10 @@ def get_data(filters):
                 doctype_type = "Custom"
             else:
                 doctype_type = "Standard"
-            doctype_metadata[meta.name] = doctype_type
+            doctype_metadata[meta.name] = {
+                "type": doctype_type,
+                "module": meta.get("module", ""),
+            }
 
     # Build comparison data
     data = []
@@ -181,8 +193,24 @@ def get_data(filters):
 
         # Apply doctype_type filter if specified
         if doctype_type_filter:
-            current_doctype_type = doctype_metadata.get(doctype, "Unknown")
+            current_metadata = doctype_metadata.get(doctype, {})
+            current_doctype_type = (
+                current_metadata.get("type")
+                if isinstance(current_metadata, dict)
+                else "Unknown"
+            )
             if current_doctype_type != doctype_type_filter:
+                continue
+
+        # Apply module filter if specified
+        if module_filter:
+            current_metadata = doctype_metadata.get(doctype, {})
+            current_module = (
+                current_metadata.get("module")
+                if isinstance(current_metadata, dict)
+                else ""
+            )
+            if current_module != module_filter:
                 continue
 
         # Determine status
@@ -229,7 +257,16 @@ def get_data(filters):
         data.append(
             {
                 "doctype": doctype,
-                "doctype_type": doctype_metadata.get(doctype, "Unknown"),
+                "doctype_type": (
+                    doctype_metadata.get(doctype, {}).get("type")
+                    if isinstance(doctype_metadata.get(doctype), dict)
+                    else doctype_metadata.get(doctype, "Unknown")
+                ),
+                "module": (
+                    doctype_metadata.get(doctype, {}).get("module")
+                    if isinstance(doctype_metadata.get(doctype), dict)
+                    else ""
+                ),
                 "role": role,
                 "permlevel": permlevel,
                 "if_owner": if_owner,

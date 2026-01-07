@@ -11,13 +11,6 @@ frappe.query_reports["Role Permissions"] = {
             "reqd": 0
         },
         {
-            "fieldname": "doctype_type",
-            "label": __("DocType Type"),
-            "fieldtype": "Select",
-            "options": "\nStandard\nCustom\nVirtual",
-            "reqd": 0
-        },
-        {
             "fieldname": "role",
             "label": __("Role"),
             "fieldtype": "Link",
@@ -29,6 +22,20 @@ frappe.query_reports["Role Permissions"] = {
             "label": __("Status"),
             "fieldtype": "Select",
             "options": "\nDefault\nCustom",
+            "reqd": 0
+        },
+        {
+            "fieldname": "doctype_type",
+            "label": __("DocType Type"),
+            "fieldtype": "Select",
+            "options": "\nStandard\nCustom\nVirtual",
+            "reqd": 0
+        },
+        {
+            "fieldname": "module",
+            "label": __("Module"),
+            "fieldtype": "Link",
+            "options": "Module Def",
             "reqd": 0
         }
     ],
