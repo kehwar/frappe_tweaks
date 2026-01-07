@@ -103,7 +103,7 @@ Permission-related Event Scripts should migrate to AC Rules. This includes:
 
 ## Related Documentation
 
-- [AC Rule Instructions](.github/instructions/ac-rule.instructions.md)
+- [AC Rule Instructions](../../../.github/instructions/ac-rule.instructions.md)
 - [Frappe Server Scripts Documentation](https://frappeframework.com/docs/user/en/desk/scripting/server-script)
 
 ## Support

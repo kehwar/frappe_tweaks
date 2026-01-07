@@ -237,7 +237,7 @@ def get_data(filters=None):
                 script_preview += "..."
         
         # Determine migration target and notes
-        migration_target, migration_notes = get_migration_recommendation(script)
+        migration_target, migration_notes = get_migration_recommendation(script, parameter_count)
         
         data.append({
             "name": script.name,
@@ -268,12 +268,13 @@ def get_data(filters=None):
     return data
 
 
-def get_migration_recommendation(script):
+def get_migration_recommendation(script, parameter_count=0):
     """
     Determine the recommended migration target for an Event Script.
     
     Args:
         script: Event Script document dictionary
+        parameter_count: Number of Event Script Parameters
     
     Returns:
         Tuple of (migration_target, migration_notes)
@@ -318,7 +319,7 @@ def get_migration_recommendation(script):
         migration_notes += " NOTE: User/Role filtering will need to be implemented in the script logic."
     
     # Add note about parameters
-    if script.get("parameter_count", 0) > 0:
+    if parameter_count > 0:
         migration_notes += " NOTE: Event Script Parameters will need to be reimplemented."
     
     return "Server Script", migration_notes
