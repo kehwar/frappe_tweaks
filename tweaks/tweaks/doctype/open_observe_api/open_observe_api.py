@@ -13,6 +13,8 @@ Main Classes:
 
 Main Functions:
     send_logs: Send log data to an OpenObserve stream
+    search_logs: Search and query logs from OpenObserve
+    test_connection: Test connection to OpenObserve API
 
 Example Usage:
     # Send logs to OpenObserve
@@ -21,15 +23,23 @@ Example Usage:
         logs=[{"message": "Test log", "level": "info"}],
         org="default"
     )
+
+    # Search logs
+    search_logs(
+        sql="SELECT * FROM application_logs WHERE level='error'",
+        start_time="2025-01-01T00:00:00Z",
+        end_time="2025-01-01T23:59:59Z"
+    )
 """
 
 import json
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import frappe
 from frappe.integrations.utils import make_get_request, make_post_request
 from frappe.model.document import Document
-from frappe.utils import get_datetime
+from frappe.utils import convert_timezone_to_utc, get_datetime
 
 
 class OpenObserveAPI(Document):
@@ -263,28 +273,41 @@ def test_connection() -> Dict[str, Any]:
 
 @frappe.whitelist()
 def search_logs(
-    stream: str,
     query: Optional[Dict[str, Any]] = None,
+    stream: Optional[str] = None,
+    sql: Optional[str] = None,
     org: Optional[str] = None,
     start_time: Optional[str] = None,
     end_time: Optional[str] = None,
-    size: int = 100,
+    start: Optional[int] = None,
+    size: Optional[int] = None,
+    search_type: str = "ui",
+    timeout: int = 0,
 ) -> Dict[str, Any]:
     """
     Search logs in OpenObserve stream.
 
     This function is whitelisted and can only be called by System Managers.
-    It searches log data from an OpenObserve stream based on query parameters.
+    It searches log data from OpenObserve using SQL queries and time ranges.
 
     Args:
-        stream: Stream name to search logs from
-        query: SQL query or query object for filtering logs (optional)
+        query: Query object that can be complete or incomplete. Missing fields will be filled
+               from individual parameters. Can contain sql, start_time, end_time, start, size.
+               Time values can be ISO strings, datetime objects, or Unix timestamps in microseconds. (optional)
+        stream: Stream name to search logs from (optional, used to replace {stream} placeholder in sql)
+        sql: SQL query string for filtering logs (e.g., "SELECT * FROM stream_name WHERE level='error'").
+             Use {stream} placeholder which will be replaced with the actual stream name. (optional)
         org: Organization name (optional, uses default_org from config if not provided)
-        start_time: Start time for log search in ISO format (e.g., "2025-12-26T05:00:00Z").
-                    Will be converted to Unix timestamp in microseconds for the API. (optional)
-        end_time: End time for log search in ISO format (e.g., "2025-12-26T06:00:00Z").
-                  Will be converted to Unix timestamp in microseconds for the API. (optional)
-        size: Maximum number of logs to return (default: 100)
+        start_time: Start time for log search. Accepts:
+                    - ISO format string (e.g., "2025-12-26T05:00:00Z")
+                    - datetime object (naive or timezone-aware)
+                    - Unix timestamp in microseconds (int)
+                    Naive datetimes are converted to UTC. (optional)
+        end_time: End time for log search. Accepts same formats as start_time. (optional)
+        start: Starting offset for pagination (default: 0 if not in query object)
+        size: Maximum number of logs to return (default: 100 if not in query object)
+        search_type: Type of search, typically "ui" (default: "ui")
+        timeout: Query timeout in seconds (default: 0 for no timeout)
 
     Returns:
         Dictionary containing API response with keys:
@@ -294,22 +317,51 @@ def search_logs(
 
     Raises:
         frappe.PermissionError: If the current user is not a System Manager
+        frappe.ValidationError: If sql, start_time, or end_time are missing in final query
         Exception: If the API call fails
 
     Example:
-        >>> # Search logs from last hour
+        >>> # Search with complete query object (Unix timestamps)
         >>> search_logs(
-        ...     stream="application-logs",
+        ...     query={
+        ...         "sql": "SELECT * FROM application_logs",
+        ...         "start_time": 1674789786006000,
+        ...         "end_time": 1674789886006000,
+        ...         "start": 0,
+        ...         "size": 100
+        ...     }
+        ... )
+
+        >>> # Search with incomplete query object, completed with parameters
+        >>> search_logs(
+        ...     query={"sql": "SELECT * FROM application_logs"},
         ...     start_time="2025-12-26T05:00:00Z",
         ...     end_time="2025-12-26T06:00:00Z",
         ...     size=50
         ... )
 
-        >>> # Search with custom query
+        >>> # Search with individual parameters only (ISO strings)
         >>> search_logs(
-        ...     stream="error-logs",
-        ...     query={"sql": "SELECT * FROM error_logs WHERE level='error'"},
-        ...     size=100
+        ...     stream="application-logs",
+        ...     sql="SELECT * FROM {stream} WHERE level='error'",
+        ...     start_time="2025-12-26T05:00:00Z",
+        ...     end_time="2025-12-26T06:00:00Z",
+        ...     size=50
+        ... )
+
+        >>> # Search with datetime objects
+        >>> from datetime import datetime, timedelta
+        >>> search_logs(
+        ...     sql="SELECT * FROM error_logs",
+        ...     start_time=datetime.now() - timedelta(hours=1),
+        ...     end_time=datetime.now()
+        ... )
+
+        >>> # Parameter override - query provides base, parameters override
+        >>> search_logs(
+        ...     query={"sql": "SELECT * FROM logs", "start_time": "2025-01-01T00:00:00Z"},
+        ...     end_time="2025-01-01T23:59:59Z",  # Completes missing end_time
+        ...     size=200  # Overrides default size
         ... )
     """
     # Only System Managers can search logs
@@ -326,36 +378,92 @@ def search_logs(
     organization = org or config.default_org or "default"
 
     # Build API URL for search
-    # OpenObserve API format: {url}/api/{org}/{stream}/_search
-    url = f"{config.url.rstrip('/')}/api/{organization}/{stream}/_search"
+    # OpenObserve API format: {url}/api/{org}/_search
+    url = f"{config.url.rstrip('/')}/api/{organization}/_search"
 
     # Get authentication header
     headers = config.get_auth_header()
     headers["Content-Type"] = "application/json"
 
-    # Build search parameters
-    params = {}
-    if size:
-        params["size"] = size
-    if start_time:
-        # Convert ISO timestamp to Unix timestamp in microseconds using frappe utils
-        # get_datetime() accepts strings or datetime objects and handles timezone conversions
-        params["start_time"] = int(get_datetime(start_time).timestamp() * 1000000)
-    if end_time:
-        # Convert ISO timestamp to Unix timestamp in microseconds using frappe utils
-        # get_datetime() accepts strings or datetime objects and handles timezone conversions
-        params["end_time"] = int(get_datetime(end_time).timestamp() * 1000000)
+    # Start with query object if provided, otherwise start fresh
+    query_obj = query.copy() if query else {}
+
+    # Individual parameters always override query object values when provided
+
+    # Override start and size if parameters are provided
+    if start is not None:
+        query_obj["start"] = start
+    elif "start" not in query_obj:
+        query_obj["start"] = 0  # Default value
+
+    if size is not None:
+        query_obj["size"] = size
+    elif "size" not in query_obj:
+        query_obj["size"] = 100  # Default value
+
+    # Override SQL query if sql parameter is provided
+    if sql:
+        query_obj["sql"] = sql
+    elif stream and "sql" not in query_obj:
+        # If no SQL in query object and no sql parameter, generate default query using stream
+        query_obj["sql"] = f"SELECT * FROM {stream}"
+
+    # Replace {stream} placeholder in SQL if stream is provided
+    if stream and "sql" in query_obj:
+        query_obj["sql"] = query_obj["sql"].replace("{stream}", stream)
+
+    # Override time range if parameters are provided
+    if start_time is not None:
+        query_obj["start_time"] = start_time
+
+    if end_time is not None:
+        query_obj["end_time"] = end_time
+
+    # Convert start_time and end_time to Unix timestamps in microseconds if needed
+    if "start_time" in query_obj:
+        dt = None
+        if isinstance(query_obj["start_time"], str):
+            dt = get_datetime(query_obj["start_time"])
+        elif isinstance(query_obj["start_time"], datetime):
+            dt = query_obj["start_time"]
+
+        if dt is not None:
+            # Convert naive datetime to UTC before converting to timestamp
+            dt = convert_timezone_to_utc(dt)
+            query_obj["start_time"] = int(dt.timestamp() * 1000000)
+
+    if "end_time" in query_obj:
+        dt = None
+        if isinstance(query_obj["end_time"], str):
+            dt = get_datetime(query_obj["end_time"])
+        elif isinstance(query_obj["end_time"], datetime):
+            dt = query_obj["end_time"]
+
+        if dt is not None:
+            # Convert naive datetime to UTC before converting to timestamp
+            dt = convert_timezone_to_utc(dt)
+            query_obj["end_time"] = int(dt.timestamp() * 1000000)
+
+    # Build final request body
+    request_body = {
+        "query": query_obj,
+        "search_type": search_type,
+        "timeout": timeout,
+    }
+
+    # Validate that required fields are present in the final query
+    if "sql" not in request_body["query"]:
+        frappe.throw("'sql' is required in the query")
+    if "start_time" not in request_body["query"]:
+        frappe.throw("'start_time' is required in the query")
+    if "end_time" not in request_body["query"]:
+        frappe.throw("'end_time' is required in the query")
 
     try:
-        # Make GET request to OpenObserve API using Frappe's integration utility
-        if query:
-            # If query is provided, use POST request
-            response = make_post_request(
-                url, data=json.dumps(query), headers=headers, params=params
-            )
-        else:
-            # Otherwise use GET request with params
-            response = make_get_request(url, headers=headers, params=params)
+        # Make POST request to OpenObserve API using Frappe's integration utility
+        response = make_post_request(
+            url, data=frappe.as_json(request_body, indent=0), headers=headers
+        )
 
         # Return success response
         return {"success": True, "response": response, "status_code": 200}
