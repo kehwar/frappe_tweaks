@@ -222,12 +222,12 @@ def get_data(filters):
                     custom_perm.get(field) != default_perm.get(field)
                     for field in permission_fields
                 )
-                status = "Custom" if is_different else "Default"
+                status = "Custom" if is_different else "Standard"
             else:
                 status = "Custom"
         else:
             # No custom permissions for this doctype - using default
-            status = "Default"
+            status = "Standard"
 
         # Apply status filter if specified
         if status_filter and status != status_filter:

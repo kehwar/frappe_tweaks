@@ -21,7 +21,7 @@ frappe.query_reports["Role Permissions"] = {
             "fieldname": "status",
             "label": __("Status"),
             "fieldtype": "Select",
-            "options": "\nDefault\nCustom",
+            "options": "\nStandard\nCustom",
             "reqd": 0
         },
         {
