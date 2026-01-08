@@ -34,7 +34,7 @@ Example Usage:
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import frappe
 from frappe.integrations.utils import make_get_request, make_post_request
@@ -277,8 +277,8 @@ def search_logs(
     stream: Optional[str] = None,
     sql: Optional[str] = None,
     org: Optional[str] = None,
-    start_time: Optional[str] = None,
-    end_time: Optional[str] = None,
+    start_time: Optional[Union[str, datetime, int]] = None,
+    end_time: Optional[Union[str, datetime, int]] = None,
     start: Optional[int] = None,
     size: Optional[int] = None,
     search_type: str = "ui",
