@@ -304,7 +304,8 @@ def search_logs(
                     - Unix timestamp in microseconds (int)
                     Naive datetimes are converted to UTC. (optional)
         end_time: End time for log search. Accepts same formats as start_time. (optional)
-        start: Starting offset for pagination (default: 0 if not in query object)
+        start: Starting offset for pagination (default: 0 if not in query object).
+               Maps to 'from' field in OpenObserve API.
         size: Maximum number of logs to return (default: 100 if not in query object)
         search_type: Type of search, typically "ui" (default: "ui")
         timeout: Query timeout in seconds (default: 0 for no timeout)
@@ -391,10 +392,11 @@ def search_logs(
     # Individual parameters always override query object values when provided
 
     # Override start and size if parameters are provided
+    # Note: OpenObserve API uses 'from' for pagination offset, not 'start'
     if start is not None:
-        query_obj["start"] = start
-    elif "start" not in query_obj:
-        query_obj["start"] = 0  # Default value
+        query_obj["from"] = start
+    elif "from" not in query_obj:
+        query_obj["from"] = 0  # Default value
 
     if size is not None:
         query_obj["size"] = size
