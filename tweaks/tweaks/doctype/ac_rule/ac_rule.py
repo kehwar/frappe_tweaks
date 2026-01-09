@@ -17,7 +17,7 @@ class ACRule(Document):
 
     def clear_cache(self):
         """Clear AC rule cache"""
-        if hasattr(super(), 'clear_cache'):
+        if hasattr(super(), "clear_cache"):
             super().clear_cache()
         from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import clear_ac_rule_cache
 
@@ -25,7 +25,7 @@ class ACRule(Document):
 
     def on_trash(self):
         """Clear AC rule cache when rule is deleted"""
-        if hasattr(super(), 'on_trash'):
+        if hasattr(super(), "on_trash"):
             super().on_trash()
         from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import clear_ac_rule_cache
 
@@ -223,3 +223,47 @@ class ACRule(Document):
             filters.append({"all": 1})
 
         return filters
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def get_query_filters_for_resource(doctype, txt, searchfield, start, page_len, filters):
+    """
+    Query method to filter Query Filters based on the selected AC Resource.
+    Only returns Query Filters that match the resource's doctype or report.
+    """
+    resource_name = filters.get("resource")
+
+    if not resource_name:
+        return []
+
+    resource = frappe.get_cached_doc("AC Resource", resource_name)
+
+    query_filter_filters = {}
+
+    # If resource is based on DocType, filter Query Filters by reference_doctype
+    if resource.type == "DocType" and resource.document_type:
+        query_filter_filters["reference_doctype"] = resource.document_type
+
+    # If resource is based on Report, filter Query Filters by reference_report
+    elif resource.type == "Report" and resource.report:
+        query_filter_filters["reference_report"] = resource.report
+
+    # Add text search if provided
+    if txt:
+        query_filter_filters["filter_name"] = ["like", f"%{txt}%"]
+
+    return frappe.get_all(
+        "Query Filter",
+        filters=query_filter_filters,
+        fields=["name", "filter_name"],
+        or_filters=(
+            {"name": ["like", f"%{txt}%"], "filter_name": ["like", f"%{txt}%"]}
+            if txt
+            else None
+        ),
+        start=start,
+        page_length=page_len,
+        order_by="filter_name asc",
+        as_list=True,
+    )

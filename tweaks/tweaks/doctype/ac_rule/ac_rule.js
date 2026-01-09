@@ -2,9 +2,10 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("AC Rule", {
-	setup(frm) {
+    setup(frm) {
         frm.trigger('setup_help');
-	},
+        frm.trigger('setup_resource_filter_query');
+    },
     setup_help(frm) {
         frm.get_field('principals_html').html(`
             <p class="help-box small text-muted">
@@ -27,6 +28,27 @@ frappe.ui.form.on("AC Rule", {
             A <code>user</code> will have access to a <code>resource</code> if <b>at least one</b> <code>rule</code> permits it and <b>zero</b> <code>rules</code> forbid it.
             </p>`
         );
+    },
+    setup_resource_filter_query(frm) {
+        frm.set_query('filter', 'resources', function() {
+            if (!frm.doc.resource) {
+                return {
+                    filters: {
+                        name: ['in', []]
+                    }
+                };
+            }
+            
+            return {
+                query: 'tweaks.tweaks.doctype.ac_rule.ac_rule.get_query_filters_for_resource',
+                filters: {
+                    resource: frm.doc.resource
+                }
+            };
+        });
+    },
+    resource(frm) {
+        frm.trigger('setup_resource_filter_query');
     }
 });
 
