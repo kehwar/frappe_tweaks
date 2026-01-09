@@ -21,7 +21,7 @@ class QueryFilter(Document):
 
     def clear_cache(self):
         """Clear AC rule cache"""
-        if hasattr(super(), 'clear_cache'):
+        if hasattr(super(), "clear_cache"):
             super().clear_cache()
         from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import clear_ac_rule_cache
 
@@ -29,7 +29,7 @@ class QueryFilter(Document):
 
     def on_trash(self):
         """Clear AC rule cache when query filter is deleted"""
-        if hasattr(super(), 'on_trash'):
+        if hasattr(super(), "on_trash"):
             super().on_trash()
         from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import clear_ac_rule_cache
 
@@ -59,28 +59,38 @@ def get_sql(query_filter: str | QueryFilter | dict):
     if filters_type == "SQL":
         return filters
 
+    if reference_doctype and reference_docname:
+        return (
+            f"`tab{reference_doctype}`.`name` = {frappe.db.escape(reference_docname)}"
+        )
+
+    # Helper function to build SQL from filters
+    def build_sql_from_filters(filter_data):
+        if not reference_doctype:
+            frappe.throw("Reference Doctype is required when using filters")
+        sql = frappe.get_all(
+            reference_doctype, filters=filter_data, order_by="", distinct=1, run=0
+        )
+        flat_sql = sql.strip().replace("\n", " ").replace("\r", " ")
+        return f"`tab{reference_doctype}`.`name` IN ({flat_sql})"
+
     if filters_type == "Python":
-        loc = {"resource": query_filter, "conditions": ""}
+        loc = {"resource": query_filter, "conditions": "", "filters": None}
         safe_exec(
             filters,
             None,
             loc,
             script_filename=f"Resource Filter {query_filter.get('name')}",
         )
+        # Check conditions first
         if loc["conditions"]:
             return loc["conditions"]
+        # Fall back to filters dict/array
+        if loc.get("filters") is not None:
+            return build_sql_from_filters(loc["filters"])
         return "1=0"
 
-    if reference_doctype and reference_docname:
-        return (
-            f"`tab{reference_doctype}`.`name` = {frappe.db.escape(reference_docname)}"
-        )
-
-    if reference_doctype and filters_type == "JSON":
-        sql = frappe.get_all(
-            reference_doctype, filters=filters, order_by="", distinct=1, run=0
-        )
-        flat_sql = sql.strip().replace("\n", " ").replace("\r", " ")
-        return f"`tab{reference_doctype}`.`name` IN ({flat_sql})"
+    if filters_type == "JSON":
+        return build_sql_from_filters(filters)
 
     return "1=1"
