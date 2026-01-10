@@ -43,6 +43,7 @@ class TestACResourceRulesReport(FrappeTestCase):
         if not frappe.db.exists("AC Resource", "Test Resource"):
             resource = frappe.get_doc({
                 "doctype": "AC Resource",
+                "title": "Test Resource",
                 "type": "DocType",
                 "document_type": "User",
                 "managed_actions": "All Actions"
