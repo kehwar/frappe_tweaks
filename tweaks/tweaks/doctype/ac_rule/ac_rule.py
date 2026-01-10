@@ -195,6 +195,67 @@ class ACRule(Document):
 
         return filters
 
+    def get_distinct_query_filters(self, query_filters):
+        """
+        Helper function that creates distinct tuples from query filters.
+        
+        For each non-exception filter, creates a tuple containing:
+        - The rule type (Permit or Forbid)
+        - The non-exception filter
+        - A tuple of all exception filters
+        
+        Args:
+            query_filters: List of filter rows (principals or resources child table)
+            
+        Returns:
+            List of tuples: [(rule_type, non_exception_filter, (exception_filters...))]
+        
+        Example:
+            If Rule is Permit, and filters are allow1, allow2, allow3, forbid1, forbid2
+            Returns:
+            [
+                ("Permit", "allow1", ("forbid1", "forbid2")),
+                ("Permit", "allow2", ("forbid1", "forbid2")),
+                ("Permit", "allow3", ("forbid1", "forbid2"))
+            ]
+        """
+        # Separate non-exception and exception filters
+        non_exception_filters = []
+        exception_filters = []
+        
+        for row in query_filters:
+            if row.exception:
+                exception_filters.append(row.filter)
+            else:
+                non_exception_filters.append(row.filter)
+        
+        # Create tuples for each non-exception filter
+        result = []
+        exception_tuple = tuple(sorted(exception_filters))
+        
+        for filter_name in non_exception_filters:
+            result.append((self.type, filter_name, exception_tuple))
+        
+        return result
+
+    def get_distinct_principal_query_filters(self):
+        """
+        Get distinct tuples for principal filters.
+        
+        Returns:
+            List of tuples: [(rule_type, non_exception_filter, (exception_filters...))]
+        """
+        return self.get_distinct_query_filters(self.principals)
+
+    def get_distinct_resource_query_filters(self):
+        """
+        Get distinct tuples for resource filters.
+        
+        Returns:
+            List of tuples: [(rule_type, non_exception_filter, (exception_filters...))]
+        """
+        return self.get_distinct_query_filters(self.resources)
+
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
