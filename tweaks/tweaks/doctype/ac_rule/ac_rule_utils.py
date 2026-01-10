@@ -6,7 +6,7 @@ from tweaks.tweaks.doctype.query_filter.query_filter import get_sql
 from tweaks.utils.access_control import allow_value
 
 
-def has_permissions(doc=None, ptype=None, user=None, debug=False):
+def has_permissions(doc=None, ptype=None, user=None):
 
     return not allow_value()
 
@@ -55,7 +55,7 @@ def get_user_rule_match_cache_ttl():
         return 300
 
 
-def check_user_matches_rule(rule_name, user, principals, debug=False):
+def check_user_matches_rule(rule_name, user, principals):
     """
     Check if a user matches a rule's principal filters.
     
@@ -63,21 +63,16 @@ def check_user_matches_rule(rule_name, user, principals, debug=False):
         rule_name: Name of the AC Rule
         user: Username to check
         principals: List of principal filter definitions from rule
-        debug: If True, skip caching
     
     Returns:
         bool: True if user matches the principal filters, False otherwise
     """
-    # Skip caching in debug mode
-    if debug:
-        return check_user_matches_rule_principals(user, principals, debug=debug)
-    
     # Get cache TTL
     cache_ttl = get_user_rule_match_cache_ttl()
     
     # If TTL is 0, caching is disabled
     if cache_ttl == 0:
-        return check_user_matches_rule_principals(user, principals, debug=debug)
+        return check_user_matches_rule_principals(user, principals)
     
     # Generate cache key
     cache_key = f"ac_rule_user_match:{rule_name}:{user}"
@@ -88,7 +83,7 @@ def check_user_matches_rule(rule_name, user, principals, debug=False):
         return cached_result
     
     # Cache miss - compute the result
-    result = check_user_matches_rule_principals(user, principals, debug=debug)
+    result = check_user_matches_rule_principals(user, principals)
     
     # Store in cache with TTL
     frappe.cache.set_value(cache_key, result, expires_in_sec=cache_ttl)
@@ -96,14 +91,13 @@ def check_user_matches_rule(rule_name, user, principals, debug=False):
     return result
 
 
-def check_user_matches_rule_principals(user, principals, debug=False):
+def check_user_matches_rule_principals(user, principals):
     """
     Check if user matches principal filters.
     
     Args:
         user: Username to check
         principals: List of principal filter definitions from rule
-        debug: If True, enables debug output
     
     Returns:
         bool: True if user matches the principal filters, False otherwise
@@ -155,7 +149,7 @@ def check_user_matches_rule_principals(user, principals, debug=False):
 
 
 @frappe.whitelist()
-def get_rule_map(debug=False):
+def get_rule_map():
     # Early returns for system states
     if frappe.flags.in_patch and not frappe.db.table_exists("AC Rule"):
         return {}
@@ -166,11 +160,10 @@ def get_rule_map(debug=False):
     if frappe.flags.in_migrate:
         return {}
 
-    # Check cache first (skip cache if debug mode)
-    if not debug:
-        rule_map = frappe.cache.get_value("ac_rule_map")
-        if rule_map is not None:
-            return rule_map
+    # Check cache first
+    rule_map = frappe.cache.get_value("ac_rule_map")
+    if rule_map is not None:
+        return rule_map
 
     rules = frappe.get_all(
         "AC Rule",
@@ -239,12 +232,12 @@ def get_rule_map(debug=False):
 
         actions = [scrub(a.action) for a in rule.actions]
 
-        principals = rule.resolve_principals(debug=debug)
+        principals = rule.resolve_principals()
         if len(principals) == 0:
             frappe.log_error(f"AC Rule {rule.name} has no valid principals")
             continue
 
-        resources = rule.resolve_resources(debug=debug)
+        resources = rule.resolve_resources()
         if len(resources) == 0:
             frappe.log_error(f"AC Rule {rule.name} has no valid resources")
             continue
@@ -260,21 +253,16 @@ def get_rule_map(debug=False):
             r = frappe._dict(
                 {
                     "name": rule.name,
-                    "title": rule.get_title(),
                     "type": rule.type,
                     "principals": principals,
                     "resources": resources,
                 }
             )
 
-            if not (debug):
-                r.pop("title")
-
             folder.setdefault(action, []).append(r)
 
-    # Cache the rule map (skip cache if debug mode)
-    if not debug:
-        frappe.cache.set_value("ac_rule_map", rule_map)
+    # Cache the rule map
+    frappe.cache.set_value("ac_rule_map", rule_map)
 
     return rule_map
 
@@ -371,17 +359,16 @@ def get_resource_rules(
     fieldname="",
     action="",
     user="",
-    debug=False,
 ):
 
     type, key, fieldname, action, user = get_params(
         resource, doctype, report, type, key, fieldname, action, user
     )
 
-    if debug or user != frappe.session.user:
+    if user != frappe.session.user:
         frappe.only_for("System Manager")
 
-    rule_map = get_rule_map(debug)
+    rule_map = get_rule_map()
 
     folder = (
         rule_map.get(type, {}).get(key, {}).get(fieldname or "", {}).get(action, None)
@@ -397,69 +384,8 @@ def get_resource_rules(
         principals = rule.get("principals", [])
         
         # Use cached function to check if user matches this rule
-        if check_user_matches_rule(rule_name, user, principals, debug=debug):
+        if check_user_matches_rule(rule_name, user, principals):
             rules.append(rule)
-
-    if debug:
-        # In debug mode, also include the old query structure for comparison
-        user_filter_queries = []
-        for rule in folder:
-            rule_name = rule.get("name")
-            
-            allowed = [
-                get_principal_filter_sql(r)
-                for r in rule.get("principals", [])
-                if r.get("exception", 0) == 0
-            ]
-            denied = [
-                get_principal_filter_sql(r)
-                for r in rule.get("principals", [])
-                if r.get("exception", 0) == 1
-            ]
-            
-            allowed = [r for r in allowed if r]
-            denied = [r for r in denied if r]
-            
-            allowed = (
-                " OR ".join([f"({q})" for q in allowed])
-                if len(allowed) != 1
-                else allowed[0]
-            )
-            denied = (
-                " OR ".join([f"({q})" for q in denied]) if len(denied) != 1 else denied[0]
-            )
-            
-            q = {"rule": rule_name}
-            
-            if allowed and denied:
-                user_filter_queries.append(q | {"sql": f"({allowed}) AND NOT ({denied})"})
-            elif allowed:
-                user_filter_queries.append(q | {"sql": f"{allowed}"})
-            else:
-                frappe.log_error(f"AC Rule {rule_name} has no valid principals")
-
-        user_filter_query = " UNION ".join(
-            [
-                f"""SELECT {frappe.db.escape(q.get('rule'))} AS "rule" FROM `tabUser` WHERE `tabUser`.`name` = {frappe.db.escape(user)} AND ({q.get("sql")})"""
-                for q in user_filter_queries
-            ]
-        )
-
-        return frappe._dict(
-            {
-                "type": type,
-                "key": key,
-                "fieldname": fieldname,
-                "action": action,
-                "user": user,
-                "rules": rules,
-                "query": {
-                    "query": user_filter_query,
-                    "parts": user_filter_queries,
-                },
-                "folder": folder,
-            }
-        )
 
     return frappe._dict({"rules": rules})
 
@@ -486,7 +412,6 @@ def get_resource_filter_query(
     fieldname="",
     action="",
     user="",
-    debug=False,
 ):
 
     type, key, fieldname, action, user = get_params(
@@ -494,7 +419,7 @@ def get_resource_filter_query(
     )
 
     rule_map = get_resource_rules(
-        resource, doctype, report, type, key, fieldname, action, user, debug
+        resource, doctype, report, type, key, fieldname, action, user
     )
 
     if rule_map.get("unmanaged"):
@@ -566,23 +491,6 @@ def get_resource_filter_query(
     else:
         access = "partial"
 
-    if debug:
-
-        return frappe._dict(
-            {
-                "type": type,
-                "key": key,
-                "fieldname": fieldname,
-                "action": action,
-                "user": user,
-                "user_filter_query": rule_map.get("query"),
-                "query": resource_filter_query,
-                "access": access,
-                "parts": resource_filter_queries,
-                "folder": folder,
-            }
-        )
-
     return frappe._dict({"query": resource_filter_query, "access": access})
 
 
@@ -596,7 +504,6 @@ def has_resource_access(
     fieldname="",
     action="",
     user="",
-    debug=False,
 ):
 
     type, key, fieldname, action, user = get_params(
@@ -604,7 +511,7 @@ def has_resource_access(
     )
 
     rule_map = get_resource_rules(
-        resource, doctype, report, type, key, fieldname, action, user, debug
+        resource, doctype, report, type, key, fieldname, action, user
     )
 
     if rule_map.get("unmanaged"):
@@ -613,20 +520,6 @@ def has_resource_access(
     folder = rule_map.get("rules", [])
 
     access = len(folder) > 0
-
-    if debug:
-
-        return frappe._dict(
-            {
-                "type": type,
-                "key": key,
-                "fieldname": fieldname,
-                "action": action,
-                "user": user,
-                "folder": folder,
-                "access": access,
-            }
-        )
 
     return frappe._dict({"access": access})
 
@@ -652,7 +545,7 @@ def _get_permission_query_conditions_for_doctype(doctype, user=None, action="rea
 
     # Get filter query from AC Rules
     result = get_resource_filter_query(
-        doctype=doctype, action=action, user=user, debug=False
+        doctype=doctype, action=action, user=user
     )
 
     # If unmanaged, return empty string (fall through to standard Frappe permissions)
