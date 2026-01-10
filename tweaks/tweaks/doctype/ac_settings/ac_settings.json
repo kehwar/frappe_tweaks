@@ -5,9 +5,23 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "cache_section",
+  "user_rule_match_cache_ttl",
   "html"
  ],
  "fields": [
+  {
+   "fieldname": "cache_section",
+   "fieldtype": "Section Break",
+   "label": "Cache Settings"
+  },
+  {
+   "default": "5",
+   "description": "Time in minutes to cache user-rule matching results. Set to 0 to disable caching.",
+   "fieldname": "user_rule_match_cache_ttl",
+   "fieldtype": "Int",
+   "label": "User Rule Match Cache TTL (minutes)"
+  },
   {
    "fieldname": "html",
    "fieldtype": "HTML"
@@ -17,7 +31,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-09-17 09:42:28.679186",
+ "modified": "2026-01-10 04:30:00.000000",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "AC Settings",
