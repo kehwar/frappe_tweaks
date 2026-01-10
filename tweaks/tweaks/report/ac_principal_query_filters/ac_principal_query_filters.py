@@ -33,20 +33,45 @@ def get_columns():
             "label": _("Query Filter"),
             "fieldtype": "Link",
             "options": "Query Filter",
-            "width": 250,
+            "width": 200,
+        },
+        {
+            "fieldname": "reference_doctype",
+            "label": _("Reference DocType"),
+            "fieldtype": "Link",
+            "options": "DocType",
+            "width": 150,
+        },
+        {
+            "fieldname": "reference_docname",
+            "label": _("Reference DocName"),
+            "fieldtype": "Data",
+            "width": 150,
+        },
+        {
+            "fieldname": "filters_type",
+            "label": _("Filter Type"),
+            "fieldtype": "Data",
+            "width": 100,
+        },
+        {
+            "fieldname": "filters",
+            "label": _("Filter"),
+            "fieldtype": "Code",
+            "width": 120,
         },
         {
             "fieldname": "filter_sql",
             "label": _("Filter SQL"),
             "fieldtype": "Data",
-            "width": 400,
+            "width": 300,
         },
         {
             "fieldname": "user",
             "label": _("User"),
             "fieldtype": "Link",
             "options": "User",
-            "width": 200,
+            "width": 150,
         },
     ]
 
@@ -61,7 +86,7 @@ def get_data(filters):
             "reference_doctype": ["in", ["User", "Role", "User Group", "Role Profile"]],
             "disabled": 0
         },
-        fields=["name", "filter_name", "reference_doctype"],
+        fields=["name", "filter_name", "reference_doctype", "reference_docname", "filters_type", "filters"],
         order_by="name"
     )
     
@@ -96,6 +121,10 @@ def get_data(filters):
             for user in users:
                 data.append({
                     "query_filter": qf_info.name,
+                    "reference_doctype": qf_info.reference_doctype,
+                    "reference_docname": qf_info.reference_docname,
+                    "filters_type": qf_info.filters_type,
+                    "filters": qf_info.filters,
                     "filter_sql": filter_sql_display,
                     "user": user,
                 })
