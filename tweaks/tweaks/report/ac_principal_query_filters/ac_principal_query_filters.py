@@ -16,9 +16,10 @@ def execute(filters=None):
     
     Report Structure:
         - Rows: One row per (Query Filter, User) combination
-        - Columns: Query Filter, Filter SQL, User
+        - Columns: Query Filter, Reference DocType, Reference DocName, Filter Type, Filter, SQL, User
     
     The report helps understand which users are matched by each principal filter.
+    Includes Query Filter properties and a button to view filter code in a dialog.
     """
     columns = get_columns()
     data = get_data(filters)
