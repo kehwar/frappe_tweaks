@@ -201,20 +201,20 @@ def build_filter_columns(ac_rules):
     # Build column definitions
     columns = []
     for idx, (key, group) in enumerate(sorted(filter_groups.items())):
-        # Extract filter names for display
-        allowed_names = [r["name"] for r in group["resources"] if not r.get("exception", 0)]
-        denied_names = [r["name"] for r in group["resources"] if r.get("exception", 0)]
-
+        # Extract filter names directly from key - no need to recalculate
+        rule_type = key[0]
+        non_exception_filter = key[1]
+        exception_filters_tuple = key[2]
+        
         # Build label with filter names
-        if denied_names:
+        if exception_filters_tuple:
             # Add emoji before each exception filter
-            denied_with_emoji = [f"⚠️ {name}" for name in denied_names]
-            label = f"{', '.join(allowed_names)} - {', '.join(denied_with_emoji)}"
+            denied_with_emoji = [f"⚠️ {name}" for name in exception_filters_tuple]
+            label = f"{non_exception_filter} - {', '.join(denied_with_emoji)}"
         else:
-            label = ", ".join(allowed_names)
+            label = non_exception_filter
 
-        # Add emoji based on rule types (use first rule's type as indicator)
-        rule_type = key[0]  # Extract rule_type from key
+        # Add emoji based on rule type
         emoji = "✅" if rule_type == "Permit" else "🚫"
         label = f"{emoji} {label}"
 
