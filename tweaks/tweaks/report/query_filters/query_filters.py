@@ -69,15 +69,15 @@ def get_columns():
             "width": 100,
         },
         {
-            "fieldname": "disabled",
-            "label": _("Disabled"),
-            "fieldtype": "Check",
-            "width": 80,
+            "fieldname": "filters",
+            "label": _("Filter"),
+            "fieldtype": "Code",
+            "width": 120,
         },
         {
             "fieldname": "calculated_sql",
             "label": _("Calculated SQL"),
-            "fieldtype": "Code",
+            "fieldtype": "Data",
             "width": 500,
         },
     ]
@@ -95,9 +95,10 @@ def get_data(filters):
         if impersonate_user:
             frappe.set_user(impersonate_user)
         
-        # Fetch all query filters
+        # Fetch all query filters (excluding disabled ones)
         query_filters = frappe.get_all(
             "Query Filter",
+            filters={"disabled": 0},
             fields=[
                 "name",
                 "filter_name",
@@ -105,7 +106,7 @@ def get_data(filters):
                 "reference_report",
                 "reference_docname",
                 "filters_type",
-                "disabled",
+                "filters",
             ],
             order_by="filter_name ASC, name ASC",
         )
@@ -117,6 +118,8 @@ def get_data(filters):
                 # Get the full document to calculate SQL
                 filter_doc = frappe.get_doc("Query Filter", qf.name)
                 calculated_sql = filter_doc.get_sql()
+                # Remove line breaks from SQL
+                calculated_sql = calculated_sql.replace("\n", " ").replace("\r", " ")
             except Exception as e:
                 # If there's an error calculating SQL, show the error message
                 calculated_sql = f"ERROR: {str(e)}"
