@@ -14,24 +14,26 @@ def execute(filters=None):
     """
     AC Resource Rules Report
     
-    Matrix view showing which users have access based on principal query filters.
+    Matrix view showing which users have access to which resources based on resource query filters.
     
     Filters:
         - resource (required): AC Resource to analyze
         - query_filter (optional): Query Filter for user filtering (User, User Group, Role, or Role Profile)
+        - action (optional): Specific action to check (shows Y/N instead of listing all actions)
     
     Report Structure:
         - Rows: Users (all enabled, or filtered by Query Filter)
-        - Columns: Principal Query Filters from AC Rules (grouped and de-duplicated)
-        - Cells: Comma-separated actions if user matches the filter
+        - Columns: Resource Query Filters from AC Rules (grouped and de-duplicated)
+        - Cells: Y/N if action filter is specified, or comma-separated actions if not
     
     Column Logic:
-        - Each non-exception principal filter becomes a column
+        - Each non-exception resource filter becomes a column
         - Exception filters multiply columns (e.g., "Allow1 - ⚠️ Forbid1, ⚠️ Forbid2")
         - If multiple rules use the same filter, actions aggregate in that column
         - Column labels show filter names with emoji (✅ Permit, 🚫 Forbid based on rule type; ⚠️ for exception filters)
     
-    The report evaluates each user against principal filters and displays allowed actions.
+    The report evaluates each user against principal filters to determine who has access,
+    then shows which resource filters apply for each user.
     Only enabled rules within valid date ranges are shown.
     """
     columns = []
@@ -110,13 +112,20 @@ def get_data(filters):
 
     # Build data rows
     data = []
+    action_filter = filters.get("action")
+    
     for user in users:
         row = {"user": user}
 
-        # For each filter column, check if the user matches and aggregate actions
+        # For each filter column, check if the user matches principals and aggregate actions
         for col in filter_columns:
             actions = get_user_actions_for_filter_column(user, col, ac_rules)
-            row[col["fieldname"]] = actions
+            
+            # If action filter is specified, show Y/N instead of listing actions
+            if action_filter:
+                row[col["fieldname"]] = "Y" if action_filter in actions.split(", ") else "N"
+            else:
+                row[col["fieldname"]] = actions
 
         data.append(row)
 
@@ -125,12 +134,12 @@ def get_data(filters):
 
 def build_filter_columns(ac_rules):
     """
-    Build columns based on principal query filters from all rules.
+    Build columns based on resource query filters from all rules.
     
     Returns a list of column definitions with:
     - fieldname: unique identifier for the column
     - label: display name with emojis
-    - principals: list of principal objects (with name, doctype, exception fields) for matching
+    - resources: list of resource objects (with name, exception fields) for matching
     - rules: list of rule info (name, type, actions) that use this filter combination
     """
     # Dictionary to group filters: key = (tuple of allowed filters, tuple of denied filters)
@@ -138,14 +147,18 @@ def build_filter_columns(ac_rules):
 
     for rule_info in ac_rules:
         rule = frappe.get_doc("AC Rule", rule_info.name)
-        principals = rule.resolve_principals()
+        resources = rule.resolve_resources()
 
-        # Separate allowed and denied principals
-        allowed = [p for p in principals if not p.get("exception", 0)]
-        denied = [p for p in principals if p.get("exception", 0)]
+        # Separate allowed and denied resources
+        allowed = [r for r in resources if not r.get("exception", 0) and not r.get("all", 0)]
+        denied = [r for r in resources if r.get("exception", 0)]
 
         # Get actions for this rule
         actions = [action.action for action in rule.actions]
+
+        # If there are no denied filters and no allowed filters (all=1), skip this rule
+        if not denied and not allowed:
+            continue
 
         # If there are no denied filters, create one entry per allowed filter
         if not denied:
@@ -153,7 +166,7 @@ def build_filter_columns(ac_rules):
                 key = (tuple([allow_filter["name"]]), tuple())
                 if key not in filter_groups:
                     filter_groups[key] = {
-                        "principals": [allow_filter],
+                        "resources": [allow_filter],
                         "rules": []
                     }
                 filter_groups[key]["rules"].append({
@@ -170,10 +183,10 @@ def build_filter_columns(ac_rules):
             for allow_filter in allowed:
                 key = (tuple([allow_filter["name"]]), denied_names)
                 if key not in filter_groups:
-                    # Combine allowed and denied principals for this combination
-                    combined_principals = [allow_filter] + denied
+                    # Combine allowed and denied resources for this combination
+                    combined_resources = [allow_filter] + denied
                     filter_groups[key] = {
-                        "principals": combined_principals,
+                        "resources": combined_resources,
                         "rules": []
                     }
                 filter_groups[key]["rules"].append({
@@ -186,8 +199,8 @@ def build_filter_columns(ac_rules):
     columns = []
     for idx, (key, group) in enumerate(sorted(filter_groups.items())):
         # Extract filter names for display
-        allowed_names = [p["name"] for p in group["principals"] if not p.get("exception", 0)]
-        denied_names = [p["name"] for p in group["principals"] if p.get("exception", 0)]
+        allowed_names = [r["name"] for r in group["resources"] if not r.get("exception", 0)]
+        denied_names = [r["name"] for r in group["resources"] if r.get("exception", 0)]
 
         # Build label with filter names
         if denied_names:
@@ -206,7 +219,7 @@ def build_filter_columns(ac_rules):
         columns.append({
             "fieldname": f"filter_{idx}",
             "label": label,
-            "principals": group["principals"],
+            "resources": group["resources"],
             "rules": group["rules"]
         })
 
@@ -215,15 +228,24 @@ def build_filter_columns(ac_rules):
 
 def get_user_actions_for_filter_column(user, column, ac_rules):
     """
-    Check if a user matches the filter column's criteria and return aggregated actions.
-    Uses the check_user_matches_rule_principals utility function.
+    Check if a user matches the principals of rules in this resource filter column
+    and return aggregated actions.
+    
+    For each rule in the column (which all share the same resource filters):
+    - Check if the user matches the rule's principals
+    - If yes, add the actions from that rule
     """
     all_actions = set()
 
-    # Check if user matches the principals for this column
-    if check_user_matches_rule_principals(user, column["principals"]):
-        # User matches - add all actions from rules in this column
-        for rule_info in column["rules"]:
+    # Check each rule in this column
+    for rule_info in column["rules"]:
+        # Get the full rule to check its principals
+        rule = frappe.get_doc("AC Rule", rule_info["name"])
+        principals = rule.resolve_principals()
+        
+        # Check if user matches the principals for this rule
+        if check_user_matches_rule_principals(user, principals):
+            # User matches - add all actions from this rule
             all_actions.update(rule_info["actions"])
 
     return ", ".join(sorted(all_actions)) if all_actions else ""
