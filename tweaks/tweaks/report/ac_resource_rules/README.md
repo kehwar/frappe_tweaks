@@ -1,4 +1,4 @@
-# AC Resource Permissions Report
+# AC Resource Rules Report
 
 ## Overview
 
@@ -14,7 +14,7 @@ This report provides a matrix view of user permissions for a specific AC Resourc
 
 ## Usage
 
-1. Navigate to **Reports > AC Resource Permissions**
+1. Navigate to **Reports > AC Resource Rules**
 2. Select an **AC Resource** from the dropdown (required)
 3. Optionally select a **User Filter** to filter which users are displayed
    - The User Filter must be a Query Filter with reference doctype: User, User Group, Role, or Role Profile

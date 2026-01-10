@@ -8,7 +8,7 @@ from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import get_principal_filter_sql
 
 
 def execute(filters=None):
-    """Generate AC Resource Permissions report"""
+    """Generate AC Resource Rules report"""
     columns = []
     data = []
 
