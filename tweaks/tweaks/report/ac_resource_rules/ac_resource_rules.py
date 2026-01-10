@@ -144,8 +144,8 @@ def build_filter_columns(ac_rules):
     Returns a list of column definitions with:
     - fieldname: unique identifier for the column
     - label: display name with emojis
-    - resources: list of resource objects (with name, exception fields) for matching
     - rules: list of rule info (name, type, actions) that use this filter combination
+    - actions: aggregated list of actions from all rules using this filter combination
     """
     # Dictionary to group filters: key = (rule_type, non_exception_filter, (exception_filters...))
     # Each key represents a unique column
@@ -169,18 +169,7 @@ def build_filter_columns(ac_rules):
             
             # Initialize group if not exists
             if key not in filter_groups:
-                # Build resources list for this combination
-                resources = []
-                
-                # Add non-exception filter
-                resources.append({"name": non_exception_filter, "exception": 0})
-                
-                # Add exception filters
-                for ex_filter in exception_filters_tuple:
-                    resources.append({"name": ex_filter, "exception": 1})
-                
                 filter_groups[key] = {
-                    "resources": resources,
                     "rules": [],
                     "actions": set()  # Aggregate actions across rules
                 }
@@ -221,7 +210,6 @@ def build_filter_columns(ac_rules):
         columns.append({
             "fieldname": f"filter_{idx}",
             "label": label,
-            "resources": group["resources"],
             "rules": group["rules"],
             "actions": sorted(group["actions"])  # Convert set to sorted list
         })
