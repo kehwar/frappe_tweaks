@@ -1,5 +1,9 @@
 # Plan: Integrate AC Rules with Workflow Actions
 
+> **Status**: This is a planning document for future implementation. The features described here are NOT yet implemented in the codebase.
+> 
+> **Current State**: The AC Rules system is fully implemented for DocTypes and Reports, but integration with Workflow Actions (as described in this plan) has not been implemented yet.
+
 ## Goal
 
 Extend the AC Rules system to control workflow transitions dynamically, enabling complex permission logic (territory-based approvals, conditional validations) without creating multiple workflow transitions or roles.
@@ -1122,12 +1126,12 @@ doc_events = {
 
 ## Success Criteria
 
-1. ✅ Can control workflow transitions using AC Rules with name-based matching
-2. ✅ Can use Query Filters for conditional workflow permissions
-3. ✅ Can assign territory-based approvers without multiple roles or transitions
-4. ✅ Workflow UI correctly shows/hides buttons based on AC Rules
-5. ✅ Backward compatible - existing workflows work without changes
-6. ✅ Clear user documentation with step-by-step setup
-7. ✅ User can progressively adopt AC Rules per action
-8. ✅ Unmanaged actions fall back to workflow roles seamlessly
-9. ✅ System is simple enough to explain in 5 minutes
+1. ⬜ Can control workflow transitions using AC Rules with name-based matching
+2. ⬜ Can use Query Filters for conditional workflow permissions
+3. ⬜ Can assign territory-based approvers without multiple roles or transitions
+4. ⬜ Workflow UI correctly shows/hides buttons based on AC Rules
+5. ⬜ Backward compatible - existing workflows work without changes
+6. ⬜ Clear user documentation with step-by-step setup
+7. ⬜ User can progressively adopt AC Rules per action
+8. ⬜ Unmanaged actions fall back to workflow roles seamlessly
+9. ⬜ System is simple enough to explain in 5 minutes
