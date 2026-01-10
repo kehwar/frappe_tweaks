@@ -142,58 +142,50 @@ def build_filter_columns(ac_rules):
     - resources: list of resource objects (with name, exception fields) for matching
     - rules: list of rule info (name, type, actions) that use this filter combination
     """
-    # Dictionary to group filters: key = (tuple of allowed filters, tuple of denied filters)
+    # Dictionary to group filters: key = (non_exception_filter, (exception_filters...))
     filter_groups = {}
 
     for rule_info in ac_rules:
         rule = frappe.get_doc("AC Rule", rule_info.name)
-        resources = rule.resolve_resources()
-
-        # Separate allowed and denied resources
-        allowed = [r for r in resources if not r.get("exception", 0) and not r.get("all", 0)]
-        denied = [r for r in resources if r.get("exception", 0)]
-
+        
+        # Get distinct resource query filter combinations using the new utility
+        distinct_filters = rule.get_distinct_resource_query_filters()
+        
         # Get actions for this rule
         actions = [action.action for action in rule.actions]
-
-        # If there are no denied filters and no allowed filters (all=1), skip this rule
-        if not denied and not allowed:
+        
+        # Skip if no distinct filters
+        if not distinct_filters:
             continue
-
-        # If there are no denied filters, create one entry per allowed filter
-        if not denied:
-            for allow_filter in allowed:
-                key = (tuple([allow_filter["name"]]), tuple())
-                if key not in filter_groups:
-                    filter_groups[key] = {
-                        "resources": [allow_filter],
-                        "rules": []
-                    }
-                filter_groups[key]["rules"].append({
-                    "name": rule.name,
-                    "type": rule.type,
-                    "actions": actions
-                })
-        else:
-            # With denied filters, create one column per allowed filter with ALL denied filters
-            # For example: allow1, allow2, forbid1, forbid2 creates:
-            # - allow1, forbid1, forbid2
-            # - allow2, forbid1, forbid2
-            denied_names = tuple(sorted([d["name"] for d in denied]))
-            for allow_filter in allowed:
-                key = (tuple([allow_filter["name"]]), denied_names)
-                if key not in filter_groups:
-                    # Combine allowed and denied resources for this combination
-                    combined_resources = [allow_filter] + denied
-                    filter_groups[key] = {
-                        "resources": combined_resources,
-                        "rules": []
-                    }
-                filter_groups[key]["rules"].append({
-                    "name": rule.name,
-                    "type": rule.type,
-                    "actions": actions
-                })
+        
+        # Group by filter combination (non_exception_filter, exception_filters_tuple)
+        for rule_type, non_exception_filter, exception_filters_tuple in distinct_filters:
+            # Create a key for grouping
+            key = (non_exception_filter, exception_filters_tuple)
+            
+            # Initialize group if not exists
+            if key not in filter_groups:
+                # Build resources list for this combination
+                resources = []
+                
+                # Add non-exception filter
+                resources.append({"name": non_exception_filter, "exception": 0})
+                
+                # Add exception filters
+                for ex_filter in exception_filters_tuple:
+                    resources.append({"name": ex_filter, "exception": 1})
+                
+                filter_groups[key] = {
+                    "resources": resources,
+                    "rules": []
+                }
+            
+            # Add this rule to the group
+            filter_groups[key]["rules"].append({
+                "name": rule.name,
+                "type": rule.type,
+                "actions": actions
+            })
 
     # Build column definitions
     columns = []
