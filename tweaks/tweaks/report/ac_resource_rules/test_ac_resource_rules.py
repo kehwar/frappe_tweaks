@@ -22,8 +22,17 @@ class TestACResourceRulesReport(FrappeTestCase):
     @classmethod
     def create_test_data(cls):
         """Create test data for AC Resource Rules report tests"""
-        # Create test users
+        # Ensure standard AC Actions exist
+        from tweaks.tweaks.doctype.ac_action.ac_action import insert_standard_actions
+        insert_standard_actions()
+        frappe.db.commit()
+        
+        # Initialize class variables
         cls.test_users = []
+        cls.test_filters = {}
+        cls.test_resource = None
+        
+        # Create test users
         for i in range(3):
             user_email = f"test_user_{i}@example.com"
             if not frappe.db.exists("User", user_email):
@@ -54,7 +63,6 @@ class TestACResourceRulesReport(FrappeTestCase):
             cls.test_resource = "Test Resource"
 
         # Create test Query Filters
-        cls.test_filters = {}
         
         # Allow filter 1
         if not frappe.db.exists("Query Filter", {"filter_name": "Test Allow Filter 1"}):
@@ -110,16 +118,19 @@ class TestACResourceRulesReport(FrappeTestCase):
     def tearDownClass(cls):
         """Clean up test data"""
         # Clean up in reverse order due to dependencies
-        for filter_name in cls.test_filters.values():
-            if frappe.db.exists("Query Filter", filter_name):
-                frappe.delete_doc("Query Filter", filter_name, force=1, ignore_permissions=True)
+        if hasattr(cls, 'test_filters'):
+            for filter_name in cls.test_filters.values():
+                if frappe.db.exists("Query Filter", filter_name):
+                    frappe.delete_doc("Query Filter", filter_name, force=1, ignore_permissions=True)
         
-        if frappe.db.exists("AC Resource", cls.test_resource):
-            frappe.delete_doc("AC Resource", cls.test_resource, force=1, ignore_permissions=True)
+        if hasattr(cls, 'test_resource') and cls.test_resource:
+            if frappe.db.exists("AC Resource", cls.test_resource):
+                frappe.delete_doc("AC Resource", cls.test_resource, force=1, ignore_permissions=True)
         
-        for user_email in cls.test_users:
-            if frappe.db.exists("User", user_email):
-                frappe.delete_doc("User", user_email, force=1, ignore_permissions=True)
+        if hasattr(cls, 'test_users'):
+            for user_email in cls.test_users:
+                if frappe.db.exists("User", user_email):
+                    frappe.delete_doc("User", user_email, force=1, ignore_permissions=True)
         
         frappe.db.commit()
         super().tearDownClass()
