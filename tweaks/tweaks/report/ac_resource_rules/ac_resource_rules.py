@@ -1,6 +1,24 @@
 # Copyright (c) 2026, Erick W.R. and contributors
 # For license information, please see license.txt
 
+"""
+AC Resource Rules Report
+
+Matrix view showing which users have access to which AC Rules for a selected resource.
+
+Filters:
+    - resource (required): AC Resource to analyze
+    - query_filter (optional): Query Filter for user filtering (User, User Group, Role, or Role Profile)
+
+Report Structure:
+    - Rows: Users (all enabled, or filtered by Query Filter)
+    - Columns: AC Rules for the resource (✅ Permit, 🚫 Forbid)
+    - Cells: Comma-separated actions if user matches rule's principals
+
+The report evaluates each user against AC Rule principal filters and displays allowed actions.
+Only enabled rules within valid date ranges are shown.
+"""
+
 import frappe
 from frappe import _, scrub
 
@@ -13,7 +31,6 @@ def execute(filters=None):
     data = []
 
     if not filters or not filters.get("resource"):
-        frappe.msgprint(_("Please select a Resource"))
         return columns, data
 
     columns, data = get_data(filters)
@@ -49,14 +66,12 @@ def get_data(filters):
     ]
 
     if not ac_rules:
-        frappe.msgprint(_("No AC Rules found for the selected Resource"))
         return [], []
 
     # Get all users (or filtered users if query filter is provided)
     users = get_users(query_filter_name)
 
     if not users:
-        frappe.msgprint(_("No users found"))
         return [], []
 
     # Build columns: User + one column per AC Rule
