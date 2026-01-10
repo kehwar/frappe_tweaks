@@ -2,13 +2,9 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe import _
+from frappe import _, scrub
 
-from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import (
-    get_principal_filter_sql,
-    get_rule_map,
-    scrub,
-)
+from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import get_principal_filter_sql
 
 
 def execute(filters=None):
