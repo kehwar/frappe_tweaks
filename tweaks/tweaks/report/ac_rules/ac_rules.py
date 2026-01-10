@@ -81,8 +81,7 @@ def get_data(filters):
         {
             "fieldname": "resource_filter",
             "label": _("Resource Filter"),
-            "fieldtype": "Link",
-            "options": "Query Filter",
+            "fieldtype": "Data",
             "width": 200,
         },
     ]
@@ -102,9 +101,12 @@ def get_data(filters):
     action_filter = filters.get("action") if filters else None
 
     for row in rows:
+        # Display "All" for None resource filter
+        resource_filter_display = row["resource_filter"] if row["resource_filter"] else "All"
+        
         data_row = {
             "resource": row["resource"],
-            "resource_filter": row["resource_filter"],
+            "resource_filter": resource_filter_display,
         }
 
         # For each column (principal filter), find matching actions
@@ -136,9 +138,12 @@ def build_rows(ac_rules):
     For each rule, extract all distinct resource query filter combinations
     using the get_distinct_resource_query_filters method.
     
+    If a rule has no resource filters (applies to all), it creates a row with
+    resource_filter = None (shown as "All" in the report).
+    
     Returns a list of row definitions with:
     - resource: AC Resource name
-    - resource_filter: Query Filter name (non-exception)
+    - resource_filter: Query Filter name (non-exception), or None for "All"
     - resource_exception: Tuple of exception filter names
     """
     rows_dict = {}
@@ -149,19 +154,32 @@ def build_rows(ac_rules):
         # Get distinct resource query filter combinations
         distinct_combos = rule.get_distinct_resource_query_filters()
 
-        for rule_type, resource_filter, exception_tuple in distinct_combos:
-            # Create a unique key for this row
-            key = (rule.resource, resource_filter, exception_tuple)
-
+        # If no resource filters, create a row for "All"
+        if not distinct_combos:
+            key = (rule.resource, None, tuple())
             if key not in rows_dict:
                 rows_dict[key] = {
                     "resource": rule.resource,
-                    "resource_filter": resource_filter,
-                    "resource_exception": exception_tuple,
+                    "resource_filter": None,  # None means "All"
+                    "resource_exception": tuple(),
                 }
+        else:
+            for rule_type, resource_filter, exception_tuple in distinct_combos:
+                # Create a unique key for this row
+                key = (rule.resource, resource_filter, exception_tuple)
 
-    # Convert to sorted list
-    rows = sorted(rows_dict.values(), key=lambda x: (x["resource"], x["resource_filter"]))
+                if key not in rows_dict:
+                    rows_dict[key] = {
+                        "resource": rule.resource,
+                        "resource_filter": resource_filter,
+                        "resource_exception": exception_tuple,
+                    }
+
+    # Convert to sorted list (None sorts first)
+    rows = sorted(
+        rows_dict.values(),
+        key=lambda x: (x["resource"], x["resource_filter"] or "", x["resource_exception"]),
+    )
 
     return rows
 
@@ -228,7 +246,7 @@ def get_actions_for_cell(
     Find all rules that match:
     - The resource
     - Have the principal filter (and same exceptions)
-    - Have the resource filter (and same exceptions)
+    - Have the resource filter (and same exceptions), or None for "All"
     
     Returns a set of action names.
     """
@@ -253,10 +271,17 @@ def get_actions_for_cell(
 
         # Check if rule has matching resource filter combination
         resource_combos = rule.get_distinct_resource_query_filters()
-        resource_match = any(
-            rf == resource_filter and re == resource_exception
-            for rt, rf, re in resource_combos
-        )
+        
+        # If resource_filter is None, we're looking for rules with no resource filters
+        if resource_filter is None:
+            # Match if rule has no resource filters
+            resource_match = len(resource_combos) == 0
+        else:
+            # Match if rule has this specific resource filter combination
+            resource_match = any(
+                rf == resource_filter and re == resource_exception
+                for rt, rf, re in resource_combos
+            )
 
         if not resource_match:
             continue
