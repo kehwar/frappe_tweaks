@@ -231,7 +231,7 @@ class ACRule(Document):
         
         # Create tuples for each non-exception filter
         result = []
-        exception_tuple = tuple(exception_filters)
+        exception_tuple = tuple(sorted(exception_filters))
         
         for filter_name in non_exception_filters:
             result.append((self.type, filter_name, exception_tuple))
