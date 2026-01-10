@@ -499,9 +499,11 @@ Checks if a user has any access to a resource/action.
 
 ## Usage Examples
 
-**Note**: Currently, AC Rules work for Reports only (manual integration required). DocType integration is not yet implemented.
+**Note**: AC Rules are fully functional for:
+- **DocTypes**: Automatically enforced via Frappe permission hooks (no manual integration needed)
+- **Reports**: Manual integration required - call `get_resource_filter_query()` and inject SQL into report queries
 
-### Example 1: Report with AC Rule Access Control
+### Example 1: Sales Team Access Control (Report)
 
 **Goal**: Create a Sales Report that only shows customers based on AC Rules.
 
@@ -567,50 +569,7 @@ def execute(filters=None):
     return columns, data
 ```
 
-### Example 2: Sales Team Read Access (DocType)
-
-**Goal**: Allow sales team members to read customers they manage.
-
-**Note**: This example uses DocType integration which is now implemented and works automatically.
-
-**Step 1**: Create Query Filter for Sales Team Users
-```
-Filter Name: Sales Team Members
-Reference Doctype: User
-Filters Type: JSON
-Filters: [["email", "like", "%@sales.company.com"]]
-```
-
-**Step 2**: Create Query Filter for Managed Customers
-```
-Filter Name: My Managed Customers
-Reference Doctype: Customer
-Filters Type: Python
-Filters:
-conditions = f"`tabCustomer`.`account_manager` = {frappe.db.escape(frappe.session.user)}"
-```
-
-**Step 3**: Create AC Resource
-```
-Type: DocType
-Document Type: Customer
-Managed Actions: Select
-Actions: Read
-```
-
-**Step 4**: Create AC Rule
-```
-Title: Sales Team Read Managed Customers
-Type: Permit
-Resource: Customer
-Actions: Read
-Principal Filters: Sales Team Members
-Resource Filters: My Managed Customers
-```
-
-**Result**: Permission is automatically enforced through Frappe permission hooks. No additional code needed!
-
-### Example 3: Restrict Archive Access
+### Example 2: Restrict Archive Access (DocType)
 
 **Goal**: Prevent all users from reading archived records.
 
@@ -672,41 +631,6 @@ Resource: Sales Order
 Actions: Read, Write, Create, Delete
 Principal Filters: Tenant Users
 Resource Filters: Tenant Sales Orders
-```
-
-### Example 4: Regional Manager Access
-
-**Goal**: Regional managers can access all customers in their region.
-
-**Step 1**: Create Query Filter for Regional Managers
-```
-Filter Name: Regional Managers
-Reference Doctype: User
-Filters Type: JSON
-Filters: [["role_profile_name", "=", "Regional Manager"]]
-```
-
-**Step 2**: Create Query Filter for Regional Customers
-```
-Filter Name: My Region Customers
-Reference Doctype: Customer
-Filters Type: SQL
-Filters:
-region IN (
-    SELECT region 
-    FROM `tabUser` 
-    WHERE name = {user}
-)
-```
-
-**Step 3**: Create AC Rule
-```
-Title: Regional Manager Customer Access
-Type: Permit
-Resource: Customer
-Actions: Read, Write
-Principal Filters: Regional Managers
-Resource Filters: My Region Customers
 ```
 
 ## Code Patterns and Best Practices
