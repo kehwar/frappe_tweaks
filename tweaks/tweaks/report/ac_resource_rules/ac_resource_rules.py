@@ -24,9 +24,9 @@ def execute(filters=None):
     
     Column Logic:
         - Each non-exception principal filter becomes a column
-        - Exception filters multiply columns (e.g., "Allow1 - 🚫 Forbid1, 🚫 Forbid2")
+        - Exception filters multiply columns (e.g., "Allow1 - ⚠️ Forbid1, ⚠️ Forbid2")
         - If multiple rules use the same filter, actions aggregate in that column
-        - Column labels show filter names with emoji (✅ Permit, 🚫 Forbid based on rule type)
+        - Column labels show filter names with emoji (✅ Permit, 🚫 Forbid based on rule type; ⚠️ for exception filters)
     
     The report evaluates each user against principal filters and displays allowed actions.
     Only enabled rules within valid date ranges are shown.
@@ -189,7 +189,7 @@ def build_filter_columns(ac_rules):
         # Build label with filter names
         if denied_names:
             # Add emoji before each exception filter
-            denied_with_emoji = [f"🚫 {name}" for name in denied_names]
+            denied_with_emoji = [f"⚠️ {name}" for name in denied_names]
             label = f"{', '.join(allowed_names)} - {', '.join(denied_with_emoji)}"
         else:
             label = ", ".join(allowed_names)
