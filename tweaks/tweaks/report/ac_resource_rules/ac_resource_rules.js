@@ -23,6 +23,14 @@ frappe.query_reports["AC Resource Rules"] = {
                     }
                 };
             }
+        },
+        {
+            "fieldname": "action",
+            "label": __("Action"),
+            "fieldtype": "Link",
+            "options": "AC Action",
+            "reqd": 0,
+            "description": __("Filter by specific action. When specified, cells show Y/N instead of listing all actions.")
         }
     ],
 };
