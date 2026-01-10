@@ -680,94 +680,6 @@ def filter_workflow_action_users_by_ac_rules(users, transition, doc):
 - Clean utility module instead of monkey patches
 - No coupling between frappe and tweaks
 
-## User Workflow for Setup
-
-### Step 1: Create Workflow (Standard Frappe)
-
-1. Go to Workflow list
-2. Create new Workflow for Quotation
-3. Define workflow states (Draft, Pending Approval, Approved)
-4. Define workflow transitions:
-   - Action: "Submit", From: Draft, To: Pending Approval, Allowed Role: All
-   - Action: "Approve", From: Pending Approval, To: Approved, Allowed Role: All
-   - Action: "Reject", From: Pending Approval, To: Draft, Allowed Role: All
-
-**Key Point**: Set "Allowed Role" to "All" or a very permissive role, since AC Rules will handle the actual permissions.
-
-### Step 2: Create Workflow Action Master (Standard Frappe)
-
-The workflow actions (Submit, Approve, Reject) are automatically available via Workflow Action Master.
-
-**No manual step needed** - Frappe handles this automatically.
-
-### Step 3: Create AC Actions (Tweaks - Manual)
-
-1. Go to AC Action list
-2. For each workflow action you want to manage with AC Rules, create an AC Action:
-   - Action: "Submit"
-   - Action: "Approve"
-   - Action: "Reject"
-
-**Naming is critical**: The AC Action name must exactly match the Workflow Action name.
-
-### Step 4: Create AC Resource (Tweaks)
-
-1. Go to AC Resource list
-2. Create resource for Quotation
-3. Set Type: DocType
-4. Set DocType: Quotation
-5. Set Managed Actions: Select
-6. Add the workflow actions you want to manage:
-   - Submit
-   - Approve
-   - Reject
-
-### Step 5: Create Query Filters (Tweaks)
-
-1. Go to Query Filter list
-2. Create principal filters (WHO can perform actions):
-   ```
-   Name: Sales Managers
-   Reference DocType: Role
-   Filter Type: JSON
-   Filters: [["name", "=", "Sales Manager"]]
-   ```
-
-3. Create resource filters (WHICH records):
-   ```
-   Name: Below Min Price
-   Reference DocType: Quotation
-   Filter Type: Python
-   Filters:
-   min_price = 1000
-   conditions = f"`tabQuotation`.`grand_total` < {min_price}"
-   ```
-
-### Step 6: Create AC Rules (Tweaks)
-
-1. **Rule: Forbid Submit if Below Min Price**
-   - Title: "Forbid Submit if Below Min Price"
-   - Type: Forbid
-   - Resource: Quotation Resource
-   - Actions: Submit
-   - Principals: All (no filter = everyone)
-   - Resources: Below Min Price
-
-2. **Rule: Allow Approve for Sales Managers**
-   - Title: "Sales Managers Can Approve"
-   - Type: Permit
-   - Resource: Quotation Resource
-   - Actions: Approve
-   - Principals: Sales Managers
-   - Resources: (empty = all records)
-
-### Step 7: Test
-
-1. Create a quotation under $1000
-2. Try to Submit → Should be blocked (Forbid rule)
-3. Try to Approve as non-manager → Should be blocked (no Permit rule)
-4. Try to Approve as Sales Manager → Should work (Permit rule)
-
 ## Design Decisions
 
 ### 1. Name Matching Strategy
@@ -836,16 +748,7 @@ else:
 - Explicit is better than implicit
 - Easy to document and teach
 
-### 5. Workflow Action Doctype Integration
-
-**Decision**: Optional/Low priority - can be deferred to later phase.
-
-**Rationale**:
-- Core workflow permission checks work without this
-- Workflow Action notifications are supplementary
-- Can be added incrementally after core implementation is stable
-
-### 6. Performance Considerations
+### 5. Performance Considerations
 
 **Decision**: Accept overhead, leverage existing AC Rules caching.
 
@@ -856,7 +759,7 @@ else:
 - Simpler implementation than custom caching
 - Can optimize later if needed
 
-### 7. UI Indicators for Forbidden Transitions
+### 6. UI Indicators for Forbidden Transitions
 
 **Decision**: Generic "No Permission" message for users, detailed info in debug mode for System Managers.
 
