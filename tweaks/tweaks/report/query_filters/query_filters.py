@@ -75,8 +75,8 @@ def get_columns():
             "width": 120,
         },
         {
-            "fieldname": "calculated_sql",
-            "label": _("Calculated SQL"),
+            "fieldname": "sql",
+            "label": _("SQL"),
             "fieldtype": "Data",
             "width": 500,
         },
@@ -117,15 +117,15 @@ def get_data(filters):
             try:
                 # Get the full document to calculate SQL
                 filter_doc = frappe.get_doc("Query Filter", qf.name)
-                calculated_sql = filter_doc.get_sql()
+                sql = filter_doc.get_sql()
                 # Remove line breaks from SQL
-                calculated_sql = calculated_sql.replace("\n", " ").replace("\r", " ")
+                sql = sql.replace("\n", " ").replace("\r", " ")
             except Exception as e:
                 # If there's an error calculating SQL, show the error message
-                calculated_sql = f"ERROR: {str(e)}"
+                sql = f"ERROR: {str(e)}"
             
             # Add calculated SQL to the row
-            qf["calculated_sql"] = calculated_sql
+            qf["sql"] = sql
             data.append(qf)
         
         return data
