@@ -1,30 +1,6 @@
 # Copyright (c) 2026, Erick W.R. and contributors
 # For license information, please see license.txt
 
-"""
-AC Resource Rules Report
-
-Matrix view showing which users have access based on principal query filters.
-
-Filters:
-    - resource (required): AC Resource to analyze
-    - query_filter (optional): Query Filter for user filtering (User, User Group, Role, or Role Profile)
-
-Report Structure:
-    - Rows: Users (all enabled, or filtered by Query Filter)
-    - Columns: Principal Query Filters from AC Rules (grouped and de-duplicated)
-    - Cells: Comma-separated actions if user matches the filter
-
-Column Logic:
-    - Each non-exception principal filter becomes a column
-    - Exception filters multiply columns (e.g., "Allow1 - Forbid1")
-    - If multiple rules use the same filter, actions aggregate in that column
-    - Column labels show filter names with emoji (✅ Permit, 🚫 Forbid based on rule type)
-
-The report evaluates each user against principal filters and displays allowed actions.
-Only enabled rules within valid date ranges are shown.
-"""
-
 import frappe
 from frappe import _, scrub
 
@@ -32,7 +8,29 @@ from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import get_principal_filter_sql
 
 
 def execute(filters=None):
-    """Generate AC Resource Rules report"""
+    """
+    AC Resource Rules Report
+    
+    Matrix view showing which users have access based on principal query filters.
+    
+    Filters:
+        - resource (required): AC Resource to analyze
+        - query_filter (optional): Query Filter for user filtering (User, User Group, Role, or Role Profile)
+    
+    Report Structure:
+        - Rows: Users (all enabled, or filtered by Query Filter)
+        - Columns: Principal Query Filters from AC Rules (grouped and de-duplicated)
+        - Cells: Comma-separated actions if user matches the filter
+    
+    Column Logic:
+        - Each non-exception principal filter becomes a column
+        - Exception filters multiply columns (e.g., "Allow1 - 🚫 Forbid1, 🚫 Forbid2")
+        - If multiple rules use the same filter, actions aggregate in that column
+        - Column labels show filter names with emoji (✅ Permit, 🚫 Forbid based on rule type)
+    
+    The report evaluates each user against principal filters and displays allowed actions.
+    Only enabled rules within valid date ranges are shown.
+    """
     columns = []
     data = []
 
@@ -163,21 +161,24 @@ def build_filter_columns(ac_rules):
                     "actions": actions
                 })
         else:
-            # With denied filters, create cartesian product (multiply)
+            # With denied filters, create one column per allowed filter with ALL denied filters
+            # For example: allow1, allow2, forbid1, forbid2 creates:
+            # - allow1, forbid1, forbid2
+            # - allow2, forbid1, forbid2
+            denied_names = tuple(sorted([d["name"] for d in denied]))
             for allow_filter in allowed:
-                for deny_filter in denied:
-                    key = (tuple([allow_filter["name"]]), tuple([deny_filter["name"]]))
-                    if key not in filter_groups:
-                        filter_groups[key] = {
-                            "allowed_filters": [allow_filter["name"]],
-                            "denied_filters": [deny_filter["name"]],
-                            "rules": []
-                        }
-                    filter_groups[key]["rules"].append({
-                        "name": rule.name,
-                        "type": rule.type,
-                        "actions": actions
-                    })
+                key = (tuple([allow_filter["name"]]), denied_names)
+                if key not in filter_groups:
+                    filter_groups[key] = {
+                        "allowed_filters": [allow_filter["name"]],
+                        "denied_filters": list(denied_names),
+                        "rules": []
+                    }
+                filter_groups[key]["rules"].append({
+                    "name": rule.name,
+                    "type": rule.type,
+                    "actions": actions
+                })
 
     # Build column definitions
     columns = []
@@ -187,7 +188,9 @@ def build_filter_columns(ac_rules):
 
         # Build label with filter names
         if denied_names:
-            label = f"{', '.join(allowed_names)} - {', '.join(denied_names)}"
+            # Add emoji before each exception filter
+            denied_with_emoji = [f"🚫 {name}" for name in denied_names]
+            label = f"{', '.join(allowed_names)} - {', '.join(denied_with_emoji)}"
         else:
             label = ", ".join(allowed_names)
 
