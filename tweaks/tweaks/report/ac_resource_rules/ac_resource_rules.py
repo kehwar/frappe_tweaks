@@ -142,7 +142,7 @@ def build_filter_columns(ac_rules):
     - resources: list of resource objects (with name, exception fields) for matching
     - rules: list of rule info (name, type, actions) that use this filter combination
     """
-    # Dictionary to group filters: key = (non_exception_filter, (exception_filters...))
+    # Dictionary to group filters: key = (rule_type, non_exception_filter, (exception_filters...))
     filter_groups = {}
 
     for rule_info in ac_rules:
@@ -158,10 +158,10 @@ def build_filter_columns(ac_rules):
         if not distinct_filters:
             continue
         
-        # Group by filter combination (non_exception_filter, exception_filters_tuple)
+        # Group by filter combination (rule_type, non_exception_filter, exception_filters_tuple)
         for rule_type, non_exception_filter, exception_filters_tuple in distinct_filters:
-            # Create a key for grouping
-            key = (non_exception_filter, exception_filters_tuple)
+            # Create a key for grouping - include rule_type to separate Permit and Forbid rules
+            key = (rule_type, non_exception_filter, exception_filters_tuple)
             
             # Initialize group if not exists
             if key not in filter_groups:
