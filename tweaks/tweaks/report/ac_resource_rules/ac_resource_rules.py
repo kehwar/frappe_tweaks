@@ -4,7 +4,10 @@
 import frappe
 from frappe import _, scrub
 
-from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import get_principal_filter_sql
+from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import (
+    check_user_matches_rule_principals,
+    get_principal_filter_sql,
+)
 
 
 def execute(filters=None):
@@ -127,8 +130,7 @@ def build_filter_columns(ac_rules):
     Returns a list of column definitions with:
     - fieldname: unique identifier for the column
     - label: display name with emojis
-    - allowed_filters: list of allowed filter names
-    - denied_filters: list of denied (exception) filter names
+    - principals: list of principal objects (with name, doctype, exception fields) for matching
     - rules: list of rule info (name, type, actions) that use this filter combination
     """
     # Dictionary to group filters: key = (tuple of allowed filters, tuple of denied filters)
@@ -151,8 +153,7 @@ def build_filter_columns(ac_rules):
                 key = (tuple([allow_filter["name"]]), tuple())
                 if key not in filter_groups:
                     filter_groups[key] = {
-                        "allowed_filters": [allow_filter["name"]],
-                        "denied_filters": [],
+                        "principals": [allow_filter],
                         "rules": []
                     }
                 filter_groups[key]["rules"].append({
@@ -169,9 +170,10 @@ def build_filter_columns(ac_rules):
             for allow_filter in allowed:
                 key = (tuple([allow_filter["name"]]), denied_names)
                 if key not in filter_groups:
+                    # Combine allowed and denied principals for this combination
+                    combined_principals = [allow_filter] + denied
                     filter_groups[key] = {
-                        "allowed_filters": [allow_filter["name"]],
-                        "denied_filters": list(denied_names),
+                        "principals": combined_principals,
                         "rules": []
                     }
                 filter_groups[key]["rules"].append({
@@ -183,8 +185,9 @@ def build_filter_columns(ac_rules):
     # Build column definitions
     columns = []
     for idx, (key, group) in enumerate(sorted(filter_groups.items())):
-        allowed_names = group["allowed_filters"]
-        denied_names = group["denied_filters"]
+        # Extract filter names for display
+        allowed_names = [p["name"] for p in group["principals"] if not p.get("exception", 0)]
+        denied_names = [p["name"] for p in group["principals"] if p.get("exception", 0)]
 
         # Build label with filter names
         if denied_names:
@@ -203,8 +206,7 @@ def build_filter_columns(ac_rules):
         columns.append({
             "fieldname": f"filter_{idx}",
             "label": label,
-            "allowed_filters": allowed_names,
-            "denied_filters": denied_names,
+            "principals": group["principals"],
             "rules": group["rules"]
         })
 
@@ -214,39 +216,14 @@ def build_filter_columns(ac_rules):
 def get_user_actions_for_filter_column(user, column, ac_rules):
     """
     Check if a user matches the filter column's criteria and return aggregated actions.
+    Uses the check_user_matches_rule_principals utility function.
     """
     all_actions = set()
 
-    for rule_info in column["rules"]:
-        # Check if user matches the allowed filters
-        allowed_match = False
-        for filter_name in column["allowed_filters"]:
-            query_filter = frappe.get_doc("Query Filter", filter_name)
-            filter_sql = get_principal_filter_sql(query_filter)
-            
-            if filter_sql:
-                user_check_sql = f"SELECT 1 FROM `tabUser` WHERE `name` = {frappe.db.escape(user)} AND ({filter_sql})"
-                if frappe.db.sql(user_check_sql):
-                    allowed_match = True
-                    break
-
-        if not allowed_match:
-            continue
-
-        # Check if user is denied by exception filters
-        denied_match = False
-        for filter_name in column["denied_filters"]:
-            query_filter = frappe.get_doc("Query Filter", filter_name)
-            filter_sql = get_principal_filter_sql(query_filter)
-            
-            if filter_sql:
-                user_check_sql = f"SELECT 1 FROM `tabUser` WHERE `name` = {frappe.db.escape(user)} AND ({filter_sql})"
-                if frappe.db.sql(user_check_sql):
-                    denied_match = True
-                    break
-
-        # If user matches allowed but not denied, add actions
-        if allowed_match and not denied_match:
+    # Check if user matches the principals for this column
+    if check_user_matches_rule_principals(user, column["principals"]):
+        # User matches - add all actions from rules in this column
+        for rule_info in column["rules"]:
             all_actions.update(rule_info["actions"])
 
     return ", ".join(sorted(all_actions)) if all_actions else ""
