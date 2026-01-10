@@ -20,9 +20,137 @@ def after_install():
 
 def clear_ac_rule_cache():
     """
-    Clear AC rule cache.
+    Clear AC rule cache including rule map and user-rule matching cache.
     """
     frappe.cache.delete_value("ac_rule_map")
+    
+    # Clear all user-rule matching cache entries
+    # Pattern: ac_rule_user_match:*
+    cache = frappe.cache
+    if hasattr(cache, 'delete_keys'):
+        # Redis-based cache supports pattern deletion
+        cache.delete_keys("ac_rule_user_match:*")
+    else:
+        # For other cache backends, we can't easily delete by pattern
+        # The cache entries will expire based on TTL
+        pass
+
+
+def get_user_rule_match_cache_ttl():
+    """
+    Get the cache TTL for user-rule matching from AC Settings.
+    Returns TTL in seconds (converted from minutes).
+    """
+    try:
+        if not frappe.db.table_exists("AC Settings"):
+            return 300  # Default 5 minutes
+            
+        settings = frappe.get_cached_doc("AC Settings", "AC Settings")
+        ttl_minutes = settings.get("user_rule_match_cache_ttl", 5)
+        
+        # Convert minutes to seconds, 0 means no caching
+        return ttl_minutes * 60 if ttl_minutes else 0
+    except Exception:
+        # Default to 5 minutes if any error
+        return 300
+
+
+def check_user_matches_rule(rule_name, user, principals, debug=False):
+    """
+    Check if a user matches a rule's principal filters.
+    
+    Args:
+        rule_name: Name of the AC Rule
+        user: Username to check
+        principals: List of principal filter definitions from rule
+        debug: If True, skip caching
+    
+    Returns:
+        bool: True if user matches the principal filters, False otherwise
+    """
+    # Skip caching in debug mode
+    if debug:
+        return _check_user_matches_rule_uncached(user, principals)
+    
+    # Get cache TTL
+    cache_ttl = get_user_rule_match_cache_ttl()
+    
+    # If TTL is 0, caching is disabled
+    if cache_ttl == 0:
+        return _check_user_matches_rule_uncached(user, principals)
+    
+    # Generate cache key
+    cache_key = f"ac_rule_user_match:{rule_name}:{user}"
+    
+    # Try to get from cache
+    cached_result = frappe.cache.get_value(cache_key)
+    if cached_result is not None:
+        return cached_result
+    
+    # Cache miss - compute the result
+    result = _check_user_matches_rule_uncached(user, principals)
+    
+    # Store in cache with TTL
+    frappe.cache.set_value(cache_key, result, expires_in_sec=cache_ttl)
+    
+    return result
+
+
+def _check_user_matches_rule_uncached(user, principals):
+    """
+    Internal function to check if user matches principal filters without caching.
+    
+    Args:
+        user: Username to check
+        principals: List of principal filter definitions from rule
+    
+    Returns:
+        bool: True if user matches the principal filters, False otherwise
+    """
+    # Build SQL query to check if user matches principals
+    allowed = [
+        get_principal_filter_sql(r)
+        for r in principals
+        if r.get("exception", 0) == 0
+    ]
+    denied = [
+        get_principal_filter_sql(r)
+        for r in principals
+        if r.get("exception", 0) == 1
+    ]
+    
+    allowed = [r for r in allowed if r]
+    denied = [r for r in denied if r]
+    
+    if not allowed:
+        return False
+    
+    allowed_sql = (
+        " OR ".join([f"({q})" for q in allowed])
+        if len(allowed) != 1
+        else allowed[0]
+    )
+    denied_sql = (
+        " OR ".join([f"({q})" for q in denied]) if len(denied) != 1 else denied[0]
+    )
+    
+    if allowed_sql and denied_sql:
+        user_filter_sql = f"({allowed_sql}) AND NOT ({denied_sql})"
+    elif allowed_sql:
+        user_filter_sql = f"{allowed_sql}"
+    else:
+        return False
+    
+    # Execute query to check if user matches
+    query = f"""
+        SELECT COUNT(*) as count
+        FROM `tabUser`
+        WHERE `tabUser`.`name` = {frappe.db.escape(user)}
+        AND ({user_filter_sql})
+    """
+    
+    result = frappe.db.sql(query, as_dict=True)
+    return result[0].get("count", 0) > 0 if result else False
 
 
 @frappe.whitelist()
@@ -261,56 +389,60 @@ def get_resource_rules(
     if folder is None:
         return {"rules": [], "unmanaged": True}
 
-    user_filter_queries = []
+    # Filter rules to those that match the user using cached function
+    rules = []
     for rule in folder:
-
         rule_name = rule.get("name")
-
-        allowed = [
-            get_principal_filter_sql(r)
-            for r in rule.get("principals", [])
-            if r.get("exception", 0) == 0
-        ]
-        denied = [
-            get_principal_filter_sql(r)
-            for r in rule.get("principals", [])
-            if r.get("exception", 0) == 1
-        ]
-
-        allowed = [r for r in allowed if r]
-        denied = [r for r in denied if r]
-
-        allowed = (
-            " OR ".join([f"({q})" for q in allowed])
-            if len(allowed) != 1
-            else allowed[0]
-        )
-        denied = (
-            " OR ".join([f"({q})" for q in denied]) if len(denied) != 1 else denied[0]
-        )
-
-        q = {"rule": rule_name}
-
-        if allowed and denied:
-            user_filter_queries.append(q | {"sql": f"({allowed}) AND NOT ({denied})"})
-        elif allowed:
-            user_filter_queries.append(q | {"sql": f"{allowed}"})
-        else:
-            frappe.log_error(f"AC Rule {rule_name} has no valid principals")
-
-    user_filter_query = " UNION ".join(
-        [
-            f"""SELECT {frappe.db.escape(q.get('rule'))} AS "rule" FROM `tabUser` WHERE `tabUser`.`name` = {frappe.db.escape(user)} AND ({q.get("sql")})"""
-            for q in user_filter_queries
-        ]
-    )
-    if user_filter_query:
-        rules = frappe.db.sql(user_filter_query, pluck="rule")
-        rules = [r for r in folder if r.get("name") in rules]
-    else:
-        rules = []
+        principals = rule.get("principals", [])
+        
+        # Use cached function to check if user matches this rule
+        if check_user_matches_rule(rule_name, user, principals, debug=debug):
+            rules.append(rule)
 
     if debug:
+        # In debug mode, also include the old query structure for comparison
+        user_filter_queries = []
+        for rule in folder:
+            rule_name = rule.get("name")
+            
+            allowed = [
+                get_principal_filter_sql(r)
+                for r in rule.get("principals", [])
+                if r.get("exception", 0) == 0
+            ]
+            denied = [
+                get_principal_filter_sql(r)
+                for r in rule.get("principals", [])
+                if r.get("exception", 0) == 1
+            ]
+            
+            allowed = [r for r in allowed if r]
+            denied = [r for r in denied if r]
+            
+            allowed = (
+                " OR ".join([f"({q})" for q in allowed])
+                if len(allowed) != 1
+                else allowed[0]
+            )
+            denied = (
+                " OR ".join([f"({q})" for q in denied]) if len(denied) != 1 else denied[0]
+            )
+            
+            q = {"rule": rule_name}
+            
+            if allowed and denied:
+                user_filter_queries.append(q | {"sql": f"({allowed}) AND NOT ({denied})"})
+            elif allowed:
+                user_filter_queries.append(q | {"sql": f"{allowed}"})
+            else:
+                frappe.log_error(f"AC Rule {rule_name} has no valid principals")
+
+        user_filter_query = " UNION ".join(
+            [
+                f"""SELECT {frappe.db.escape(q.get('rule'))} AS "rule" FROM `tabUser` WHERE `tabUser`.`name` = {frappe.db.escape(user)} AND ({q.get("sql")})"""
+                for q in user_filter_queries
+            ]
+        )
 
         return frappe._dict(
             {
