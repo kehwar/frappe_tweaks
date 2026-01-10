@@ -61,8 +61,8 @@ def get_columns():
             "width": 120,
         },
         {
-            "fieldname": "filter_sql",
-            "label": _("Filter SQL"),
+            "fieldname": "sql",
+            "label": _("SQL"),
             "fieldtype": "Data",
             "width": 300,
         },
@@ -125,7 +125,7 @@ def get_data(filters):
                     "reference_docname": qf_info.reference_docname,
                     "filters_type": qf_info.filters_type,
                     "filters": qf_info.filters,
-                    "filter_sql": filter_sql_display,
+                    "sql": filter_sql_display,
                     "user": user,
                 })
                 
