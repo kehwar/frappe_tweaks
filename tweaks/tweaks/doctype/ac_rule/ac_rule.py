@@ -66,7 +66,7 @@ class ACRule(Document):
                     )
                 )
 
-    def resolve_principals(self, debug=False):
+    def resolve_principals(self):
 
         filters = []
 
@@ -81,19 +81,6 @@ class ACRule(Document):
                 }
             )
 
-            if debug:
-                r["title"] = query_filter.get_title()
-                if query_filter.reference_doctype:
-                    r["reference_doctype"] = query_filter.reference_doctype
-                if query_filter.reference_report:
-                    r["reference_report"] = query_filter.reference_report
-                if query_filter.reference_docname:
-                    r["reference_docname"] = query_filter.reference_docname
-                if query_filter.filters_type:
-                    r["filters_type"] = query_filter.filters_type
-                if query_filter.filters:
-                    r["filters"] = query_filter.filters
-
             if row.exception:
                 r["exception"] = 1
 
@@ -101,7 +88,7 @@ class ACRule(Document):
 
         return filters
 
-    def resolve_principals_deprecated(self, debug=False):
+    def resolve_principals_deprecated(self):
 
         allowed = set()
         denied = set()
@@ -175,9 +162,6 @@ class ACRule(Document):
 
             p = frappe._dict({"name": principal.name})
 
-            if debug:
-                p["title"] = principal.get_title()
-
             if sql:
                 p["sql"] = f"`tabUser`.`name` in ({sql})"
             elif script:
@@ -190,7 +174,7 @@ class ACRule(Document):
 
         return principals
 
-    def resolve_resources(self, debug=False):
+    def resolve_resources(self):
 
         filters = []
 
@@ -199,19 +183,6 @@ class ACRule(Document):
             query_filter = frappe.get_doc("Query Filter", row.filter)
 
             r = frappe._dict({"name": query_filter.name})
-
-            if debug:
-                r["title"] = query_filter.get_title()
-                if query_filter.reference_doctype:
-                    r["reference_doctype"] = query_filter.reference_doctype
-                if query_filter.reference_report:
-                    r["reference_report"] = query_filter.reference_report
-                if query_filter.reference_docname:
-                    r["reference_docname"] = query_filter.reference_docname
-                if query_filter.filters_type:
-                    r["filters_type"] = query_filter.filters_type
-                if query_filter.filters:
-                    r["filters"] = query_filter.filters
 
             if row.exception:
                 r["exception"] = 1

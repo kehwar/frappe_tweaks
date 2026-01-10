@@ -68,8 +68,8 @@ allowed_records = (M1 OR M2) AND NOT (E1 OR E2)
 
 **Important Methods**:
 - `validate()`: Validates rule configuration and resource filters
-- `resolve_principals(debug=False)`: Resolves principal filters into metadata
-- `resolve_resources(debug=False)`: Resolves resource filters into metadata
+- `resolve_principals()`: Resolves principal filters into metadata
+- `resolve_resources()`: Resolves resource filters into metadata
 - `validate_resource_filters()`: Ensures filters match the resource's doctype/report
 
 ### 2. Query Filter
@@ -159,7 +159,7 @@ Standard actions are inserted on install via `after_install()` hook.
 
 ### Rule Map Generation
 
-**Function**: `get_rule_map(debug=False)` in `ac_rule_utils.py`
+**Function**: `get_rule_map()` in `ac_rule_utils.py`
 
 The rule map is a hierarchical structure that organizes rules by resource and action:
 
@@ -402,10 +402,10 @@ All endpoints are whitelisted with `@frappe.whitelist()`:
 
 ```python
 @frappe.whitelist()
-def get_rule_map(debug=False)
+def get_rule_map()
 ```
 
-Returns the complete rule map structure. Use `debug=True` for detailed information.
+Returns the complete rule map structure.
 
 ### 2. Get Resource Rules
 
@@ -420,7 +420,6 @@ def get_resource_rules(
     fieldname="",     # Optional field name
     action="",        # Action name (default: "read")
     user="",          # User (default: current user)
-    debug=False
 )
 ```
 
@@ -455,7 +454,6 @@ def get_resource_filter_query(
     fieldname="",
     action="",
     user="",
-    debug=False
 )
 ```
 
@@ -483,7 +481,6 @@ def has_resource_access(
     fieldname="",
     action="",
     user="",
-    debug=False
 )
 ```
 
@@ -807,7 +804,7 @@ The rule map should be cached for performance. Consider implementing:
 
 ```python
 @frappe.cache()  # Site-level cache
-def get_rule_map(debug=False):
+def get_rule_map():
     # Expensive operation - cache this
     pass
 ```
@@ -878,20 +875,6 @@ safe_exec(
 - Validate filter references match resource types
 - Check user permissions before executing
 - Log access attempts for audit trail
-
-### 4. Debug Mode Protection
-
-Debug mode provides detailed query information:
-
-```python
-if debug or user != frappe.session.user:
-    frappe.only_for("System Manager")
-```
-
-**Only System Managers** can:
-- Debug other users' access
-- View internal query structure
-- See full rule evaluation details
 
 ## Testing
 
@@ -986,12 +969,11 @@ from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import get_resource_rules
 result = get_resource_rules(
     doctype="Customer",
     action="read",
-    user="test@example.com",
-    debug=True  # Get detailed debug info
+    user="test@example.com"
 )
 
-print(result.get("query"))  # See the SQL being generated
-print(result.get("folder"))  # See all rules for this resource
+# Check the rules returned
+print(result.get("rules"))
 ```
 
 ### Issue: Incorrect Filtering
@@ -1008,11 +990,12 @@ from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import get_resource_filter_quer
 
 result = get_resource_filter_query(
     doctype="Customer",
-    action="read",
-    debug=True
+    action="read"
 )
 
 print(result.get("query"))  # Final WHERE clause
+print(result.get("access"))  # Access level
+```
 print(result.get("parts"))  # Individual filter components
 ```
 
