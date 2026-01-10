@@ -136,6 +136,11 @@ def build_filter_columns(ac_rules):
     """
     Build columns based on resource query filters from all rules.
     
+    Process:
+    1. List all rules
+    2. Expand distinct query filters - each becomes a column
+    3. For each distinct query filter, aggregate actions present in the rule
+    
     Returns a list of column definitions with:
     - fieldname: unique identifier for the column
     - label: display name with emojis
@@ -143,22 +148,21 @@ def build_filter_columns(ac_rules):
     - rules: list of rule info (name, type, actions) that use this filter combination
     """
     # Dictionary to group filters: key = (rule_type, non_exception_filter, (exception_filters...))
+    # Each key represents a unique column
     filter_groups = {}
 
+    # Step 1 & 2: List all rules and expand distinct query filters
     for rule_info in ac_rules:
         rule = frappe.get_doc("AC Rule", rule_info.name)
         
-        # Get distinct resource query filter combinations using the new utility
+        # Get distinct resource query filter combinations using the utility
         distinct_filters = rule.get_distinct_resource_query_filters()
-        
-        # Get actions for this rule
-        actions = [action.action for action in rule.actions]
         
         # Skip if no distinct filters
         if not distinct_filters:
             continue
         
-        # Group by filter combination (rule_type, non_exception_filter, exception_filters_tuple)
+        # Step 3: For each distinct query filter, aggregate actions
         for rule_type, non_exception_filter, exception_filters_tuple in distinct_filters:
             # Create a key for grouping - include rule_type to separate Permit and Forbid rules
             key = (rule_type, non_exception_filter, exception_filters_tuple)
@@ -177,15 +181,22 @@ def build_filter_columns(ac_rules):
                 
                 filter_groups[key] = {
                     "resources": resources,
-                    "rules": []
+                    "rules": [],
+                    "actions": set()  # Aggregate actions across rules
                 }
+            
+            # Get actions for this rule
+            rule_actions = [action.action for action in rule.actions]
             
             # Add this rule to the group
             filter_groups[key]["rules"].append({
                 "name": rule.name,
                 "type": rule.type,
-                "actions": actions
+                "actions": rule_actions
             })
+            
+            # Aggregate actions
+            filter_groups[key]["actions"].update(rule_actions)
 
     # Build column definitions
     columns = []
@@ -203,16 +214,16 @@ def build_filter_columns(ac_rules):
             label = ", ".join(allowed_names)
 
         # Add emoji based on rule types (use first rule's type as indicator)
-        if group["rules"]:
-            first_rule_type = group["rules"][0]["type"]
-            emoji = "✅" if first_rule_type == "Permit" else "🚫"
-            label = f"{emoji} {label}"
+        rule_type = key[0]  # Extract rule_type from key
+        emoji = "✅" if rule_type == "Permit" else "🚫"
+        label = f"{emoji} {label}"
 
         columns.append({
             "fieldname": f"filter_{idx}",
             "label": label,
             "resources": group["resources"],
-            "rules": group["rules"]
+            "rules": group["rules"],
+            "actions": sorted(group["actions"])  # Convert set to sorted list
         })
 
     return columns
