@@ -70,14 +70,14 @@ def check_user_matches_rule(rule_name, user, principals, debug=False):
     """
     # Skip caching in debug mode
     if debug:
-        return _check_user_matches_rule_uncached(user, principals)
+        return check_user_matches_rule_principals(user, principals, debug=debug)
     
     # Get cache TTL
     cache_ttl = get_user_rule_match_cache_ttl()
     
     # If TTL is 0, caching is disabled
     if cache_ttl == 0:
-        return _check_user_matches_rule_uncached(user, principals)
+        return check_user_matches_rule_principals(user, principals, debug=debug)
     
     # Generate cache key
     cache_key = f"ac_rule_user_match:{rule_name}:{user}"
@@ -88,7 +88,7 @@ def check_user_matches_rule(rule_name, user, principals, debug=False):
         return cached_result
     
     # Cache miss - compute the result
-    result = _check_user_matches_rule_uncached(user, principals)
+    result = check_user_matches_rule_principals(user, principals, debug=debug)
     
     # Store in cache with TTL
     frappe.cache.set_value(cache_key, result, expires_in_sec=cache_ttl)
@@ -96,13 +96,14 @@ def check_user_matches_rule(rule_name, user, principals, debug=False):
     return result
 
 
-def _check_user_matches_rule_uncached(user, principals):
+def check_user_matches_rule_principals(user, principals, debug=False):
     """
-    Internal function to check if user matches principal filters without caching.
+    Check if user matches principal filters.
     
     Args:
         user: Username to check
         principals: List of principal filter definitions from rule
+        debug: If True, enables debug output
     
     Returns:
         bool: True if user matches the principal filters, False otherwise

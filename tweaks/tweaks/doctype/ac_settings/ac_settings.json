@@ -7,8 +7,6 @@
  "field_order": [
   "cache_section",
   "user_rule_match_cache_ttl",
-  "column_break_cache",
-  "clear_cache_button",
   "html"
  ],
  "fields": [
@@ -23,15 +21,6 @@
    "fieldname": "user_rule_match_cache_ttl",
    "fieldtype": "Int",
    "label": "User Rule Match Cache TTL (minutes)"
-  },
-  {
-   "fieldname": "column_break_cache",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "clear_cache_button",
-   "fieldtype": "Button",
-   "label": "Clear AC Rule Cache"
   },
   {
    "fieldname": "html",
