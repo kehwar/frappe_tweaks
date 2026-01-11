@@ -102,7 +102,7 @@ def get_data(filters):
             "label": _("User ID"),
             "fieldtype": "Link",
             "options": "User",
-            "width": 0,  # Hidden column
+            "hidden": 1,  # Hidden column
         },
     ]
 
