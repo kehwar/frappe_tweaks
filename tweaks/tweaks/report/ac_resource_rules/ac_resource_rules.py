@@ -136,91 +136,82 @@ def build_filter_columns(ac_rules):
     """
     Build columns based on resource query filters from all rules.
     
+    Process:
+    1. List all rules
+    2. Expand distinct query filters - each becomes a column
+    3. For each distinct query filter, aggregate actions present in the rule
+    
     Returns a list of column definitions with:
     - fieldname: unique identifier for the column
     - label: display name with emojis
-    - resources: list of resource objects (with name, exception fields) for matching
     - rules: list of rule info (name, type, actions) that use this filter combination
+    - actions: aggregated list of actions from all rules using this filter combination
     """
-    # Dictionary to group filters: key = (tuple of allowed filters, tuple of denied filters)
+    # Dictionary to group filters: key = (rule_type, non_exception_filter, (exception_filters...))
+    # Each key represents a unique column
     filter_groups = {}
 
+    # Step 1 & 2: List all rules and expand distinct query filters
     for rule_info in ac_rules:
         rule = frappe.get_doc("AC Rule", rule_info.name)
-        resources = rule.resolve_resources()
-
-        # Separate allowed and denied resources
-        allowed = [r for r in resources if not r.get("exception", 0) and not r.get("all", 0)]
-        denied = [r for r in resources if r.get("exception", 0)]
-
-        # Get actions for this rule
-        actions = [action.action for action in rule.actions]
-
-        # If there are no denied filters and no allowed filters (all=1), skip this rule
-        if not denied and not allowed:
+        
+        # Get distinct resource query filter combinations using the utility
+        distinct_filters = rule.get_distinct_resource_query_filters()
+        
+        # Skip if no distinct filters
+        if not distinct_filters:
             continue
-
-        # If there are no denied filters, create one entry per allowed filter
-        if not denied:
-            for allow_filter in allowed:
-                key = (tuple([allow_filter["name"]]), tuple())
-                if key not in filter_groups:
-                    filter_groups[key] = {
-                        "resources": [allow_filter],
-                        "rules": []
-                    }
-                filter_groups[key]["rules"].append({
-                    "name": rule.name,
-                    "type": rule.type,
-                    "actions": actions
-                })
-        else:
-            # With denied filters, create one column per allowed filter with ALL denied filters
-            # For example: allow1, allow2, forbid1, forbid2 creates:
-            # - allow1, forbid1, forbid2
-            # - allow2, forbid1, forbid2
-            denied_names = tuple(sorted([d["name"] for d in denied]))
-            for allow_filter in allowed:
-                key = (tuple([allow_filter["name"]]), denied_names)
-                if key not in filter_groups:
-                    # Combine allowed and denied resources for this combination
-                    combined_resources = [allow_filter] + denied
-                    filter_groups[key] = {
-                        "resources": combined_resources,
-                        "rules": []
-                    }
-                filter_groups[key]["rules"].append({
-                    "name": rule.name,
-                    "type": rule.type,
-                    "actions": actions
-                })
+        
+        # Step 3: For each distinct query filter, aggregate actions
+        for rule_type, non_exception_filter, exception_filters_tuple in distinct_filters:
+            # Create a key for grouping - include rule_type to separate Permit and Forbid rules
+            key = (rule_type, non_exception_filter, exception_filters_tuple)
+            
+            # Initialize group if not exists
+            if key not in filter_groups:
+                filter_groups[key] = {
+                    "rules": [],
+                    "actions": set()  # Aggregate actions across rules
+                }
+            
+            # Get actions for this rule
+            rule_actions = [action.action for action in rule.actions]
+            
+            # Add this rule to the group
+            filter_groups[key]["rules"].append({
+                "name": rule.name,
+                "type": rule.type,
+                "actions": rule_actions
+            })
+            
+            # Aggregate actions
+            filter_groups[key]["actions"].update(rule_actions)
 
     # Build column definitions
     columns = []
     for idx, (key, group) in enumerate(sorted(filter_groups.items())):
-        # Extract filter names for display
-        allowed_names = [r["name"] for r in group["resources"] if not r.get("exception", 0)]
-        denied_names = [r["name"] for r in group["resources"] if r.get("exception", 0)]
-
+        # Extract filter names directly from key - no need to recalculate
+        rule_type = key[0]
+        non_exception_filter = key[1]
+        exception_filters_tuple = key[2]
+        
         # Build label with filter names
-        if denied_names:
+        if exception_filters_tuple:
             # Add emoji before each exception filter
-            denied_with_emoji = [f"⚠️ {name}" for name in denied_names]
-            label = f"{', '.join(allowed_names)} - {', '.join(denied_with_emoji)}"
+            denied_with_emoji = [f"⚠️ {name}" for name in exception_filters_tuple]
+            label = f"{non_exception_filter} - {', '.join(denied_with_emoji)}"
         else:
-            label = ", ".join(allowed_names)
+            label = non_exception_filter
 
-        # Add emoji based on rule types (use first rule's type as indicator)
-        if group["rules"]:
-            first_rule_type = group["rules"][0]["type"]
-            emoji = "✅" if first_rule_type == "Permit" else "🚫"
-            label = f"{emoji} {label}"
+        # Add emoji based on rule type
+        emoji = "✅" if rule_type == "Permit" else "🚫"
+        label = f"{emoji} {label}"
 
         columns.append({
             "fieldname": f"filter_{idx}",
             "label": label,
-            "resources": group["resources"],
-            "rules": group["rules"]
+            "rules": group["rules"],
+            "actions": sorted(group["actions"])  # Convert set to sorted list
         })
 
     return columns
