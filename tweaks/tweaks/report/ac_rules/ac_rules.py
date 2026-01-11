@@ -22,6 +22,7 @@ def execute(filters=None):
 
     Filters:
         - action (optional): Filter by specific action. Shows Y/N for that specific action.
+        - principal_filter (optional): Filter by Query Filter (User, User Group, or Role). Only shows users matching the selected filter.
 
     Use Cases:
         1. Comprehensive Access Audit: View all access control rules
@@ -226,6 +227,36 @@ def get_flat_data(filters):
     # Build flat data: one row per (user, resource, resource filter) combination
     flat_rows = {}
 
+    # Get principal filter if specified
+    principal_filter_name = filters.get("principal_filter")
+    principal_filter_users = None
+    if principal_filter_name:
+        # Get users matching the principal filter
+        try:
+            from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import (
+                get_principal_filter_sql,
+            )
+
+            query_filter = frappe.get_cached_doc("Query Filter", principal_filter_name)
+            filter_sql = get_principal_filter_sql(query_filter)
+            if filter_sql:
+                users_result = frappe.db.sql(
+                    f"""
+                    SELECT DISTINCT `name`
+                    FROM `tabUser`
+                    WHERE {filter_sql} AND enabled = 1
+                    """,
+                    as_dict=1,
+                )
+                principal_filter_users = {u["name"] for u in users_result}
+            else:
+                principal_filter_users = set()
+        except Exception as e:
+            frappe.log_error(
+                f"Error resolving principal filter {principal_filter_name}: {str(e)}"
+            )
+            principal_filter_users = set()
+
     # Step 2-4: For each rule, resolve principals and resources, then create rows
     for rule_name, rule in ac_rules_dict.items():
         resource_name = rule.resource
@@ -249,6 +280,13 @@ def get_flat_data(filters):
 
         # Step 4: For each (user, distinct resource filter) combination, create/update row
         for user in users:
+            # Filter by principal_filter if specified
+            if (
+                principal_filter_users is not None
+                and user["name"] not in principal_filter_users
+            ):
+                continue
+
             for r_rule_type, r_filter, r_exceptions in resource_combos:
                 # Create unique key for this combination
                 key = (

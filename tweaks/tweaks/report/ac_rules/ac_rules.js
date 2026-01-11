@@ -10,6 +10,22 @@ frappe.query_reports["AC Rules"] = {
             "options": "AC Action",
             "reqd": 0,
             "description": __("Filter by specific action. Shows Y/N instead of listing all actions.")
+        },
+        {
+            "fieldname": "principal_filter",
+            "label": __("Principal Filter"),
+            "fieldtype": "Link",
+            "options": "Query Filter",
+            "reqd": 0,
+            "description": __("Filter by Query Filter (User, User Group, or Role). Only shows users matching the selected filter."),
+            "get_query": function() {
+                return {
+                    "filters": {
+                        "reference_doctype": ["in", ["User", "User Group", "Role"]],
+                        "disabled": 0
+                    }
+                };
+            }
         }
     ],
     "formatter": function(value, row, column, data, default_formatter) {
