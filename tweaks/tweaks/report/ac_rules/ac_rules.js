@@ -12,4 +12,13 @@ frappe.query_reports["AC Rules"] = {
             "description": __("Filter by specific action. When specified, cells show Y/N instead of listing all actions.")
         }
     ],
+    "formatter": function(value, row, column, data, default_formatter) {
+        value = default_formatter(value, row, column, data);
+        
+        if (column.fieldname === "resource" && data && data.resource_name) {
+            return `<a href="/app/ac-resource/${encodeURIComponent(data.resource_name)}">${value}</a>`;
+        }
+        
+        return value;
+    }
 };

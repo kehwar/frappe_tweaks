@@ -103,10 +103,16 @@ def get_data(filters):
     # Build report columns structure
     columns = [
         {
+            "fieldname": "resource_name",
+            "label": _("Resource Name"),
+            "fieldtype": "Data",
+            "width": 0,
+            "hidden": 1,
+        },
+        {
             "fieldname": "resource",
             "label": _("Resource"),
-            "fieldtype": "Link",
-            "options": "AC Resource",
+            "fieldtype": "Data",
             "width": 200,
         },
         {
@@ -140,14 +146,15 @@ def get_data(filters):
         resource_filter_display = f"{rule_emoji} {resource_filter_name}"
 
         data_row = {
-            "resource": row["resource"],
+            "resource_name": row["resource_name"],
+            "resource": row["resource_title"],
             "resource_filter": resource_filter_display,
         }
 
         # For each column (principal filter), find matching actions
         for col in columns_list:
             actions = get_actions_for_cell(
-                row["resource"],
+                row["resource_name"],
                 row["resource_filter"],
                 row["resource_exception"],
                 row["rule_type"],
@@ -184,14 +191,22 @@ def build_rows(ac_rules_dict):
         ac_rules_dict: Dictionary mapping rule name to loaded AC Rule document
 
     Returns a list of row definitions with:
-    - resource: AC Resource name
+    - resource_name: AC Resource name (for linking)
+    - resource_title: AC Resource title (for display)
     - resource_filter: Query Filter name (non-exception), or None for "All"
     - resource_exception: Tuple of exception filter names
     - rule_type: "Permit" or "Forbid"
     """
     rows_dict = {}
 
+    # Cache resource titles to avoid repeated queries
+    resource_titles = {}
+
     for rule_name, rule in ac_rules_dict.items():
+        # Get resource title if not cached
+        if rule.resource not in resource_titles:
+            resource_doc = frappe.get_cached_doc("AC Resource", rule.resource)
+            resource_titles[rule.resource] = resource_doc.title or rule.resource
 
         # Get distinct resource query filter combinations
         distinct_combos = rule.get_distinct_resource_query_filters()
@@ -201,7 +216,8 @@ def build_rows(ac_rules_dict):
             key = (rule.resource, None, tuple(), rule.type)
             if key not in rows_dict:
                 rows_dict[key] = {
-                    "resource": rule.resource,
+                    "resource_name": rule.resource,
+                    "resource_title": resource_titles[rule.resource],
                     "resource_filter": None,  # None means "All"
                     "resource_exception": tuple(),
                     "rule_type": rule.type,
@@ -213,7 +229,8 @@ def build_rows(ac_rules_dict):
 
                 if key not in rows_dict:
                     rows_dict[key] = {
-                        "resource": rule.resource,
+                        "resource_name": rule.resource,
+                        "resource_title": resource_titles[rule.resource],
                         "resource_filter": resource_filter,
                         "resource_exception": exception_tuple,
                         "rule_type": rule_type,
@@ -223,7 +240,7 @@ def build_rows(ac_rules_dict):
     rows = sorted(
         rows_dict.values(),
         key=lambda x: (
-            x["resource"],
+            x["resource_title"],
             x["resource_filter"] or "",
             x["resource_exception"],
             x["rule_type"],
