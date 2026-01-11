@@ -28,7 +28,10 @@ after_install = (
     + server_script_hooks["after_install"]
 )
 
-after_migrate = ["tweaks.utils.sync_job_type.sync_job_types"]
+after_migrate = [
+    "tweaks.utils.sync_job_type.sync_job_types",
+    "tweaks.utils.report.clean_reports_with_missing_modules",
+]
 
 doc_events = {
     "*": {
