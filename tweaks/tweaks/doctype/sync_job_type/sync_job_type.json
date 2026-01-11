@@ -18,7 +18,8 @@
   "timeout",
   "column_break_2",
   "retry_delay",
-  "max_retries"
+  "max_retries",
+  "verbose_logging"
  ],
  "fields": [
   {
@@ -113,6 +114,13 @@
    "fieldname": "max_retries",
    "fieldtype": "Int",
    "label": "Max Retries"
+  },
+  {
+   "default": "0",
+   "description": "When disabled, current data and updated data fields will be cleared when sync job completes",
+   "fieldname": "verbose_logging",
+   "fieldtype": "Check",
+   "label": "Verbose Logging"
   }
  ],
  "index_web_pages_for_search": 1,
