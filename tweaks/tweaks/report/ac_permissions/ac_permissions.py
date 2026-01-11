@@ -7,7 +7,7 @@ from frappe import _, scrub
 
 def execute(filters=None):
     """
-    AC Rules Report - Flat view of all access control rules resolved to actual users.
+    AC Permissions Report - Flat view of all access control rules resolved to actual users.
 
     Shows one row per (user, resource, resource_filter, rule_type) combination with
     aggregated actions from all matching enabled rules within valid date ranges.
