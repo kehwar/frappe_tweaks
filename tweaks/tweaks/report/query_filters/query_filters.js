@@ -15,6 +15,23 @@ frappe.query_reports["Query Filters"] = {
             return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`;
         }
         
+        // Format the reference column to show proper link based on reference_type
+        if (column.fieldname === "reference" && value && data.reference_type) {
+            if (data.reference_type === "Report") {
+                const link_url = `/app/query-report/${encodeURIComponent(value)}`;
+                return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`;
+            } else if (data.reference_type === "DocType") {
+                const link_url = `/app/${frappe.router.slug(value)}`;
+                return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`;
+            }
+        }
+        
+        // Format the reference_docname column to show proper link
+        if (column.fieldname === "reference_docname" && value && data.reference_doctype) {
+            const link_url = frappe.utils.get_form_link(data.reference_doctype, value);
+            return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`;
+        }
+        
         value = default_formatter(value, row, column, data);
         
         if (column.fieldname === "filters" && data.filters) {
