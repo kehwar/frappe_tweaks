@@ -199,21 +199,45 @@ def build_filter_columns(ac_rules):
             # Aggregate actions
             filter_groups[key]["actions"].update(rule_actions)
 
+    # Collect all unique filter names to fetch their display names
+    all_filter_names = set()
+    for key in filter_groups.keys():
+        all_filter_names.add(key[1])  # non_exception_filter
+        all_filter_names.update(key[2])  # exception_filters_tuple
+
+    # Fetch filter_name (display names) for all query filters
+    filter_display_names = {}
+    if all_filter_names:
+        filter_docs = frappe.get_all(
+            "Query Filter",
+            filters={"name": ["in", list(all_filter_names)]},
+            fields=["name", "filter_name"],
+        )
+        filter_display_names = {doc.name: doc.filter_name for doc in filter_docs}
+
     # Build column definitions
     columns = []
-    for idx, (key, group) in enumerate(sorted(filter_groups.items())):
+    for key, group in filter_groups.items():
         # Extract filter names directly from key - no need to recalculate
         rule_type = key[0]
         non_exception_filter = key[1]
         exception_filters_tuple = key[2]
 
-        # Build label with filter names
+        # Get display name for non-exception filter
+        non_exception_display = filter_display_names.get(
+            non_exception_filter, non_exception_filter
+        )
+
+        # Build label with filter display names
         if exception_filters_tuple:
-            # Add emoji before each exception filter
-            denied_with_emoji = [f"⚠️ {name}" for name in exception_filters_tuple]
-            label = f"{non_exception_filter} - {', '.join(denied_with_emoji)}"
+            # Add emoji before each exception filter using display names
+            denied_with_emoji = [
+                f"⚠️ {filter_display_names.get(name, name)}"
+                for name in exception_filters_tuple
+            ]
+            label = f"{non_exception_display} - {', '.join(denied_with_emoji)}"
         else:
-            label = non_exception_filter
+            label = non_exception_display
 
         # Add emoji based on rule type
         emoji = "✅" if rule_type == "Permit" else "🚫"
@@ -221,12 +245,18 @@ def build_filter_columns(ac_rules):
 
         columns.append(
             {
-                "fieldname": f"filter_{idx}",
                 "label": label,
                 "rules": group["rules"],
                 "actions": sorted(group["actions"]),  # Convert set to sorted list
             }
         )
+
+    # Sort columns by label
+    columns.sort(key=lambda col: col["label"])
+
+    # Add fieldname after sorting
+    for idx, col in enumerate(columns):
+        col["fieldname"] = f"filter_{idx}"
 
     return columns
 
