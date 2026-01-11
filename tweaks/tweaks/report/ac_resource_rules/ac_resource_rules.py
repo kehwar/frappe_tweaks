@@ -275,9 +275,9 @@ def build_filter_columns(ac_rules):
         else:
             label = non_exception_display
 
-        # Add emoji based on rule type
-        emoji = "✅" if rule_type == "Permit" else "🚫"
-        label = f"{emoji} {label}"
+        # Add emoji based on rule type (only for Forbid)
+        if rule_type == "Forbid":
+            label = f"🚫 {label}"
 
         columns.append(
             {
