@@ -9,64 +9,49 @@ def execute(filters=None):
     """
     AC Rules Report
 
-    The AC Rules report provides a comprehensive matrix view of all access control rules in the system.
-    It helps administrators understand at a glance which combinations of resources, resource filters,
-    and principal filters grant which actions.
+    The AC Rules report provides a view of all access control rules in the system.
+    It can be displayed as either a flat list or as a pivot table.
 
-    Report Structure:
+    Flat Report (default):
+        Columns:
+        - Resource: The AC Resource (DocType or Report)
+        - Principal Filter: Query Filter defining which users/roles the rule applies to
+        - Resource Filter: Query Filter defining which records the rule applies to (or "All")
+        - Actions: List of actions granted/denied by matching rules
 
-    Rows:
-        Each row represents a unique combination of:
-        - Resource: An AC Resource (DocType or Report)
-        - Resource Filter: A Query Filter that defines which specific records/instances the rule applies to,
-          or "All" if the rule applies to all records
-        - Rule Type: Permit (✅) or Forbid (🚫)
+        Each row shows one unique combination of (resource, principal filter, resource filter)
+        with aggregated actions from all matching rules.
 
-    Columns:
-        Each column represents a unique combination of:
-        - Principal Filter: A Query Filter that defines which users/roles the rule applies to
-        - Exception Filters: Any exception filters are shown with a ⚠️ emoji
-        - Rule Type: Permit (✅) or Forbid (🚫)
-
-    Cells:
-        Each cell shows the aggregated actions that are granted for the intersection of:
-        - The row's (resource, resource filter, rule type) combination
-        - The column's (principal filter, rule type) combination
+    Pivot Report (when pivot_by_resource_filter is enabled):
+        Rows: (Resource, Principal Filter)
+        Columns: Distinct Resource Query Filters
+        Cells: Actions granted/denied for that combination
 
     Filters:
-        - action (optional): Specific action to check. When specified, cells show Y/N instead of listing all actions.
-          This makes it easier to audit specific actions across all rules.
+        - pivot_by_resource_filter (optional): Enable pivot mode, pivoting by resource query filter
+        - action (optional): Filter by specific action. Shows Y/N in pivot mode.
 
     Use Cases:
-        1. Comprehensive Access Audit: View all access control rules in one place
+        1. Comprehensive Access Audit: View all access control rules
         2. Action-Specific Auditing: Filter by action to see which combinations grant that action
-        3. Gap Analysis: Identify resources without access rules (empty rows)
-        4. Over-Permission Detection: Identify principals with access to many resources
-
-    How It Works:
-        1. Loads all enabled AC Rules within their valid date range
-        2. Uses get_distinct_principal_query_filters() to extract unique principal filter combinations
-        3. Uses get_distinct_resource_query_filters() to extract unique resource filter combinations
-        4. Builds a matrix where each cell aggregates actions from all matching rules
+        3. Gap Analysis: Identify resources without access rules
+        4. Over-Permission Detection: Identify principals with excessive access
 
     Only enabled rules within valid date ranges are shown.
     """
-    columns = []
-    data = []
+    filters = filters or {}
 
-    columns, data = get_data(filters)
-    return columns, data
+    if filters.get("pivot_by_resource_filter"):
+        return get_pivot_data(filters)
+    else:
+        return get_flat_data(filters)
 
 
-def get_data(filters):
-    """Get access control rule data"""
-
-    # Get all enabled AC Rules within valid date range
+def get_enabled_ac_rules():
+    """Get all enabled AC Rules within valid date range"""
     ac_rules_meta = frappe.get_all(
         "AC Rule",
-        filters={
-            "disabled": 0,
-        },
+        filters={"disabled": 0},
         fields=["name", "title", "type", "resource", "valid_from", "valid_upto"],
         order_by="name",
     )
@@ -80,27 +65,162 @@ def get_data(filters):
         and (not r.valid_upto or r.valid_upto >= today)
     ]
 
-    if not ac_rules_meta:
-        return [], []
-
     # Load all AC Rule documents once to avoid N³ database queries
     ac_rules_dict = {}
     for rule_meta in ac_rules_meta:
         ac_rules_dict[rule_meta.name] = frappe.get_doc("AC Rule", rule_meta.name)
 
-    # Build rows: unique combinations of (resource, resource query filter)
-    rows = build_rows(ac_rules_dict)
+    return ac_rules_dict
 
-    if not rows:
+
+def get_filter_display_names_cache(ac_rules_dict):
+    """Get display names for all query filters used in the rules"""
+    all_filter_names = set()
+
+    for rule_name, rule in ac_rules_dict.items():
+        # Collect principal filter names
+        for row in rule.principals:
+            all_filter_names.add(row.filter)
+
+        # Collect resource filter names
+        for row in rule.resources:
+            all_filter_names.add(row.filter)
+
+    # Fetch display names
+    filter_display_names = {}
+    if all_filter_names:
+        filter_docs = frappe.get_all(
+            "Query Filter",
+            filters={"name": ["in", list(all_filter_names)]},
+            fields=["name", "filter_name"],
+        )
+        filter_display_names = {doc.name: doc.filter_name for doc in filter_docs}
+
+    return filter_display_names
+
+
+def get_resource_title(resource_name):
+    """Get display title for a resource"""
+    resource_doc = frappe.get_cached_doc("AC Resource", resource_name)
+    return resource_doc.title or resource_name
+
+
+def format_filter_display(
+    filter_name, exception_tuple, rule_type, filter_display_names
+):
+    """
+    Format filter display with exceptions and rule type emoji.
+
+    Args:
+        filter_name: Query filter name (or None for "All")
+        exception_tuple: Tuple of exception filter names
+        rule_type: "Permit" or "Forbid"
+        filter_display_names: Dict mapping filter names to display names
+
+    Returns:
+        Formatted display string
+    """
+    if filter_name is None:
+        display = "All"
+    else:
+        display = filter_display_names.get(filter_name, filter_name)
+
+        # Add exceptions if present
+        if exception_tuple:
+            exception_names = [
+                filter_display_names.get(e, e) for e in sorted(exception_tuple)
+            ]
+            display += f" ⚠️ ({', '.join(exception_names)})"
+
+    # Add emoji for Forbid type
+    if rule_type == "Forbid":
+        display = f"🚫 {display}"
+
+    return display
+
+
+def get_flat_data(filters):
+    """
+    Get flat report data.
+
+    Each row represents a unique combination of:
+    - Resource
+    - Principal Filter (with exceptions and rule type)
+    - Resource Filter (with exceptions and rule type)
+
+    Returns columns and data for flat report view.
+    """
+    # Get all enabled AC Rules within valid date range
+    ac_rules_dict = get_enabled_ac_rules()
+
+    if not ac_rules_dict:
         return [], []
 
-    # Build columns: distinct principal query filters
-    columns_list = build_columns(ac_rules_dict)
+    # Get filter display names cache
+    filter_display_names = get_filter_display_names_cache(ac_rules_dict)
 
-    if not columns_list:
-        return [], []
+    # Build flat data: one row per (resource, principal filter, resource filter) combination
+    flat_rows = []
 
-    # Build report columns structure
+    for rule_name, rule in ac_rules_dict.items():
+        resource_name = rule.resource
+        resource_title = get_resource_title(resource_name)
+
+        # Get distinct principal and resource filter combinations
+        principal_combos = rule.get_distinct_principal_query_filters()
+        resource_combos = rule.get_distinct_resource_query_filters()
+
+        # If no resource filters, treat as "All"
+        if not resource_combos:
+            resource_combos = [(rule.type, None, ())]
+
+        # Create a row for each combination
+        for p_rule_type, p_filter, p_exceptions in principal_combos:
+            for r_rule_type, r_filter, r_exceptions in resource_combos:
+                # Create unique key for this combination
+                key = (
+                    resource_name,
+                    p_filter,
+                    p_exceptions,
+                    p_rule_type,
+                    r_filter,
+                    r_exceptions,
+                    r_rule_type,
+                )
+
+                # Find or create row
+                existing_row = None
+                for row in flat_rows:
+                    if row["_key"] == key:
+                        existing_row = row
+                        break
+
+                if existing_row:
+                    # Add actions to existing row
+                    for action in rule.actions:
+                        existing_row["_actions"].add(action.action)
+                else:
+                    # Create new row
+                    actions_set = set()
+                    for action in rule.actions:
+                        actions_set.add(action.action)
+
+                    flat_rows.append(
+                        {
+                            "_key": key,
+                            "resource_name": resource_name,
+                            "resource_title": resource_title,
+                            "principal_filter": p_filter,
+                            "principal_exception": p_exceptions,
+                            "principal_rule_type": p_rule_type,
+                            "resource_filter": r_filter,
+                            "resource_exception": r_exceptions,
+                            "resource_rule_type": r_rule_type,
+                            "_actions": actions_set,
+                        }
+                    )
+
+    # Build columns
     columns = [
         {
             "fieldname": "resource_name",
@@ -116,340 +236,245 @@ def get_data(filters):
             "width": 200,
         },
         {
+            "fieldname": "principal_filter",
+            "label": _("Principal Filter"),
+            "fieldtype": "Data",
+            "width": 250,
+        },
+        {
             "fieldname": "resource_filter",
-            "label": _("Query Filter"),
+            "label": _("Resource Filter"),
+            "fieldtype": "Data",
+            "width": 250,
+        },
+        {
+            "fieldname": "actions",
+            "label": _("Actions"),
             "fieldtype": "Data",
             "width": 200,
         },
     ]
 
-    for col in columns_list:
+    # Build data rows
+    data = []
+    action_filter = filters.get("action")
+
+    for row in flat_rows:
+        # Format principal filter display
+        principal_display = format_filter_display(
+            row["principal_filter"],
+            row["principal_exception"],
+            row["principal_rule_type"],
+            filter_display_names,
+        )
+
+        # Format resource filter display
+        resource_display = format_filter_display(
+            row["resource_filter"],
+            row["resource_exception"],
+            row["resource_rule_type"],
+            filter_display_names,
+        )
+
+        # Format actions
+        if action_filter:
+            actions_display = "Y" if action_filter in row["_actions"] else "N"
+        else:
+            actions_display = (
+                ", ".join(sorted(row["_actions"])) if row["_actions"] else ""
+            )
+
+        data.append(
+            {
+                "resource_name": row["resource_name"],
+                "resource": row["resource_title"],
+                "principal_filter": principal_display,
+                "resource_filter": resource_display,
+                "actions": actions_display,
+            }
+        )
+
+    # Sort data
+    data.sort(
+        key=lambda x: (x["resource"], x["principal_filter"], x["resource_filter"])
+    )
+
+    return columns, data
+
+
+def get_pivot_data(filters):
+    """
+    Get pivot report data.
+
+    Rows: (Resource, Principal Filter)
+    Columns: Distinct Resource Query Filters
+    Cells: Actions
+
+    Returns columns and data for pivot report view.
+    """
+    # Get all enabled AC Rules within valid date range
+    ac_rules_dict = get_enabled_ac_rules()
+
+    if not ac_rules_dict:
+        return [], []
+
+    # Get filter display names cache
+    filter_display_names = get_filter_display_names_cache(ac_rules_dict)
+
+    # Step 1: Collect all unique resource filter combinations (for columns)
+    resource_filter_combos = set()
+
+    for rule_name, rule in ac_rules_dict.items():
+        resource_combos = rule.get_distinct_resource_query_filters()
+
+        if not resource_combos:
+            # Rule applies to all resources
+            resource_filter_combos.add((None, (), rule.type))
+        else:
+            for r_rule_type, r_filter, r_exceptions in resource_combos:
+                resource_filter_combos.add((r_filter, r_exceptions, r_rule_type))
+
+    # Sort resource filter combos for consistent column ordering
+    resource_filter_combos = sorted(
+        resource_filter_combos, key=lambda x: (x[0] or "", x[1], x[2])
+    )
+
+    # Step 2: Build pivot rows: unique (resource, principal filter) combinations
+    pivot_rows_dict = {}
+
+    for rule_name, rule in ac_rules_dict.items():
+        resource_name = rule.resource
+        resource_title = get_resource_title(resource_name)
+
+        principal_combos = rule.get_distinct_principal_query_filters()
+
+        for p_rule_type, p_filter, p_exceptions in principal_combos:
+            # Create unique key for this row
+            row_key = (resource_name, p_filter, p_exceptions, p_rule_type)
+
+            if row_key not in pivot_rows_dict:
+                pivot_rows_dict[row_key] = {
+                    "_key": row_key,
+                    "resource_name": resource_name,
+                    "resource_title": resource_title,
+                    "principal_filter": p_filter,
+                    "principal_exception": p_exceptions,
+                    "principal_rule_type": p_rule_type,
+                    "_cells": {},  # Map: resource_filter_combo -> actions set
+                }
+
+    # Step 3: Populate cells with actions
+    for rule_name, rule in ac_rules_dict.items():
+        resource_name = rule.resource
+
+        principal_combos = rule.get_distinct_principal_query_filters()
+        resource_combos = rule.get_distinct_resource_query_filters()
+
+        if not resource_combos:
+            resource_combos = [(rule.type, None, ())]
+
+        for p_rule_type, p_filter, p_exceptions in principal_combos:
+            row_key = (resource_name, p_filter, p_exceptions, p_rule_type)
+
+            if row_key in pivot_rows_dict:
+                for r_rule_type, r_filter, r_exceptions in resource_combos:
+                    cell_key = (r_filter, r_exceptions, r_rule_type)
+
+                    if cell_key not in pivot_rows_dict[row_key]["_cells"]:
+                        pivot_rows_dict[row_key]["_cells"][cell_key] = set()
+
+                    # Add actions to this cell
+                    for action in rule.actions:
+                        pivot_rows_dict[row_key]["_cells"][cell_key].add(action.action)
+
+    # Step 4: Build columns structure
+    columns = [
+        {
+            "fieldname": "resource_name",
+            "label": _("Resource Name"),
+            "fieldtype": "Data",
+            "width": 0,
+            "hidden": 1,
+        },
+        {
+            "fieldname": "resource",
+            "label": _("Resource"),
+            "fieldtype": "Data",
+            "width": 200,
+        },
+        {
+            "fieldname": "principal_filter",
+            "label": _("Principal Filter"),
+            "fieldtype": "Data",
+            "width": 250,
+        },
+    ]
+
+    # Add columns for each resource filter combination
+    resource_filter_columns = []
+    for idx, (r_filter, r_exceptions, r_rule_type) in enumerate(resource_filter_combos):
+        col_fieldname = f"rf_{idx}"
+        col_label = format_filter_display(
+            r_filter,
+            r_exceptions,
+            r_rule_type,
+            filter_display_names,
+        )
+
         columns.append(
             {
-                "fieldname": col["fieldname"],
-                "label": col["label"],
+                "fieldname": col_fieldname,
+                "label": col_label,
                 "fieldtype": "Data",
                 "width": 150,
             }
         )
 
-    # Build data rows
+        resource_filter_columns.append(
+            (col_fieldname, (r_filter, r_exceptions, r_rule_type))
+        )
+
+    # Step 5: Build data rows
     data = []
-    action_filter = filters.get("action") if filters else None
+    action_filter = filters.get("action")
 
-    for row in rows:
-        # Display "All" for None resource filter with rule type emoji (only for Forbid)
-        if row["resource_filter"]:
-            # Add exception filters with emoji if present
-            if row.get("resource_exception"):
-                exception_names = sorted(row["resource_exception"])
-                resource_filter_display = (
-                    f"{row['resource_filter']} - ⚠️ {', '.join(exception_names)}"
-                )
-            else:
-                resource_filter_display = row["resource_filter"]
-        else:
-            resource_filter_display = "All"
+    pivot_rows_list = sorted(
+        pivot_rows_dict.values(),
+        key=lambda x: (
+            x["resource_title"],
+            format_filter_display(
+                x["principal_filter"],
+                x["principal_exception"],
+                x["principal_rule_type"],
+                filter_display_names,
+            ),
+        ),
+    )
 
-        # Add emoji only for Forbid type
-        if row["rule_type"] == "Forbid":
-            resource_filter_display = f"🚫 {resource_filter_display}"
+    for row in pivot_rows_list:
+        # Format principal filter display
+        principal_display = format_filter_display(
+            row["principal_filter"],
+            row["principal_exception"],
+            row["principal_rule_type"],
+            filter_display_names,
+        )
 
         data_row = {
             "resource_name": row["resource_name"],
             "resource": row["resource_title"],
-            "resource_filter": resource_filter_display,
+            "principal_filter": principal_display,
         }
 
-        # For each column (principal filter), find matching actions
-        for col in columns_list:
-            actions = get_actions_for_cell(
-                row["resource_name"],
-                row.get("resource_filter_name"),  # Use original name for matching
-                row.get(
-                    "resource_exception_names", tuple()
-                ),  # Use original names for matching
-                row["rule_type"],
-                col["principal_filter_name"],  # Use original name for matching
-                col["principal_exception_names"],  # Use original names for matching
-                col["rule_type"],
-                ac_rules_dict,
-            )
+        # Populate cells for each resource filter column
+        for col_fieldname, cell_key in resource_filter_columns:
+            actions = row["_cells"].get(cell_key, set())
 
-            # If action filter is specified, show Y/N instead of listing actions
             if action_filter:
-                data_row[col["fieldname"]] = "Y" if action_filter in actions else "N"
+                data_row[col_fieldname] = "Y" if action_filter in actions else "N"
             else:
-                data_row[col["fieldname"]] = (
-                    ", ".join(sorted(actions)) if actions else ""
-                )
+                data_row[col_fieldname] = ", ".join(sorted(actions)) if actions else ""
 
         data.append(data_row)
 
     return columns, data
-
-
-def build_rows(ac_rules_dict):
-    """
-    Build rows based on unique combinations of (resource, resource query filter, rule type).
-
-    For each rule, extract all distinct resource query filter combinations
-    using the get_distinct_resource_query_filters method.
-
-    If a rule has no resource filters (applies to all), it creates a row with
-    resource_filter = None (shown as "All" in the report).
-
-    Args:
-        ac_rules_dict: Dictionary mapping rule name to loaded AC Rule document
-
-    Returns a list of row definitions with:
-    - resource_name: AC Resource name (for linking)
-    - resource_title: AC Resource title (for display)
-    - resource_filter: Query Filter name (non-exception), or None for "All"
-    - resource_exception: Tuple of exception filter names
-    - rule_type: "Permit" or "Forbid"
-    """
-    rows_dict = {}
-
-    # Cache resource titles to avoid repeated queries
-    resource_titles = {}
-
-    # Collect all unique filter names to fetch their display names
-    all_filter_names = set()
-    for rule_name, rule in ac_rules_dict.items():
-        distinct_combos = rule.get_distinct_resource_query_filters()
-        for rule_type, resource_filter, exception_tuple in distinct_combos:
-            if resource_filter:
-                all_filter_names.add(resource_filter)
-            all_filter_names.update(exception_tuple)
-
-    # Fetch filter_name (display names) for all query filters
-    filter_display_names = {}
-    if all_filter_names:
-        filter_docs = frappe.get_all(
-            "Query Filter",
-            filters={"name": ["in", list(all_filter_names)]},
-            fields=["name", "filter_name"],
-        )
-        filter_display_names = {doc.name: doc.filter_name for doc in filter_docs}
-
-    for rule_name, rule in ac_rules_dict.items():
-        # Get resource title if not cached
-        if rule.resource not in resource_titles:
-            resource_doc = frappe.get_cached_doc("AC Resource", rule.resource)
-            resource_titles[rule.resource] = resource_doc.title or rule.resource
-
-        # Get distinct resource query filter combinations
-        distinct_combos = rule.get_distinct_resource_query_filters()
-
-        # If no resource filters, create a row for "All"
-        if not distinct_combos:
-            key = (rule.resource, None, tuple(), rule.type)
-            if key not in rows_dict:
-                rows_dict[key] = {
-                    "resource_name": rule.resource,
-                    "resource_title": resource_titles[rule.resource],
-                    "resource_filter": None,  # None means "All"
-                    "resource_filter_name": None,  # For matching in get_actions_for_cell
-                    "resource_exception": tuple(),
-                    "rule_type": rule.type,
-                }
-        else:
-            for rule_type, resource_filter, exception_tuple in distinct_combos:
-                # Create a unique key for this row - include rule_type
-                key = (rule.resource, resource_filter, exception_tuple, rule_type)
-
-                if key not in rows_dict:
-                    # Get display name for resource filter
-                    resource_filter_display = filter_display_names.get(
-                        resource_filter, resource_filter
-                    )
-
-                    # Get display names for exceptions
-                    exception_display_tuple = tuple(
-                        filter_display_names.get(name, name) for name in exception_tuple
-                    )
-
-                    rows_dict[key] = {
-                        "resource_name": rule.resource,
-                        "resource_title": resource_titles[rule.resource],
-                        "resource_filter": resource_filter_display,
-                        "resource_filter_name": resource_filter,  # Original name for matching
-                        "resource_exception": exception_display_tuple,
-                        "resource_exception_names": exception_tuple,  # Original names for matching
-                        "rule_type": rule_type,
-                    }
-
-    # Convert to sorted list (None sorts first)
-    rows = sorted(
-        rows_dict.values(),
-        key=lambda x: (
-            x["resource_title"],
-            x["resource_filter"] or "",
-            x["resource_exception"],
-            x["rule_type"],
-        ),
-    )
-
-    return rows
-
-
-def build_columns(ac_rules_dict):
-    """
-    Build columns based on distinct principal query filters.
-
-    For each rule, extract all distinct principal query filter combinations
-    using the get_distinct_principal_query_filters method.
-
-    Args:
-        ac_rules_dict: Dictionary mapping rule name to loaded AC Rule document
-
-    Returns a list of column definitions with:
-    - fieldname: unique identifier for the column
-    - label: display name with rule type emoji, filter name and exceptions
-    - principal_filter: Query Filter name (non-exception)
-    - principal_exception: Tuple of exception filter names
-    - rule_type: "Permit" or "Forbid"
-    """
-    columns_dict = {}
-
-    # Collect all unique filter names to fetch their display names
-    all_filter_names = set()
-    for rule_name, rule in ac_rules_dict.items():
-        distinct_combos = rule.get_distinct_principal_query_filters()
-        for rule_type, principal_filter, exception_tuple in distinct_combos:
-            all_filter_names.add(principal_filter)
-            all_filter_names.update(exception_tuple)
-
-    # Fetch filter_name (display names) for all query filters
-    filter_display_names = {}
-    if all_filter_names:
-        filter_docs = frappe.get_all(
-            "Query Filter",
-            filters={"name": ["in", list(all_filter_names)]},
-            fields=["name", "filter_name"],
-        )
-        filter_display_names = {doc.name: doc.filter_name for doc in filter_docs}
-
-    for rule_name, rule in ac_rules_dict.items():
-
-        # Get distinct principal query filter combinations
-        distinct_combos = rule.get_distinct_principal_query_filters()
-
-        for rule_type, principal_filter, exception_tuple in distinct_combos:
-            # Create a unique key for this column - include rule_type
-            key = (principal_filter, exception_tuple, rule_type)
-
-            if key not in columns_dict:
-                # Build label with display names
-                # Get display name for principal filter
-                principal_filter_display = filter_display_names.get(
-                    principal_filter, principal_filter
-                )
-
-                if exception_tuple:
-                    # Use display names for exception filters
-                    exception_names = sorted(
-                        [
-                            filter_display_names.get(name, name)
-                            for name in exception_tuple
-                        ]
-                    )
-                    label = (
-                        f"{principal_filter_display} - ⚠️ {', '.join(exception_names)}"
-                    )
-                else:
-                    label = principal_filter_display
-
-                # Add emoji only for Forbid type
-                if rule_type == "Forbid":
-                    label = f"🚫 {label}"
-
-                columns_dict[key] = {
-                    "fieldname": f"col_{len(columns_dict)}",
-                    "label": label,
-                    "principal_filter": principal_filter_display,  # Display name
-                    "principal_filter_name": principal_filter,  # Original name for matching
-                    "principal_exception": exception_tuple,  # Display tuple (not used)
-                    "principal_exception_names": exception_tuple,  # Original names for matching
-                    "rule_type": rule_type,
-                }
-
-    # Convert to sorted list
-    columns_list = sorted(
-        columns_dict.values(),
-        key=lambda x: (x["principal_filter"], x["principal_exception"], x["rule_type"]),
-    )
-
-    return columns_list
-
-
-def get_actions_for_cell(
-    resource,
-    resource_filter,
-    resource_exception,
-    resource_rule_type,
-    principal_filter,
-    principal_exception,
-    principal_rule_type,
-    ac_rules_dict,
-):
-    """
-    Get aggregated actions for a specific cell (row, column combination).
-
-    Find all rules that match:
-    - The resource
-    - Have the principal filter (and same exceptions and rule type)
-    - Have the resource filter (and same exceptions and rule type), or None for "All"
-
-    Args:
-        ac_rules_dict: Dictionary mapping rule name to loaded AC Rule document
-
-    Returns a set of action names.
-    """
-    actions = set()
-
-    for rule_name, rule in ac_rules_dict.items():
-
-        # Check if rule matches the resource
-        if rule.resource != resource:
-            continue
-
-        # Check if rule has matching principal filter combination (including rule type)
-        principal_combos = rule.get_distinct_principal_query_filters()
-        principal_match = any(
-            pf == principal_filter
-            and pe == principal_exception
-            and rt == principal_rule_type
-            for rt, pf, pe in principal_combos
-        )
-
-        if not principal_match:
-            continue
-
-        # Check if rule has matching resource filter combination (including rule type)
-        resource_combos = rule.get_distinct_resource_query_filters()
-
-        # If resource_filter is None, we're looking for rules with no resource filters
-        if resource_filter is None:
-            # Match if rule has no resource filters and rule type matches
-            resource_match = (
-                len(resource_combos) == 0 and rule.type == resource_rule_type
-            )
-        else:
-            # Match if rule has this specific resource filter combination and rule type
-            resource_match = any(
-                rf == resource_filter
-                and re == resource_exception
-                and rt == resource_rule_type
-                for rt, rf, re in resource_combos
-            )
-
-        if not resource_match:
-            continue
-
-        # Rule matches - add its actions
-        for action in rule.actions:
-            actions.add(action.action)
-
-    return actions

@@ -4,6 +4,13 @@
 frappe.query_reports["AC Rules"] = {
     "filters": [
         {
+            "fieldname": "pivot_by_resource_filter",
+            "label": __("Pivot by Resource Filter"),
+            "fieldtype": "Check",
+            "default": 0,
+            "description": __("Enable pivot mode. Rows: (Resource, Principal Filter), Columns: Resource Filters, Cells: Actions")
+        },
+        {
             "fieldname": "action",
             "label": __("Action"),
             "fieldtype": "Link",
