@@ -40,11 +40,10 @@ class QueryFilter(Document):
         return get_sql(self)
 
 
-@frappe.request_cache
 def get_sql(query_filter: str | QueryFilter | dict):
 
     if isinstance(query_filter, str):
-        query_filter = frappe.get_doc("Resource Filter", query_filter).as_dict()
+        query_filter = frappe.get_doc("Query Filter", query_filter).as_dict()
     elif isinstance(query_filter, QueryFilter):
         query_filter = query_filter.as_dict()
 
