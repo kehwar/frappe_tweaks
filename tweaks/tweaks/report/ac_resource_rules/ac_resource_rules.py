@@ -24,13 +24,26 @@ def execute(filters=None):
     Report Structure:
         - Rows: Users (all enabled, or filtered by Query Filter)
         - Columns: Resource Query Filters from AC Rules (grouped and de-duplicated)
-        - Cells: Y/N if action filter is specified, or comma-separated actions if not
+        - Cells: Y/N if action filter is specified, or comma-separated sorted actions if not
 
     Column Logic:
+        - Columns are deduplicated by (rule_type, non_exception_filter, exception_filters)
+        - Same filter can appear in multiple columns if used by different rule types (Permit vs Forbid)
         - Each non-exception resource filter becomes a column
         - Exception filters multiply columns (e.g., "Allow1 - ⚠️ Forbid1, ⚠️ Forbid2")
-        - If multiple rules use the same filter, actions aggregate in that column
+        - Actions from multiple rules sharing the same filter combination are aggregated (deduplicated)
+          and sorted alphabetically in that column
         - Column labels show filter names with emoji (✅ Permit, 🚫 Forbid based on rule type; ⚠️ for exception filters)
+        - Columns are sorted alphabetically by their final label
+
+    Cell Logic:
+        - For each user/filter column combination:
+          1. Check if user matches principal filters of each rule in that column
+             (Principal logic: (M1 OR M2) AND NOT (E1 OR E2) where M = main filters, E = exception filters)
+          2. If user matches, include that rule's actions in the cell
+          3. Aggregate and sort all matched actions
+        - If action filter is specified: show "Y" if user has that action, "N" otherwise (hidden in UI)
+        - If no action filter: show comma-separated list of all actions user has for that resource filter
 
     The report evaluates each user against principal filters to determine who has access,
     then shows which resource filters apply for each user.
@@ -47,7 +60,23 @@ def execute(filters=None):
 
 
 def get_data(filters):
-    """Get permission data for the selected resource"""
+    """
+    Get permission data for the selected resource.
+
+    Process:
+    1. Fetch AC Resource and related AC Rules (enabled, within valid date range)
+    2. Get users (all enabled or filtered by Query Filter)
+    3. Build filter columns by analyzing resource filters from all rules
+    4. For each user × filter column combination:
+       - Check if user matches the rule's principals
+       - Aggregate actions if matched
+       - Display as "Y"/"N" (if action filter specified) or comma-separated action list
+
+    Returns:
+        Tuple of (columns, data) where:
+        - columns: List of column definitions for the report table
+        - data: List of row dicts with user info and permission data
+    """
 
     resource_name = filters.get("resource")
     query_filter_name = filters.get("query_filter")
@@ -148,14 +177,21 @@ def build_filter_columns(ac_rules):
 
     Process:
     1. List all rules
-    2. Expand distinct query filters - each becomes a column
-    3. For each distinct query filter, aggregate actions present in the rule
+    2. Expand distinct query filters using get_distinct_resource_query_filters()
+       - Each non-exception filter becomes a column
+       - Exception filters are combined into the same column (e.g., "Filter1 - ⚠️ Exception1, ⚠️ Exception2")
+    3. Group filters by (rule_type, non_exception_filter, exception_filters_tuple)
+       - Same filter can appear in multiple columns if used by different rule types (Permit vs Forbid)
+    4. For each filter group, aggregate actions from all rules using that combination
+       - Actions are stored as a set (deduplicated), then converted to sorted list
 
     Returns a list of column definitions with:
-    - fieldname: unique identifier for the column
-    - label: display name with emojis
+    - fieldname: unique identifier for the column (e.g., "filter_0", "filter_1")
+    - label: display name with emojis (✅ for Permit, 🚫 for Forbid, ⚠️ for exceptions)
     - rules: list of rule info (name, type, actions) that use this filter combination
-    - actions: aggregated list of actions from all rules using this filter combination
+    - actions: aggregated deduplicated sorted list of actions from all rules using this filter combination
+
+    Columns are sorted alphabetically by their final label before fieldnames are assigned.
     """
     # Dictionary to group filters: key = (rule_type, non_exception_filter, (exception_filters...))
     # Each key represents a unique column
@@ -267,8 +303,12 @@ def get_user_actions_for_filter_column(user, column, ac_rules):
     and return aggregated actions.
 
     For each rule in the column (which all share the same resource filters):
-    - Check if the user matches the rule's principals
-    - If yes, add the actions from that rule
+    - Check if the user matches the rule's principals using (M1 OR M2) AND NOT (E1 OR E2) logic
+      where M = main principal filters and E = exception principal filters
+    - If user matches, add the actions from that rule to the aggregate
+
+    Returns:
+        Comma-separated string of sorted action names, or empty string if no matches
     """
     all_actions = set()
 
@@ -287,7 +327,17 @@ def get_user_actions_for_filter_column(user, column, ac_rules):
 
 
 def get_users(query_filter_name=None):
-    """Get list of users with their full names, optionally filtered by a Query Filter"""
+    """
+    Get list of users with their full names, optionally filtered by a Query Filter.
+
+    Args:
+        query_filter_name: Optional name of a Query Filter to restrict which users are shown
+                          Must reference User, User Group, Role, or Role Profile doctype
+
+    Returns:
+        List of dicts with 'name' (user ID) and 'full_name' fields, sorted by name
+        Only enabled users are included
+    """
 
     if query_filter_name:
         # Get users matching the query filter
