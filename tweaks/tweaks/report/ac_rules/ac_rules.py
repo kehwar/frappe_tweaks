@@ -7,30 +7,34 @@ from frappe import _, scrub
 
 def execute(filters=None):
     """
-    AC Rules Report
+    AC Rules Report - Flat view of all access control rules resolved to actual users.
 
-    The AC Rules report provides a comprehensive view of all access control rules in the system.
+    Shows one row per (user, resource, resource_filter, rule_type) combination with
+    aggregated actions from all matching enabled rules within valid date ranges.
 
     Columns:
-        - Resource: The AC Resource (DocType or Report)
-        - Principal Filter: Query Filter defining which users/roles the rule applies to
-        - Resource Filter: Query Filter defining which records the rule applies to (or "All")
-        - Actions: List of actions granted/denied by matching rules
-
-    Each row shows one unique combination of (resource, principal filter, resource filter)
-    with aggregated actions from all matching rules.
+        - User: Full name (resolved from principal filters)
+        - Resource: AC Resource title (DocType or Report)
+        - Rule Type: "Permit" or "Forbid" (🚫 emoji for Forbid)
+        - Distinct Resource Query Filters: Query Filter or "All" (⚠️ for exceptions)
+        - Actions: Comma-separated list (or Y/N when action filter specified)
 
     Filters:
-        - action (optional): Filter by specific action. Shows Y/N for that specific action.
-        - principal_filter (optional): Filter by Query Filter (User, User Group, or Role). Only shows users matching the selected filter.
+        - action (optional): Shows Y/N for specific action instead of action list
+        - principal_filter (optional): Only show users matching this Query Filter
 
     Use Cases:
-        1. Comprehensive Access Audit: View all access control rules
-        2. Action-Specific Auditing: Filter by action to see which combinations grant that action
-        3. Gap Analysis: Identify resources without access rules
-        4. Over-Permission Detection: Identify principals with excessive access
+        1. System-wide access audit (who has access to what)
+        2. Action-specific auditing (filter by action to see Y/N per combination)
+        3. User-specific review (filter by principal_filter for targeted analysis)
+        4. Gap/over-permission detection
 
-    Only enabled rules within valid date ranges are shown.
+    Algorithm:
+        1. Load enabled AC Rules within valid date range
+        2. Resolve principal filters to users via resolve_principals_to_users()
+        3. Get resource filters via get_distinct_resource_query_filters()
+        4. Create rows for each (user, resource, resource_filter, rule_type)
+        5. Aggregate actions from matching rules
     """
     filters = filters or {}
     return get_flat_data(filters)
