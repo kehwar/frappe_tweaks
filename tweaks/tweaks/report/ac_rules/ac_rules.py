@@ -117,7 +117,7 @@ def get_data(filters):
         },
         {
             "fieldname": "resource_filter",
-            "label": _("Resource Filter"),
+            "label": _("Query Filter"),
             "fieldtype": "Data",
             "width": 200,
         },
@@ -140,10 +140,16 @@ def get_data(filters):
     for row in rows:
         # Display "All" for None resource filter with rule type emoji
         rule_emoji = "✅" if row["rule_type"] == "Permit" else "🚫"
-        resource_filter_name = (
-            row["resource_filter"] if row["resource_filter"] else "All"
-        )
-        resource_filter_display = f"{rule_emoji} {resource_filter_name}"
+
+        if row["resource_filter"]:
+            # Add exception filters with emoji if present
+            if row.get("resource_exception"):
+                exception_labels = [f"⚠️ {name}" for name in row["resource_exception"]]
+                resource_filter_display = f"{rule_emoji} {row['resource_filter']} - {', '.join(exception_labels)}"
+            else:
+                resource_filter_display = f"{rule_emoji} {row['resource_filter']}"
+        else:
+            resource_filter_display = f"{rule_emoji} All"
 
         data_row = {
             "resource_name": row["resource_name"],
@@ -155,11 +161,13 @@ def get_data(filters):
         for col in columns_list:
             actions = get_actions_for_cell(
                 row["resource_name"],
-                row["resource_filter"],
-                row["resource_exception"],
+                row.get("resource_filter_name"),  # Use original name for matching
+                row.get(
+                    "resource_exception_names", tuple()
+                ),  # Use original names for matching
                 row["rule_type"],
-                col["principal_filter"],
-                col["principal_exception"],
+                col["principal_filter_name"],  # Use original name for matching
+                col["principal_exception_names"],  # Use original names for matching
                 col["rule_type"],
                 ac_rules_dict,
             )
@@ -202,6 +210,25 @@ def build_rows(ac_rules_dict):
     # Cache resource titles to avoid repeated queries
     resource_titles = {}
 
+    # Collect all unique filter names to fetch their display names
+    all_filter_names = set()
+    for rule_name, rule in ac_rules_dict.items():
+        distinct_combos = rule.get_distinct_resource_query_filters()
+        for rule_type, resource_filter, exception_tuple in distinct_combos:
+            if resource_filter:
+                all_filter_names.add(resource_filter)
+            all_filter_names.update(exception_tuple)
+
+    # Fetch filter_name (display names) for all query filters
+    filter_display_names = {}
+    if all_filter_names:
+        filter_docs = frappe.get_all(
+            "Query Filter",
+            filters={"name": ["in", list(all_filter_names)]},
+            fields=["name", "filter_name"],
+        )
+        filter_display_names = {doc.name: doc.filter_name for doc in filter_docs}
+
     for rule_name, rule in ac_rules_dict.items():
         # Get resource title if not cached
         if rule.resource not in resource_titles:
@@ -219,6 +246,7 @@ def build_rows(ac_rules_dict):
                     "resource_name": rule.resource,
                     "resource_title": resource_titles[rule.resource],
                     "resource_filter": None,  # None means "All"
+                    "resource_filter_name": None,  # For matching in get_actions_for_cell
                     "resource_exception": tuple(),
                     "rule_type": rule.type,
                 }
@@ -228,11 +256,23 @@ def build_rows(ac_rules_dict):
                 key = (rule.resource, resource_filter, exception_tuple, rule_type)
 
                 if key not in rows_dict:
+                    # Get display name for resource filter
+                    resource_filter_display = filter_display_names.get(
+                        resource_filter, resource_filter
+                    )
+
+                    # Get display names for exceptions
+                    exception_display_tuple = tuple(
+                        filter_display_names.get(name, name) for name in exception_tuple
+                    )
+
                     rows_dict[key] = {
                         "resource_name": rule.resource,
                         "resource_title": resource_titles[rule.resource],
-                        "resource_filter": resource_filter,
-                        "resource_exception": exception_tuple,
+                        "resource_filter": resource_filter_display,
+                        "resource_filter_name": resource_filter,  # Original name for matching
+                        "resource_exception": exception_display_tuple,
+                        "resource_exception_names": exception_tuple,  # Original names for matching
                         "rule_type": rule_type,
                     }
 
@@ -269,6 +309,24 @@ def build_columns(ac_rules_dict):
     """
     columns_dict = {}
 
+    # Collect all unique filter names to fetch their display names
+    all_filter_names = set()
+    for rule_name, rule in ac_rules_dict.items():
+        distinct_combos = rule.get_distinct_principal_query_filters()
+        for rule_type, principal_filter, exception_tuple in distinct_combos:
+            all_filter_names.add(principal_filter)
+            all_filter_names.update(exception_tuple)
+
+    # Fetch filter_name (display names) for all query filters
+    filter_display_names = {}
+    if all_filter_names:
+        filter_docs = frappe.get_all(
+            "Query Filter",
+            filters={"name": ["in", list(all_filter_names)]},
+            fields=["name", "filter_name"],
+        )
+        filter_display_names = {doc.name: doc.filter_name for doc in filter_docs}
+
     for rule_name, rule in ac_rules_dict.items():
 
         # Get distinct principal query filter combinations
@@ -279,20 +337,31 @@ def build_columns(ac_rules_dict):
             key = (principal_filter, exception_tuple, rule_type)
 
             if key not in columns_dict:
-                # Build label with rule type emoji
+                # Build label with rule type emoji and display names
                 rule_emoji = "✅" if rule_type == "Permit" else "🚫"
 
+                # Get display name for principal filter
+                principal_filter_display = filter_display_names.get(
+                    principal_filter, principal_filter
+                )
+
                 if exception_tuple:
-                    exception_labels = [f"⚠️ {name}" for name in exception_tuple]
-                    label = f"{rule_emoji} {principal_filter} - {', '.join(exception_labels)}"
+                    # Use display names for exception filters
+                    exception_labels = [
+                        f"⚠️ {filter_display_names.get(name, name)}"
+                        for name in exception_tuple
+                    ]
+                    label = f"{rule_emoji} {principal_filter_display} - {', '.join(exception_labels)}"
                 else:
-                    label = f"{rule_emoji} {principal_filter}"
+                    label = f"{rule_emoji} {principal_filter_display}"
 
                 columns_dict[key] = {
                     "fieldname": f"col_{len(columns_dict)}",
                     "label": label,
-                    "principal_filter": principal_filter,
-                    "principal_exception": exception_tuple,
+                    "principal_filter": principal_filter_display,  # Display name
+                    "principal_filter_name": principal_filter,  # Original name for matching
+                    "principal_exception": exception_tuple,  # Display tuple (not used)
+                    "principal_exception_names": exception_tuple,  # Original names for matching
                     "rule_type": rule_type,
                 }
 
