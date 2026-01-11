@@ -266,12 +266,14 @@ def build_filter_columns(ac_rules):
 
         # Build label with filter display names
         if exception_filters_tuple:
-            # Add emoji before each exception filter using display names
-            denied_with_emoji = [
-                f"⚠️ {filter_display_names.get(name, name)}"
-                for name in exception_filters_tuple
-            ]
-            label = f"{non_exception_display} - {', '.join(denied_with_emoji)}"
+            # Add emoji once before all exception filters using display names
+            exception_names = sorted(
+                [
+                    filter_display_names.get(name, name)
+                    for name in exception_filters_tuple
+                ]
+            )
+            label = f"{non_exception_display} - ⚠️ {', '.join(exception_names)}"
         else:
             label = non_exception_display
 

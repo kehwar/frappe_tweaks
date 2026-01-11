@@ -142,9 +142,9 @@ def get_data(filters):
         if row["resource_filter"]:
             # Add exception filters with emoji if present
             if row.get("resource_exception"):
-                exception_labels = [f"⚠️ {name}" for name in row["resource_exception"]]
+                exception_names = sorted(row["resource_exception"])
                 resource_filter_display = (
-                    f"{row['resource_filter']} - {', '.join(exception_labels)}"
+                    f"{row['resource_filter']} - ⚠️ {', '.join(exception_names)}"
                 )
             else:
                 resource_filter_display = row["resource_filter"]
@@ -349,12 +349,14 @@ def build_columns(ac_rules_dict):
 
                 if exception_tuple:
                     # Use display names for exception filters
-                    exception_labels = [
-                        f"⚠️ {filter_display_names.get(name, name)}"
-                        for name in exception_tuple
-                    ]
+                    exception_names = sorted(
+                        [
+                            filter_display_names.get(name, name)
+                            for name in exception_tuple
+                        ]
+                    )
                     label = (
-                        f"{principal_filter_display} - {', '.join(exception_labels)}"
+                        f"{principal_filter_display} - ⚠️ {', '.join(exception_names)}"
                     )
                 else:
                     label = principal_filter_display
