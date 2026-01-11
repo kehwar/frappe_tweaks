@@ -19,6 +19,10 @@ frappe.query_reports["AC Rules"] = {
             return `<a href="/app/ac-resource/${encodeURIComponent(data.resource_name)}">${value}</a>`;
         }
         
+        if (column.fieldname === "user" && data && data.user_id) {
+            return `<a href="/app/user/${encodeURIComponent(data.user_id)}">${value}</a>`;
+        }
+        
         return value;
     }
 };

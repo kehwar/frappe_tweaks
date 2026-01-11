@@ -127,18 +127,94 @@ def format_filter_display(
     return display
 
 
+def resolve_principals_to_users(rule):
+    """
+    Resolve all principal filters in a rule to get list of users.
+
+    Args:
+        rule: AC Rule document
+
+    Returns:
+        List of user dictionaries with 'name' and 'full_name'
+    """
+    from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import get_principal_filter_sql
+
+    # Build SQL to get users matching all principal filters (including exceptions)
+    allowed_filters = []
+    denied_filters = []
+
+    for row in rule.principals:
+        if row.exception:
+            denied_filters.append(row.filter)
+        else:
+            allowed_filters.append(row.filter)
+
+    if not allowed_filters:
+        return []
+
+    # Build SQL for allowed users
+    allowed_sql_parts = []
+    for filter_name in allowed_filters:
+        try:
+            query_filter = frappe.get_cached_doc("Query Filter", filter_name)
+            filter_sql = get_principal_filter_sql(query_filter)
+            if filter_sql:
+                allowed_sql_parts.append(f"({filter_sql})")
+        except Exception as e:
+            frappe.log_error(f"Error getting SQL for filter {filter_name}: {str(e)}")
+
+    if not allowed_sql_parts:
+        return []
+
+    # Combine with OR
+    allowed_sql = " OR ".join(allowed_sql_parts)
+
+    # Build SQL for denied users
+    denied_sql_parts = []
+    for filter_name in denied_filters:
+        try:
+            query_filter = frappe.get_cached_doc("Query Filter", filter_name)
+            filter_sql = get_principal_filter_sql(query_filter)
+            if filter_sql:
+                denied_sql_parts.append(f"({filter_sql})")
+        except Exception as e:
+            frappe.log_error(
+                f"Error getting SQL for denied filter {filter_name}: {str(e)}"
+            )
+
+    # Combine final SQL
+    final_sql = f"({allowed_sql})"
+    if denied_sql_parts:
+        denied_sql = " OR ".join(denied_sql_parts)
+        final_sql = f"({final_sql}) AND NOT ({denied_sql})"
+
+    # Get users
+    users = frappe.db.sql(
+        f"""
+        SELECT DISTINCT `name`, `full_name`
+        FROM `tabUser`
+        WHERE {final_sql} AND enabled = 1
+        ORDER BY `name`
+        """,
+        as_dict=1,
+    )
+
+    return users
+
+
 def get_flat_data(filters):
     """
     Get flat report data.
 
-    Each row represents a unique combination of:
-    - Resource
-    - Principal Filter (with exceptions and rule type)
-    - Resource Filter (with exceptions and rule type)
+    Steps:
+    1. List all rules
+    2. Resolve principals for each rule to get list of all users
+    3. Resolve resources for each rule to get distinct resource filters
+    4. For each (user, distinct resource filter) combination, create a row and aggregate actions
 
     Returns columns and data for flat report view.
     """
-    # Get all enabled AC Rules within valid date range
+    # Step 1: Get all enabled AC Rules within valid date range
     ac_rules_dict = get_enabled_ac_rules()
 
     if not ac_rules_dict:
@@ -147,66 +223,64 @@ def get_flat_data(filters):
     # Get filter display names cache
     filter_display_names = get_filter_display_names_cache(ac_rules_dict)
 
-    # Build flat data: one row per (resource, principal filter, resource filter) combination
-    flat_rows = []
+    # Build flat data: one row per (user, resource, resource filter) combination
+    flat_rows = {}
 
+    # Step 2-4: For each rule, resolve principals and resources, then create rows
     for rule_name, rule in ac_rules_dict.items():
         resource_name = rule.resource
         resource_title = get_resource_title(resource_name)
 
-        # Get distinct principal and resource filter combinations
-        principal_combos = rule.get_distinct_principal_query_filters()
+        # Step 2: Resolve principals to get users
+        try:
+            users = resolve_principals_to_users(rule)
+        except Exception as e:
+            frappe.log_error(
+                f"Error resolving principals for rule {rule_name}: {str(e)}"
+            )
+            users = []
+
+        # Step 3: Resolve resources to get distinct resource query filters
         resource_combos = rule.get_distinct_resource_query_filters()
 
         # If no resource filters, treat as "All"
         if not resource_combos:
             resource_combos = [(rule.type, None, ())]
 
-        # Create a row for each combination
-        for p_rule_type, p_filter, p_exceptions in principal_combos:
+        # Step 4: For each (user, distinct resource filter) combination, create/update row
+        for user in users:
             for r_rule_type, r_filter, r_exceptions in resource_combos:
                 # Create unique key for this combination
                 key = (
+                    user["name"],
                     resource_name,
-                    p_filter,
-                    p_exceptions,
-                    p_rule_type,
                     r_filter,
                     r_exceptions,
                     r_rule_type,
                 )
 
                 # Find or create row
-                existing_row = None
-                for row in flat_rows:
-                    if row["_key"] == key:
-                        existing_row = row
-                        break
-
-                if existing_row:
+                if key in flat_rows:
                     # Add actions to existing row
                     for action in rule.actions:
-                        existing_row["_actions"].add(action.action)
+                        flat_rows[key]["_actions"].add(action.action)
                 else:
                     # Create new row
                     actions_set = set()
                     for action in rule.actions:
                         actions_set.add(action.action)
 
-                    flat_rows.append(
-                        {
-                            "_key": key,
-                            "resource_name": resource_name,
-                            "resource_title": resource_title,
-                            "principal_filter": p_filter,
-                            "principal_exception": p_exceptions,
-                            "principal_rule_type": p_rule_type,
-                            "resource_filter": r_filter,
-                            "resource_exception": r_exceptions,
-                            "resource_rule_type": r_rule_type,
-                            "_actions": actions_set,
-                        }
-                    )
+                    flat_rows[key] = {
+                        "_key": key,
+                        "user_name": user["name"],
+                        "user_full_name": user["full_name"],
+                        "resource_name": resource_name,
+                        "resource_title": resource_title,
+                        "resource_filter": r_filter,
+                        "resource_exception": r_exceptions,
+                        "resource_rule_type": r_rule_type,
+                        "_actions": actions_set,
+                    }
 
     # Build columns
     columns = [
@@ -218,22 +292,36 @@ def get_flat_data(filters):
             "hidden": 1,
         },
         {
+            "fieldname": "user_id",
+            "label": _("User ID"),
+            "fieldtype": "Link",
+            "options": "User",
+            "width": 0,
+            "hidden": 1,
+        },
+        {
+            "fieldname": "user",
+            "label": _("User"),
+            "fieldtype": "Data",
+            "width": 250,
+        },
+        {
             "fieldname": "resource",
             "label": _("Resource"),
             "fieldtype": "Data",
             "width": 200,
         },
         {
-            "fieldname": "principal_filter",
-            "label": _("Principal Filter"),
+            "fieldname": "rule_type",
+            "label": _("Rule Type"),
             "fieldtype": "Data",
-            "width": 250,
+            "width": 100,
         },
         {
-            "fieldname": "resource_filter",
-            "label": _("Resource Filter"),
+            "fieldname": "distinct_resource_query_filters",
+            "label": _("Distinct Resource Query Filters"),
             "fieldtype": "Data",
-            "width": 250,
+            "width": 300,
         },
         {
             "fieldname": "actions",
@@ -243,26 +331,21 @@ def get_flat_data(filters):
         },
     ]
 
-    # Build data rows
+    # Build data rows from dictionary
     data = []
     action_filter = filters.get("action")
 
-    for row in flat_rows:
-        # Format principal filter display
-        principal_display = format_filter_display(
-            row["principal_filter"],
-            row["principal_exception"],
-            row["principal_rule_type"],
+    for row in flat_rows.values():
+        # Format resource filter display - without rule type emoji
+        resource_filter_display = format_filter_display(
+            row["resource_filter"],
+            row["resource_exception"],
+            "Permit",  # Don't show rule type emoji in resource filter column
             filter_display_names,
         )
 
-        # Format resource filter display
-        resource_display = format_filter_display(
-            row["resource_filter"],
-            row["resource_exception"],
-            row["resource_rule_type"],
-            filter_display_names,
-        )
+        # Rule type
+        rule_type = row["resource_rule_type"]
 
         # Format actions
         if action_filter:
@@ -275,16 +358,18 @@ def get_flat_data(filters):
         data.append(
             {
                 "resource_name": row["resource_name"],
+                "user": row["user_full_name"] or row["user_name"],
+                "user_id": row["user_name"],
                 "resource": row["resource_title"],
-                "principal_filter": principal_display,
-                "resource_filter": resource_display,
+                "rule_type": rule_type,
+                "distinct_resource_query_filters": resource_filter_display,
                 "actions": actions_display,
             }
         )
 
     # Sort data
     data.sort(
-        key=lambda x: (x["resource"], x["principal_filter"], x["resource_filter"])
+        key=lambda x: (x["user"], x["resource"], x["distinct_resource_query_filters"])
     )
 
     return columns, data
