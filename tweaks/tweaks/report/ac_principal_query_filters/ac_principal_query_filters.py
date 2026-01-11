@@ -10,14 +10,14 @@ from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import get_principal_filter_sql
 def execute(filters=None):
     """
     AC Principal Query Filters Report
-    
+
     Shows each principal query filter (User, Role, User Group, Role Profile)
     with the SQL used to determine users and lists all matching users.
-    
+
     Report Structure:
         - Rows: One row per (Query Filter, User) combination
         - Columns: Query Filter, Reference DocType, Reference DocName, Filter Type, Filter, SQL, User
-    
+
     The report helps understand which users are matched by each principal filter.
     Includes Query Filter properties and a button to view filter code in a dialog.
     """
@@ -30,11 +30,30 @@ def get_columns():
     """Define report columns"""
     return [
         {
+            "fieldname": "filter_name",
+            "label": _("Filter Name"),
+            "fieldtype": "Data",
+            "width": 200,
+        },
+        {
             "fieldname": "query_filter",
             "label": _("Query Filter"),
             "fieldtype": "Link",
             "options": "Query Filter",
+            "hidden": 1,
+        },
+        {
+            "fieldname": "user",
+            "label": _("User"),
+            "fieldtype": "Data",
             "width": 200,
+        },
+        {
+            "fieldname": "user_id",
+            "label": _("User ID"),
+            "fieldtype": "Link",
+            "options": "User",
+            "hidden": 1,
         },
         {
             "fieldname": "reference_doctype",
@@ -67,75 +86,81 @@ def get_columns():
             "fieldtype": "Data",
             "width": 300,
         },
-        {
-            "fieldname": "user",
-            "label": _("User"),
-            "fieldtype": "Link",
-            "options": "User",
-            "width": 150,
-        },
     ]
 
 
 def get_data(filters):
     """Get data for the report"""
-    
+
     # Get all Query Filters of relevant types
     query_filters = frappe.get_all(
         "Query Filter",
         filters={
             "reference_doctype": ["in", ["User", "Role", "User Group", "Role Profile"]],
-            "disabled": 0
+            "disabled": 0,
         },
-        fields=["name", "filter_name", "reference_doctype", "reference_docname", "filters_type", "filters"],
-        order_by="name"
+        fields=[
+            "name",
+            "filter_name",
+            "reference_doctype",
+            "reference_docname",
+            "filters_type",
+            "filters",
+        ],
+        order_by="name",
     )
-    
+
     data = []
-    
+
     for qf_info in query_filters:
         # Load the full Query Filter document
         query_filter = frappe.get_doc("Query Filter", qf_info.name)
-        
+
         # Get the SQL for this filter
         try:
             filter_sql = get_principal_filter_sql(query_filter)
-            
+
             # Remove line breaks from SQL
-            filter_sql_display = filter_sql.replace("\n", " ").replace("\r", " ").strip()
-            
+            filter_sql_display = (
+                filter_sql.replace("\n", " ").replace("\r", " ").strip()
+            )
+
             # Get users matching this filter
             if filter_sql:
                 users = frappe.db.sql(
                     f"""
-                    SELECT DISTINCT `name`
+                    SELECT DISTINCT `name`, `full_name`
                     FROM `tabUser`
                     WHERE {filter_sql} AND enabled = 1
                     ORDER BY `name`
                     """,
-                    pluck="name"
+                    as_dict=1,
                 )
             else:
                 users = []
-            
+
             # Create a row for each user
             for user in users:
-                data.append({
-                    "query_filter": qf_info.name,
-                    "reference_doctype": qf_info.reference_doctype,
-                    "reference_docname": qf_info.reference_docname,
-                    "filters_type": qf_info.filters_type,
-                    "filters": qf_info.filters,
-                    "sql": filter_sql_display,
-                    "user": user,
-                })
-                
+                data.append(
+                    {
+                        "filter_name": qf_info.filter_name,
+                        "query_filter": qf_info.name,
+                        "reference_doctype": qf_info.reference_doctype,
+                        "reference_docname": qf_info.reference_docname,
+                        "filters_type": qf_info.filters_type,
+                        "filters": qf_info.filters,
+                        "sql": filter_sql_display,
+                        "user": user["full_name"],
+                        "user_id": user["name"],
+                    }
+                )
+
         except Exception as e:
             # If there's an error getting SQL or users, log it and skip this filter
             frappe.log_error(
                 f"Error processing Query Filter {qf_info.name}: {str(e)}",
-                "AC Principal Query Filters Report"
+                "AC Principal Query Filters Report",
             )
             continue
-    
+
     return data

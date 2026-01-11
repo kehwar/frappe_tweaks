@@ -7,6 +7,24 @@ frappe.query_reports["AC Principal Query Filters"] = {
     "formatter": function(value, row, column, data, default_formatter) {
         value = default_formatter(value, row, column, data);
         
+        // Format the filter_name column to show link to Query Filter
+        if (column.fieldname === "filter_name" && data.query_filter) {
+            const link_url = frappe.utils.get_form_link("Query Filter", data.query_filter);
+            return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`;
+        }
+        
+        // Format the user column to show full name with link to user profile
+        if (column.fieldname === "user" && data.user_id) {
+            const link_url = frappe.utils.get_form_link("User", data.user_id);
+            return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`;
+        }
+        
+        // Format the reference_docname column to show link to the referenced document
+        if (column.fieldname === "reference_docname" && data.reference_doctype && data.reference_docname) {
+            const link_url = frappe.utils.get_form_link(data.reference_doctype, data.reference_docname);
+            return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`;
+        }
+        
         if (column.fieldname === "filters" && data.filters) {
             frappe.query_reports["AC Principal Query Filters"].filter_data[data.query_filter] = {
                 filters: data.filters,
