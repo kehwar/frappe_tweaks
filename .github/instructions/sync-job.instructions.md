@@ -261,6 +261,7 @@ Optional configuration:
 - **Timeout**: Job timeout in seconds (default: 300)
 - **Retry Delay**: Seconds between retries (default: 60)
 - **Max Retries**: Maximum retry attempts (default: 3)
+- **Verbose Logging**: When disabled (default), clears current_data and updated_data fields when sync job completes (default: unchecked)
 
 ### 2. Implement Controller
 
@@ -371,6 +372,7 @@ These are defaults that can be overridden per job:
 - **Timeout**: Maximum execution time in seconds
 - **Retry Delay**: Seconds to wait before retry
 - **Max Retries**: Maximum retry attempts for failed jobs
+- **Verbose Logging**: When disabled (default: unchecked), current_data and updated_data fields are cleared when sync job reaches terminal status (Finished, Canceled, Skipped, No Target, Relayed). Enable for debugging to preserve data snapshots.
 
 ### Sync Job Flags
 
@@ -483,10 +485,20 @@ sync_job.retry()  # Resets status to Queued and re-enqueues
 
 ### Cancellation
 
+Cancels a sync job and uses the `_finish_job` utility to handle cleanup:
+
 ```python
 sync_job = frappe.get_doc("Sync Job", job_name)
 sync_job.cancel_sync(reason="No longer needed")
 ```
+
+The `cancel_sync` method:
+- Validates job status (only Pending, Queued, or Failed can be canceled)
+- Stops the RQ job if it exists
+- Calls `_finish_job(status="Canceled")` which handles:
+  - Setting status and timing
+  - Clearing current_data and updated_data if verbose_logging is disabled
+  - Saving and committing the changes
 
 ### Dry Run Mode
 
@@ -765,8 +777,10 @@ The framework automatically generates diffs for updates:
 
 Access via:
 - `sync_job.diff_summary` - JSON string of changes
-- `sync_job.current_data` - Snapshot before sync
-- `sync_job.updated_data` - Snapshot after sync
+- `sync_job.current_data` - Snapshot before sync (cleared if verbose_logging disabled)
+- `sync_job.updated_data` - Snapshot after sync (cleared if verbose_logging disabled)
+
+**Note**: By default, `current_data` and `updated_data` are cleared when a sync job reaches terminal status (Finished, Canceled, Skipped, No Target, Relayed) to save database space. Enable `verbose_logging` on the Sync Job Type to preserve these snapshots for debugging and auditing purposes.
 
 ### Error Handling
 
