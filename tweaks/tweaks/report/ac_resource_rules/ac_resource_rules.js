@@ -33,4 +33,11 @@ frappe.query_reports["AC Resource Rules"] = {
             "description": __("Filter by specific action. When specified, cells show Y/N instead of listing all actions.")
         }
     ],
+    "formatter": function(value, row, column, data, default_formatter) {
+        // Format the user column to show full name but link to user profile
+        if (column.fieldname === "user" && data.full_name) {
+            return `<a href="/app/user/${encodeURIComponent(value)}">${frappe.utils.escape_html(data.full_name)}</a>`;
+        }
+        return default_formatter(value, row, column, data);
+    }
 };

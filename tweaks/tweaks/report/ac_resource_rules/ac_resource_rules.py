@@ -13,25 +13,25 @@ from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import (
 def execute(filters=None):
     """
     AC Resource Rules Report
-    
+
     Matrix view showing which users have access to which resources based on resource query filters.
-    
+
     Filters:
         - resource (required): AC Resource to analyze
         - query_filter (optional): Query Filter for user filtering (User, User Group, Role, or Role Profile)
         - action (optional): Specific action to check (shows Y/N instead of listing all actions)
-    
+
     Report Structure:
         - Rows: Users (all enabled, or filtered by Query Filter)
         - Columns: Resource Query Filters from AC Rules (grouped and de-duplicated)
         - Cells: Y/N if action filter is specified, or comma-separated actions if not
-    
+
     Column Logic:
         - Each non-exception resource filter becomes a column
         - Exception filters multiply columns (e.g., "Allow1 - ⚠️ Forbid1, ⚠️ Forbid2")
         - If multiple rules use the same filter, actions aggregate in that column
         - Column labels show filter names with emoji (✅ Permit, 🚫 Forbid based on rule type; ⚠️ for exception filters)
-    
+
     The report evaluates each user against principal filters to determine who has access,
     then shows which resource filters apply for each user.
     Only enabled rules within valid date ranges are shown.
@@ -113,17 +113,21 @@ def get_data(filters):
     # Build data rows
     data = []
     action_filter = filters.get("action")
-    
-    for user in users:
-        row = {"user": user}
+
+    for user_dict in users:
+        row = {"user": user_dict["name"], "full_name": user_dict["full_name"]}
 
         # For each filter column, check if the user matches principals and aggregate actions
         for col in filter_columns:
-            actions = get_user_actions_for_filter_column(user, col, ac_rules)
-            
+            actions = get_user_actions_for_filter_column(
+                user_dict["name"], col, ac_rules
+            )
+
             # If action filter is specified, show Y/N instead of listing actions
             if action_filter:
-                row[col["fieldname"]] = "Y" if action_filter in actions.split(", ") else "N"
+                row[col["fieldname"]] = (
+                    "Y" if action_filter in actions.split(", ") else "N"
+                )
             else:
                 row[col["fieldname"]] = actions
 
@@ -135,12 +139,12 @@ def get_data(filters):
 def build_filter_columns(ac_rules):
     """
     Build columns based on resource query filters from all rules.
-    
+
     Process:
     1. List all rules
     2. Expand distinct query filters - each becomes a column
     3. For each distinct query filter, aggregate actions present in the rule
-    
+
     Returns a list of column definitions with:
     - fieldname: unique identifier for the column
     - label: display name with emojis
@@ -154,36 +158,38 @@ def build_filter_columns(ac_rules):
     # Step 1 & 2: List all rules and expand distinct query filters
     for rule_info in ac_rules:
         rule = frappe.get_doc("AC Rule", rule_info.name)
-        
+
         # Get distinct resource query filter combinations using the utility
         distinct_filters = rule.get_distinct_resource_query_filters()
-        
+
         # Skip if no distinct filters
         if not distinct_filters:
             continue
-        
+
         # Step 3: For each distinct query filter, aggregate actions
-        for rule_type, non_exception_filter, exception_filters_tuple in distinct_filters:
+        for (
+            rule_type,
+            non_exception_filter,
+            exception_filters_tuple,
+        ) in distinct_filters:
             # Create a key for grouping - include rule_type to separate Permit and Forbid rules
             key = (rule_type, non_exception_filter, exception_filters_tuple)
-            
+
             # Initialize group if not exists
             if key not in filter_groups:
                 filter_groups[key] = {
                     "rules": [],
-                    "actions": set()  # Aggregate actions across rules
+                    "actions": set(),  # Aggregate actions across rules
                 }
-            
+
             # Get actions for this rule
             rule_actions = [action.action for action in rule.actions]
-            
+
             # Add this rule to the group
-            filter_groups[key]["rules"].append({
-                "name": rule.name,
-                "type": rule.type,
-                "actions": rule_actions
-            })
-            
+            filter_groups[key]["rules"].append(
+                {"name": rule.name, "type": rule.type, "actions": rule_actions}
+            )
+
             # Aggregate actions
             filter_groups[key]["actions"].update(rule_actions)
 
@@ -194,7 +200,7 @@ def build_filter_columns(ac_rules):
         rule_type = key[0]
         non_exception_filter = key[1]
         exception_filters_tuple = key[2]
-        
+
         # Build label with filter names
         if exception_filters_tuple:
             # Add emoji before each exception filter
@@ -207,12 +213,14 @@ def build_filter_columns(ac_rules):
         emoji = "✅" if rule_type == "Permit" else "🚫"
         label = f"{emoji} {label}"
 
-        columns.append({
-            "fieldname": f"filter_{idx}",
-            "label": label,
-            "rules": group["rules"],
-            "actions": sorted(group["actions"])  # Convert set to sorted list
-        })
+        columns.append(
+            {
+                "fieldname": f"filter_{idx}",
+                "label": label,
+                "rules": group["rules"],
+                "actions": sorted(group["actions"]),  # Convert set to sorted list
+            }
+        )
 
     return columns
 
@@ -221,7 +229,7 @@ def get_user_actions_for_filter_column(user, column, ac_rules):
     """
     Check if a user matches the principals of rules in this resource filter column
     and return aggregated actions.
-    
+
     For each rule in the column (which all share the same resource filters):
     - Check if the user matches the rule's principals
     - If yes, add the actions from that rule
@@ -233,7 +241,7 @@ def get_user_actions_for_filter_column(user, column, ac_rules):
         # Get the full rule to check its principals
         rule = frappe.get_doc("AC Rule", rule_info["name"])
         principals = rule.resolve_principals()
-        
+
         # Check if user matches the principals for this rule
         if check_user_matches_rule_principals(user, principals):
             # User matches - add all actions from this rule
@@ -243,7 +251,7 @@ def get_user_actions_for_filter_column(user, column, ac_rules):
 
 
 def get_users(query_filter_name=None):
-    """Get list of users, optionally filtered by a Query Filter"""
+    """Get list of users with their full names, optionally filtered by a Query Filter"""
 
     if query_filter_name:
         # Get users matching the query filter
@@ -257,9 +265,7 @@ def get_users(query_filter_name=None):
             "Role Profile",
         ]:
             frappe.throw(
-                _(
-                    "Query Filter must reference User, User Group, Role, or Role Profile"
-                )
+                _("Query Filter must reference User, User Group, Role, or Role Profile")
             )
 
         # Get the SQL from the filter
@@ -268,14 +274,18 @@ def get_users(query_filter_name=None):
         if not filter_sql:
             return []
 
-        # Execute the query to get users
+        # Execute the query to get users with full names
         users = frappe.db.sql(
-            f"SELECT DISTINCT `name` FROM `tabUser` WHERE {filter_sql} AND enabled = 1 ORDER BY `name`",
-            pluck="name",
+            f"SELECT DISTINCT `name`, `full_name` FROM `tabUser` WHERE {filter_sql} AND enabled = 1 ORDER BY `name`",
+            as_dict=True,
         )
 
         return users
     else:
-        # Get all enabled users
-        return frappe.db.get_all("User", filters={"enabled": 1}, pluck="name", order_by="name")
-
+        # Get all enabled users with full names
+        return frappe.db.get_all(
+            "User",
+            filters={"enabled": 1},
+            fields=["name", "full_name"],
+            order_by="name",
+        )
