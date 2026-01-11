@@ -34,9 +34,9 @@ frappe.query_reports["AC Resource Rules"] = {
         }
     ],
     "formatter": function(value, row, column, data, default_formatter) {
-        // Format the user column to show full name but link to user profile
-        if (column.fieldname === "user" && data.full_name) {
-            return `<a href="/app/user/${encodeURIComponent(value)}">${frappe.utils.escape_html(data.full_name)}</a>`;
+        // Format the user column to show full name with link to user profile
+        if (column.fieldname === "user" && data.user_id) {
+            return `<a href="/app/user/${encodeURIComponent(data.user_id)}">${frappe.utils.escape_html(value)}</a>`;
         }
         return default_formatter(value, row, column, data);
     }

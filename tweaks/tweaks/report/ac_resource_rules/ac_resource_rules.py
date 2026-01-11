@@ -94,9 +94,15 @@ def get_data(filters):
         {
             "fieldname": "user",
             "label": _("User"),
+            "fieldtype": "Data",
+            "width": 250,
+        },
+        {
+            "fieldname": "user_id",
+            "label": _("User ID"),
             "fieldtype": "Link",
             "options": "User",
-            "width": 250,
+            "width": 0,  # Hidden column
         },
     ]
 
@@ -115,7 +121,7 @@ def get_data(filters):
     action_filter = filters.get("action")
 
     for user_dict in users:
-        row = {"user": user_dict["name"], "full_name": user_dict["full_name"]}
+        row = {"user": user_dict["full_name"], "user_id": user_dict["name"]}
 
         # For each filter column, check if the user matches principals and aggregate actions
         for col in filter_columns:
