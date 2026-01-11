@@ -25,6 +25,7 @@ class SyncJobType(Document):
         sync_job_type_name: DF.Data
         target_document_type: DF.Link
         timeout: DF.Int
+        verbose_logging: DF.Check
     # end: auto-generated types
 
     def validate(self):

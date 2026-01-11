@@ -43,6 +43,7 @@
   "update_enabled",
   "delete_enabled",
   "update_without_changes_enabled",
+  "verbose_logging",
   "section_break_execution",
   "job_id",
   "trigger_type",
@@ -270,6 +271,16 @@
    "fieldname": "update_without_changes_enabled",
    "fieldtype": "Check",
    "label": "Allow Updates without changes",
+   "set_only_once": 1
+  },
+  {
+   "default": "0",
+   "description": "When disabled, current data and updated data fields will be cleared when sync job completes",
+   "fetch_from": "sync_job_type.verbose_logging",
+   "fetch_if_empty": 1,
+   "fieldname": "verbose_logging",
+   "fieldtype": "Check",
+   "label": "Verbose Logging",
    "set_only_once": 1
   },
   {

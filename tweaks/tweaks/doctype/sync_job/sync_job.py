@@ -49,6 +49,7 @@ class SyncJob(Document, LogType):
         update_enabled: DF.Check
         delete_enabled: DF.Check
         update_without_changes_enabled: DF.Check
+        verbose_logging: DF.Check
         dry_run: DF.Check
         job_id: DF.Data | None
         max_retries: DF.Int
@@ -136,6 +137,8 @@ class SyncJob(Document, LogType):
                 self.retry_delay = job_type.retry_delay or 5
             if self.max_retries is None:
                 self.max_retries = job_type.max_retries or 3
+            if self.verbose_logging is None:
+                self.verbose_logging = job_type.verbose_logging or 0
 
     def generate_title(self):
         """
@@ -203,12 +206,12 @@ class SyncJob(Document, LogType):
             except Exception:
                 pass  # Job may not exist or already processed
 
-        self.status = "Canceled"
+        # Set cancel reason before finishing
         if reason:
             self.cancel_reason = reason
-        self.ended_at = now()
-        self.flags.ignore_links = True
-        self.save(ignore_permissions=True)
+
+        # Use _finish_job to handle status change, timing, and cleanup
+        self._finish_job(status="Canceled")
 
     @frappe.whitelist()
     def retry(self):
@@ -641,6 +644,18 @@ class SyncJob(Document, LogType):
         # Calculate time taken if started_at is set
         if self.started_at and self.ended_at:
             self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
+
+        # Clear current_data and updated_data if verbose_logging is disabled
+        # and status is one of the completion states
+        if not self.get("verbose_logging") and status in [
+            "Finished",
+            "Canceled",
+            "Skipped",
+            "No Target",
+            "Relayed",
+        ]:
+            self.current_data = None
+            self.updated_data = None
 
         # Save and commit
         self.flags.ignore_links = True
