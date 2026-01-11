@@ -9,27 +9,19 @@ def execute(filters=None):
     """
     AC Rules Report
 
-    The AC Rules report provides a view of all access control rules in the system.
-    It can be displayed as either a flat list or as a pivot table.
+    The AC Rules report provides a comprehensive view of all access control rules in the system.
 
-    Flat Report (default):
-        Columns:
+    Columns:
         - Resource: The AC Resource (DocType or Report)
         - Principal Filter: Query Filter defining which users/roles the rule applies to
         - Resource Filter: Query Filter defining which records the rule applies to (or "All")
         - Actions: List of actions granted/denied by matching rules
 
-        Each row shows one unique combination of (resource, principal filter, resource filter)
-        with aggregated actions from all matching rules.
-
-    Pivot Report (when pivot_by_resource_filter is enabled):
-        Rows: (Resource, Principal Filter)
-        Columns: Distinct Resource Query Filters
-        Cells: Actions granted/denied for that combination
+    Each row shows one unique combination of (resource, principal filter, resource filter)
+    with aggregated actions from all matching rules.
 
     Filters:
-        - pivot_by_resource_filter (optional): Enable pivot mode, pivoting by resource query filter
-        - action (optional): Filter by specific action. Shows Y/N in pivot mode.
+        - action (optional): Filter by specific action. Shows Y/N for that specific action.
 
     Use Cases:
         1. Comprehensive Access Audit: View all access control rules
@@ -40,11 +32,7 @@ def execute(filters=None):
     Only enabled rules within valid date ranges are shown.
     """
     filters = filters or {}
-
-    if filters.get("pivot_by_resource_filter"):
-        return get_pivot_data(filters)
-    else:
-        return get_flat_data(filters)
+    return get_flat_data(filters)
 
 
 def get_enabled_ac_rules():
@@ -298,183 +286,5 @@ def get_flat_data(filters):
     data.sort(
         key=lambda x: (x["resource"], x["principal_filter"], x["resource_filter"])
     )
-
-    return columns, data
-
-
-def get_pivot_data(filters):
-    """
-    Get pivot report data.
-
-    Rows: (Resource, Principal Filter)
-    Columns: Distinct Resource Query Filters
-    Cells: Actions
-
-    Returns columns and data for pivot report view.
-    """
-    # Get all enabled AC Rules within valid date range
-    ac_rules_dict = get_enabled_ac_rules()
-
-    if not ac_rules_dict:
-        return [], []
-
-    # Get filter display names cache
-    filter_display_names = get_filter_display_names_cache(ac_rules_dict)
-
-    # Step 1: Collect all unique resource filter combinations (for columns)
-    resource_filter_combos = set()
-
-    for rule_name, rule in ac_rules_dict.items():
-        resource_combos = rule.get_distinct_resource_query_filters()
-
-        if not resource_combos:
-            # Rule applies to all resources
-            resource_filter_combos.add((None, (), rule.type))
-        else:
-            for r_rule_type, r_filter, r_exceptions in resource_combos:
-                resource_filter_combos.add((r_filter, r_exceptions, r_rule_type))
-
-    # Sort resource filter combos for consistent column ordering
-    resource_filter_combos = sorted(
-        resource_filter_combos, key=lambda x: (x[0] or "", x[1], x[2])
-    )
-
-    # Step 2: Build pivot rows: unique (resource, principal filter) combinations
-    pivot_rows_dict = {}
-
-    for rule_name, rule in ac_rules_dict.items():
-        resource_name = rule.resource
-        resource_title = get_resource_title(resource_name)
-
-        principal_combos = rule.get_distinct_principal_query_filters()
-
-        for p_rule_type, p_filter, p_exceptions in principal_combos:
-            # Create unique key for this row
-            row_key = (resource_name, p_filter, p_exceptions, p_rule_type)
-
-            if row_key not in pivot_rows_dict:
-                pivot_rows_dict[row_key] = {
-                    "_key": row_key,
-                    "resource_name": resource_name,
-                    "resource_title": resource_title,
-                    "principal_filter": p_filter,
-                    "principal_exception": p_exceptions,
-                    "principal_rule_type": p_rule_type,
-                    "_cells": {},  # Map: resource_filter_combo -> actions set
-                }
-
-    # Step 3: Populate cells with actions
-    for rule_name, rule in ac_rules_dict.items():
-        resource_name = rule.resource
-
-        principal_combos = rule.get_distinct_principal_query_filters()
-        resource_combos = rule.get_distinct_resource_query_filters()
-
-        if not resource_combos:
-            resource_combos = [(rule.type, None, ())]
-
-        for p_rule_type, p_filter, p_exceptions in principal_combos:
-            row_key = (resource_name, p_filter, p_exceptions, p_rule_type)
-
-            if row_key in pivot_rows_dict:
-                for r_rule_type, r_filter, r_exceptions in resource_combos:
-                    cell_key = (r_filter, r_exceptions, r_rule_type)
-
-                    if cell_key not in pivot_rows_dict[row_key]["_cells"]:
-                        pivot_rows_dict[row_key]["_cells"][cell_key] = set()
-
-                    # Add actions to this cell
-                    for action in rule.actions:
-                        pivot_rows_dict[row_key]["_cells"][cell_key].add(action.action)
-
-    # Step 4: Build columns structure
-    columns = [
-        {
-            "fieldname": "resource_name",
-            "label": _("Resource Name"),
-            "fieldtype": "Data",
-            "width": 0,
-            "hidden": 1,
-        },
-        {
-            "fieldname": "resource",
-            "label": _("Resource"),
-            "fieldtype": "Data",
-            "width": 200,
-        },
-        {
-            "fieldname": "principal_filter",
-            "label": _("Principal Filter"),
-            "fieldtype": "Data",
-            "width": 250,
-        },
-    ]
-
-    # Add columns for each resource filter combination
-    resource_filter_columns = []
-    for idx, (r_filter, r_exceptions, r_rule_type) in enumerate(resource_filter_combos):
-        col_fieldname = f"rf_{idx}"
-        col_label = format_filter_display(
-            r_filter,
-            r_exceptions,
-            r_rule_type,
-            filter_display_names,
-        )
-
-        columns.append(
-            {
-                "fieldname": col_fieldname,
-                "label": col_label,
-                "fieldtype": "Data",
-                "width": 150,
-            }
-        )
-
-        resource_filter_columns.append(
-            (col_fieldname, (r_filter, r_exceptions, r_rule_type))
-        )
-
-    # Step 5: Build data rows
-    data = []
-    action_filter = filters.get("action")
-
-    pivot_rows_list = sorted(
-        pivot_rows_dict.values(),
-        key=lambda x: (
-            x["resource_title"],
-            format_filter_display(
-                x["principal_filter"],
-                x["principal_exception"],
-                x["principal_rule_type"],
-                filter_display_names,
-            ),
-        ),
-    )
-
-    for row in pivot_rows_list:
-        # Format principal filter display
-        principal_display = format_filter_display(
-            row["principal_filter"],
-            row["principal_exception"],
-            row["principal_rule_type"],
-            filter_display_names,
-        )
-
-        data_row = {
-            "resource_name": row["resource_name"],
-            "resource": row["resource_title"],
-            "principal_filter": principal_display,
-        }
-
-        # Populate cells for each resource filter column
-        for col_fieldname, cell_key in resource_filter_columns:
-            actions = row["_cells"].get(cell_key, set())
-
-            if action_filter:
-                data_row[col_fieldname] = "Y" if action_filter in actions else "N"
-            else:
-                data_row[col_fieldname] = ", ".join(sorted(actions)) if actions else ""
-
-        data.append(data_row)
 
     return columns, data
