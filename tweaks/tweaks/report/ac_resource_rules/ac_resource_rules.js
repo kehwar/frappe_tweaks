@@ -39,6 +39,10 @@ frappe.query_reports["AC Resource Rules"] = {
             const link_url = frappe.utils.get_form_link("User", data.user_id);
             return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`;
         }
+        // Hide "N" values for better visual clarity (only show "Y" for granted access)
+        if (value === "N") {
+            return "";
+        }
         return default_formatter(value, row, column, data);
     }
 };
