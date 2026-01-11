@@ -14,19 +14,25 @@ def execute(filters=None):
     """
     AC Resource Rules Report
 
-    Matrix view showing which users have access to which resources based on resource query filters.
+    Shows which users have access to which resources based on resource query filters.
 
     Filters:
         - resource (required): AC Resource to analyze
-        - query_filter (optional): Query Filter for user filtering (User, User Group, Role, or Role Profile)
+        - query_filter (optional): Query Filter for principal filtering (User, User Group, Role, or Role Profile)
         - action (optional): Specific action to check (shows Y/N instead of listing all actions)
+        - pivot (optional, default=0): If checked, pivot filters to columns (matrix view); if unchecked, show as flat table
 
-    Report Structure:
-        - Rows: Users (all enabled, or filtered by Query Filter)
-        - Columns: Resource Query Filters from AC Rules (grouped and de-duplicated)
-        - Cells: Y/N if action filter is specified, or comma-separated sorted actions if not
+    Report Structure (when pivot=0, default):
+        - Flat table with columns: Principal User, Resource Query Filter, Actions
+        - Each row represents a user + filter combination where the user has access
 
-    Column Logic:
+    Report Structure (when pivot=1):
+        - Matrix view:
+          - Rows: Principal Users (all enabled, or filtered by Query Filter)
+          - Columns: Resource Query Filters from AC Rules (grouped and de-duplicated)
+          - Cells: Y/N if action filter is specified, or comma-separated sorted actions if not
+
+    Column Logic (pivot mode):
         - Columns are deduplicated by (rule_type, non_exception_filter, exception_filters)
         - Same filter can appear in multiple columns if used by different rule types (Permit vs Forbid)
         - Each non-exception resource filter becomes a column
@@ -66,11 +72,8 @@ def get_data(filters):
     Process:
     1. Fetch AC Resource and related AC Rules (enabled, within valid date range)
     2. Get users (all enabled or filtered by Query Filter)
-    3. Build filter columns by analyzing resource filters from all rules
-    4. For each user × filter column combination:
-       - Check if user matches the rule's principals
-       - Aggregate actions if matched
-       - Display as "Y"/"N" (if action filter specified) or comma-separated action list
+    3. Build flat array of (User, Distinct Resource Query Filter, Actions)
+    4. If pivot=1, transform to matrix view; if pivot=0, return flat table
 
     Returns:
         Tuple of (columns, data) where:
@@ -80,6 +83,7 @@ def get_data(filters):
 
     resource_name = filters.get("resource")
     query_filter_name = filters.get("query_filter")
+    pivot = filters.get("pivot", 0)
 
     # Get the AC Resource
     resource = frappe.get_doc("AC Resource", resource_name)
@@ -118,11 +122,75 @@ def get_data(filters):
     if not filter_columns:
         return [], []
 
-    # Build columns: User + one column per filter combination
+    # Step 1: Build flat array of (User, Distinct Resource Query Filter, Actions)
+    flat_data = build_flat_data(users, filter_columns, ac_rules, filters)
+
+    # Step 2: Transform based on pivot flag
+    if pivot:
+        return build_pivot_view(users, filter_columns, flat_data, filters)
+    else:
+        return build_flat_view(flat_data, filters)
+
+
+def build_flat_data(users, filter_columns, ac_rules, filters):
+    """
+    Build flat array of (User, Distinct Resource Query Filter, Actions).
+
+    For each user × filter combination:
+    - Check if user matches the rule's principals
+    - If matched, create an entry with user, filter label, and aggregated actions
+
+    Returns:
+        List of dicts with keys: user_id, user_name, filter_label, actions
+        Only includes rows where user has access (actions not empty)
+    """
+    flat_data = []
+    action_filter = filters.get("action")
+
+    for user_dict in users:
+        user_id = user_dict["name"]
+        user_name = user_dict["full_name"]
+
+        for col in filter_columns:
+            actions = get_user_actions_for_filter_column(user_id, col, ac_rules)
+
+            # Skip if no actions (user doesn't have access to this filter)
+            if not actions:
+                continue
+
+            # Apply action filter if specified
+            if action_filter:
+                action_list = actions.split(", ")
+                if action_filter not in action_list:
+                    continue
+                actions = action_filter  # Show only the filtered action
+
+            flat_data.append(
+                {
+                    "user_id": user_id,
+                    "user_name": user_name,
+                    "filter_label": col["label"],
+                    "actions": actions,
+                }
+            )
+
+    return flat_data
+
+
+def build_flat_view(flat_data, filters):
+    """
+    Build flat table view with columns: User, Resource Query Filter, Actions.
+
+    Args:
+        flat_data: List of dicts with user_id, user_name, filter_label, actions
+
+    Returns:
+        Tuple of (columns, data) for flat table view
+    """
     columns = [
         {
             "fieldname": "user",
-            "label": _("User"),
+            "label": _("Principal User"),
             "fieldtype": "Data",
             "width": 250,
         },
@@ -131,7 +199,75 @@ def get_data(filters):
             "label": _("User ID"),
             "fieldtype": "Link",
             "options": "User",
-            "hidden": 1,  # Hidden column
+            "hidden": 1,
+        },
+        {
+            "fieldname": "filter",
+            "label": _("Resource Query Filter"),
+            "fieldtype": "Data",
+            "width": 300,
+        },
+        {
+            "fieldname": "actions",
+            "label": _("Actions"),
+            "fieldtype": "Data",
+            "width": 200,
+        },
+    ]
+
+    data = [
+        {
+            "user": row["user_name"],
+            "user_id": row["user_id"],
+            "filter": row["filter_label"],
+            "actions": row["actions"],
+        }
+        for row in flat_data
+    ]
+
+    return columns, data
+
+
+def build_pivot_view(users, filter_columns, flat_data, filters):
+    """
+    Build pivot (matrix) view with users as rows and filters as columns.
+
+    Args:
+        users: List of user dicts
+        filter_columns: List of filter column definitions
+        flat_data: List of dicts with user_id, user_name, filter_label, actions
+
+    Returns:
+        Tuple of (columns, data) for pivot table view
+    """
+    action_filter = filters.get("action")
+
+    # Create lookup for quick access: {user_id: {filter_label: actions}}
+    user_filter_map = {}
+    for row in flat_data:
+        user_id = row["user_id"]
+        filter_label = row["filter_label"]
+        actions = row["actions"]
+
+        if user_id not in user_filter_map:
+            user_filter_map[user_id] = {}
+
+        user_filter_map[user_id][filter_label] = actions
+
+    # Build columns: User + one column per filter combination
+    columns = [
+        {
+            "fieldname": "user",
+            "label": _("Principal User"),
+            "fieldtype": "Data",
+            "width": 250,
+        },
+        {
+            "fieldname": "user_id",
+            "label": _("User ID"),
+            "fieldtype": "Link",
+            "options": "User",
+            "hidden": 1,
         },
     ]
 
@@ -147,16 +283,14 @@ def get_data(filters):
 
     # Build data rows
     data = []
-    action_filter = filters.get("action")
-
     for user_dict in users:
-        row = {"user": user_dict["full_name"], "user_id": user_dict["name"]}
+        user_id = user_dict["name"]
+        user_name = user_dict["full_name"]
+        row = {"user": user_name, "user_id": user_id}
 
-        # For each filter column, check if the user matches principals and aggregate actions
+        # For each filter column, get actions from lookup
         for col in filter_columns:
-            actions = get_user_actions_for_filter_column(
-                user_dict["name"], col, ac_rules
-            )
+            actions = user_filter_map.get(user_id, {}).get(col["label"], "")
 
             # If action filter is specified, show Y/N instead of listing actions
             if action_filter:

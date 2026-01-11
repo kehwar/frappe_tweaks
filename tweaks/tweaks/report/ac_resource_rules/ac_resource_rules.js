@@ -12,7 +12,7 @@ frappe.query_reports["AC Resource Rules"] = {
         },
         {
             "fieldname": "query_filter",
-            "label": __("User Filter"),
+            "label": __("Principal Filter"),
             "fieldtype": "Link",
             "options": "Query Filter",
             "reqd": 0,
@@ -31,6 +31,13 @@ frappe.query_reports["AC Resource Rules"] = {
             "options": "AC Action",
             "reqd": 0,
             "description": __("Filter by specific action. When specified, cells show Y/N instead of listing all actions.")
+        },
+        {
+            "fieldname": "pivot",
+            "label": __("Pivot"),
+            "fieldtype": "Check",
+            "default": 0,
+            "description": __("Pivot resource query filters to columns (matrix view). Uncheck for flat table view.")
         }
     ],
     "formatter": function(value, row, column, data, default_formatter) {
