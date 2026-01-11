@@ -9,6 +9,12 @@ frappe.query_reports["Query Filters"] = {
         });
     },
     "formatter": function(value, row, column, data, default_formatter) {
+        // Format the filter_name column to show link to Query Filter document
+        if (column.fieldname === "filter_name" && data.name) {
+            const link_url = frappe.utils.get_form_link("Query Filter", data.name);
+            return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`;
+        }
+        
         value = default_formatter(value, row, column, data);
         
         if (column.fieldname === "filters" && data.filters) {
