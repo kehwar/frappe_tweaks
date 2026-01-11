@@ -4,14 +4,6 @@
 frappe.query_reports["AC Rules"] = {
     "filters": [
         {
-            "fieldname": "action",
-            "label": __("Action"),
-            "fieldtype": "Link",
-            "options": "AC Action",
-            "reqd": 0,
-            "description": __("Filter by specific action. Shows Y/N instead of listing all actions.")
-        },
-        {
             "fieldname": "principal_filter",
             "label": __("Principal Filter"),
             "fieldtype": "Link",
@@ -26,7 +18,15 @@ frappe.query_reports["AC Rules"] = {
                     }
                 };
             }
-        }
+        },
+        {
+            "fieldname": "action",
+            "label": __("Action"),
+            "fieldtype": "Link",
+            "options": "AC Action",
+            "reqd": 0,
+            "description": __("Filter by specific action. Shows Y/N instead of listing all actions.")
+        },
     ],
     "formatter": function(value, row, column, data, default_formatter) {
         value = default_formatter(value, row, column, data);
