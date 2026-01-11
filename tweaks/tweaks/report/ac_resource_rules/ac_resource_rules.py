@@ -54,6 +54,9 @@ def execute(filters=None):
     The report evaluates each user against principal filters to determine who has access,
     then shows which resource filters apply for each user.
     Only enabled rules within valid date ranges are shown.
+
+    Returns:
+        Tuple of (columns, data) or ([], []) if no resource specified
     """
     columns = []
     data = []
@@ -183,6 +186,7 @@ def build_flat_view(flat_data, filters):
 
     Args:
         flat_data: List of dicts with user_id, user_name, filter_label, actions
+        filters: Report filters dict (currently not used in flat view)
 
     Returns:
         Tuple of (columns, data) for flat table view
@@ -236,6 +240,7 @@ def build_pivot_view(users, filter_columns, flat_data, filters):
         users: List of user dicts
         filter_columns: List of filter column definitions
         flat_data: List of dicts with user_id, user_name, filter_label, actions
+        filters: Report filters dict (used for action filter to show Y/N instead of action lists)
 
     Returns:
         Tuple of (columns, data) for pivot table view
@@ -311,7 +316,8 @@ def build_filter_columns(ac_rules):
 
     Process:
     1. List all rules
-    2. Expand distinct query filters using get_distinct_resource_query_filters()
+    2. Expand distinct query filters using rule.get_distinct_resource_query_filters()
+       (a method on the AC Rule doctype that returns combinations of non-exception and exception filters)
        - Each non-exception filter becomes a column
        - Exception filters are combined into the same column (e.g., "Filter1 - ⚠️ Exception1, ⚠️ Exception2")
     3. Group filters by (rule_type, non_exception_filter, exception_filters_tuple)
