@@ -4,9 +4,7 @@
 frappe.query_reports["AC Principal Query Filters"] = {
     filters: [],
     filter_data: {},
-    "formatter": function(value, row, column, data, default_formatter) {
-        value = default_formatter(value, row, column, data);
-        
+    "formatter": function(value, row, column, data, default_formatter) {        
         // Format the filter_name column to show link to Query Filter
         if (column.fieldname === "filter_name" && data.query_filter) {
             const link_url = frappe.utils.get_form_link("Query Filter", data.query_filter);
@@ -16,6 +14,12 @@ frappe.query_reports["AC Principal Query Filters"] = {
         // Format the user column to show full name with link to user profile
         if (column.fieldname === "user" && data.user_id) {
             const link_url = frappe.utils.get_form_link("User", data.user_id);
+            return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`;
+        }
+        
+        // Format the reference_doctype column to show link to the doctype list view
+        if (column.fieldname === "reference_doctype" && data.reference_doctype) {
+            const link_url = `/app/${frappe.router.slug(data.reference_doctype)}`;
             return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`;
         }
         
@@ -38,7 +42,7 @@ frappe.query_reports["AC Principal Query Filters"] = {
             `;
         }
         
-        return value;
+        return default_formatter(value, row, column, data);
     },
     "show_filter_dialog": function(name) {
         const filter_info = this.filter_data[name];
