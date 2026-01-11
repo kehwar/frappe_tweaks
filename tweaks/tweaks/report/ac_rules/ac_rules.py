@@ -138,18 +138,22 @@ def get_data(filters):
     action_filter = filters.get("action") if filters else None
 
     for row in rows:
-        # Display "All" for None resource filter with rule type emoji
-        rule_emoji = "✅" if row["rule_type"] == "Permit" else "🚫"
-
+        # Display "All" for None resource filter with rule type emoji (only for Forbid)
         if row["resource_filter"]:
             # Add exception filters with emoji if present
             if row.get("resource_exception"):
                 exception_labels = [f"⚠️ {name}" for name in row["resource_exception"]]
-                resource_filter_display = f"{rule_emoji} {row['resource_filter']} - {', '.join(exception_labels)}"
+                resource_filter_display = (
+                    f"{row['resource_filter']} - {', '.join(exception_labels)}"
+                )
             else:
-                resource_filter_display = f"{rule_emoji} {row['resource_filter']}"
+                resource_filter_display = row["resource_filter"]
         else:
-            resource_filter_display = f"{rule_emoji} All"
+            resource_filter_display = "All"
+
+        # Add emoji only for Forbid type
+        if row["rule_type"] == "Forbid":
+            resource_filter_display = f"🚫 {resource_filter_display}"
 
         data_row = {
             "resource_name": row["resource_name"],
@@ -337,9 +341,7 @@ def build_columns(ac_rules_dict):
             key = (principal_filter, exception_tuple, rule_type)
 
             if key not in columns_dict:
-                # Build label with rule type emoji and display names
-                rule_emoji = "✅" if rule_type == "Permit" else "🚫"
-
+                # Build label with display names
                 # Get display name for principal filter
                 principal_filter_display = filter_display_names.get(
                     principal_filter, principal_filter
@@ -351,9 +353,15 @@ def build_columns(ac_rules_dict):
                         f"⚠️ {filter_display_names.get(name, name)}"
                         for name in exception_tuple
                     ]
-                    label = f"{rule_emoji} {principal_filter_display} - {', '.join(exception_labels)}"
+                    label = (
+                        f"{principal_filter_display} - {', '.join(exception_labels)}"
+                    )
                 else:
-                    label = f"{rule_emoji} {principal_filter_display}"
+                    label = principal_filter_display
+
+                # Add emoji only for Forbid type
+                if rule_type == "Forbid":
+                    label = f"🚫 {label}"
 
                 columns_dict[key] = {
                     "fieldname": f"col_{len(columns_dict)}",
