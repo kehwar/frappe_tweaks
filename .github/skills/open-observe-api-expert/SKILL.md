@@ -1,85 +1,98 @@
 ---
 name: open-observe-api-expert
-description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]
+description: Expert guidance for OpenObserve API integration in Frappe Tweaks. Use when creating, configuring, or troubleshooting OpenObserve API DocType, implementing send_logs() or search_logs() functionality, integrating with Server Scripts/Business Logic/Client-side code, debugging connection issues, or implementing logging, monitoring, error tracking, performance metrics, or audit trail use cases.
 ---
 
-# Open Observe Api Expert
+# OpenObserve API Expert
 
-## Overview
+Expert guidance for the OpenObserve API integration - a logging and observability integration for Frappe applications.
 
-[TODO: 1-2 sentences explaining what this skill enables]
+## Quick Start
 
-## Structuring This Skill
+**Configuration**: Single DocType "Open Observe API" with URL, user, password, default organization  
+**Core Functions**: `send_logs()`, `search_logs()`, `test_connection()`  
+**Access**: System Manager only  
+**Safe Exec**: Available as `frappe.open_observe.send_logs()` and `frappe.open_observe.search_logs()`
 
-[TODO: Choose the structure that best fits this skill's purpose. Common patterns:
+## Core Concepts
 
-**1. Workflow-Based** (best for sequential processes)
-- Works well when there are clear step-by-step procedures
-- Example: DOCX skill with "Workflow Decision Tree" → "Reading" → "Creating" → "Editing"
-- Structure: ## Overview → ## Workflow Decision Tree → ## Step 1 → ## Step 2...
+**OpenObserve**: Open-source observability platform for logs, metrics, and traces  
+**Stream**: Named channel for organizing logs (e.g., "application-logs", "error-logs")  
+**Organization**: Namespace for separating environments (defaults to configured default_org)  
+**Safe Exec Global**: Access API from Server Scripts/Business Logic without importing
 
-**2. Task-Based** (best for tool collections)
-- Works well when the skill offers different operations/capabilities
-- Example: PDF skill with "Quick Start" → "Merge PDFs" → "Split PDFs" → "Extract Text"
-- Structure: ## Overview → ## Quick Start → ## Task Category 1 → ## Task Category 2...
+## Common Tasks
 
-**3. Reference/Guidelines** (best for standards or specifications)
-- Works well for brand guidelines, coding standards, or requirements
-- Example: Brand styling with "Brand Guidelines" → "Colors" → "Typography" → "Features"
-- Structure: ## Overview → ## Guidelines → ## Specifications → ## Usage...
+### Configuration Setup
 
-**4. Capabilities-Based** (best for integrated systems)
-- Works well when the skill provides multiple interrelated features
-- Example: Product Management with "Core Capabilities" → numbered capability list
-- Structure: ## Overview → ## Core Capabilities → ### 1. Feature → ### 2. Feature...
+```python
+doc = frappe.get_doc("Open Observe API", "Open Observe API")
+doc.url = "https://api.openobserve.ai"
+doc.user = "admin@example.com"
+doc.password = "secure_password"
+doc.default_org = "default"
+doc.save()
+```
 
-Patterns can be mixed and matched as needed. Most skills combine patterns (e.g., start with task-based, add workflow for complex operations).
+### Send Logs
 
-Delete this entire "Structuring This Skill" section when done - it's just guidance.]
+**From Python**:
+```python
+frappe.call(
+    "tweaks.tweaks.doctype.open_observe_api.open_observe_api.send_logs",
+    stream="application-logs",
+    logs=[{"message": "Event occurred", "level": "info"}]
+)
+```
 
-## [TODO: Replace with the first main section based on chosen structure]
+**From Server Scripts/Business Logic**:
+```python
+frappe.open_observe.send_logs(
+    stream="server-logs",
+    logs=[{"message": "Script executed", "user": frappe.session.user}]
+)
+```
 
-[TODO: Add content here. See examples in existing skills:
-- Code samples for technical skills
-- Decision trees for complex workflows
-- Concrete examples with realistic user requests
-- References to scripts/templates/references as needed]
+### Search Logs
 
-## Resources
+```python
+results = frappe.open_observe.search_logs(
+    stream="application-logs",
+    start_time="2025-12-26T00:00:00Z",
+    end_time="2025-12-26T23:59:59Z",
+    size=100
+)
+```
 
-This skill includes example resource directories that demonstrate how to organize different types of bundled resources:
+## Key Features
 
-### scripts/
-Executable code (Python/Bash/etc.) that can be run directly to perform specific operations.
+**Batch Logging**: Send multiple logs in single request  
+**Time-based Search**: ISO format timestamps auto-converted to Unix microseconds  
+**Query Support**: SQL queries and JSON filters for advanced search  
+**Dry Run**: Test without actually sending to OpenObserve  
+**Secure Storage**: Password encrypted using Frappe's password field
 
-**Examples from other skills:**
-- PDF skill: `fill_fillable_fields.py`, `extract_form_field_info.py` - utilities for PDF manipulation
-- DOCX skill: `document.py`, `utilities.py` - Python modules for document processing
+## Detailed Documentation
 
-**Appropriate for:** Python scripts, shell scripts, or any executable code that performs automation, data processing, or specific operations.
+**API Functions**: See [references/api-reference.md](references/api-reference.md) for complete parameter documentation  
+**Integration Examples**: See [references/integration-examples.md](references/integration-examples.md) for usage in Python, Server Scripts, Business Logic, JavaScript  
+**Use Cases**: See [references/use-cases.md](references/use-cases.md) for document tracking, error logging, performance monitoring, audit trails  
+**Troubleshooting**: See [references/troubleshooting.md](references/troubleshooting.md) for common issues and solutions
 
-**Note:** Scripts may be executed without loading into context, but can still be read by Claude for patching or environment adjustments.
+## Best Practices
 
-### references/
-Documentation and reference material intended to be loaded into context to inform Claude's process and thinking.
+1. Use descriptive stream names (hierarchical: `app-errors`, `user-activity`)
+2. Include timestamps in all log entries
+3. Add context (user, doctype, action) to logs
+4. Batch multiple logs in single request for efficiency
+5. Handle logging failures gracefully (don't break application)
+6. Use appropriate log levels (info, warning, error, debug)
+7. Leverage search for analytics and pattern analysis
 
-**Examples from other skills:**
-- Product management: `communication.md`, `context_building.md` - detailed workflow guides
-- BigQuery: API reference documentation and query examples
-- Finance: Schema documentation, company policies
+## Security
 
-**Appropriate for:** In-depth documentation, API references, database schemas, comprehensive guides, or any detailed information that Claude should reference while working.
-
-### assets/
-Files not intended to be loaded into context, but rather used within the output Claude produces.
-
-**Examples from other skills:**
-- Brand styling: PowerPoint template files (.pptx), logo files
-- Frontend builder: HTML/React boilerplate project directories
-- Typography: Font files (.ttf, .woff2)
-
-**Appropriate for:** Templates, boilerplate code, document templates, images, icons, fonts, or any files meant to be copied or used in the final output.
-
----
-
-**Any unneeded directories can be deleted.** Not every skill requires all three types of resources.
+- System Manager permission required
+- Password stored with Frappe encryption
+- HTTP Basic Auth with base64 encoding
+- 30-second timeout prevents hanging
+- Errors logged to Frappe Error Log
