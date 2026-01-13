@@ -5,6 +5,17 @@ applyTo: '**/ac_rule/**, **/ac_resource/**, **/ac_principal/**, **/ac_action/**,
 
 # AC Rule and Query Filter System
 
+**Note**: For comprehensive guidance on AC Rules, use the `ac-rules-expert` skill instead of this instruction file. The skill provides better organized, progressive disclosure of information.
+
+To use the skill:
+```
+Use the skill "ac-rules-expert"
+```
+
+This instruction file is kept for backward compatibility but the ac-rules-expert skill is the recommended resource.
+
+---
+
 Guidelines for working with the AC (Access Control) Rule and Query Filter system in Frappe Tweaks. This is an advanced access control framework that extends Frappe's built-in permission system with fine-grained, rule-based access control.
 
 ## Project Context
@@ -1111,6 +1122,7 @@ conditions = f"owner = {frappe.db.escape(user_input)}"  # Safe
 
 ## Related Documentation
 
+- **AC Rules Expert Skill**: Use the `ac-rules-expert` skill (`.github/skills/ac-rules-expert/`) - Recommended resource for AC Rule guidance
 - Main Instructions: `.github/copilot-instructions.md`
 - Sync Job Framework: Use the `sync-job-expert` skill (`.github/skills/sync-job-expert/`)
 - OpenObserve API: `.github/instructions/open-observe-api.instructions.md`

@@ -215,6 +215,41 @@ Key areas tracked:
 
 When planning new features or modifications, always check and update the TODO documentation to maintain project visibility.
 
+## Skills
+
+This project includes specialized skills that provide expert guidance for specific domains:
+
+### Available Skills
+
+- **ac-rules-expert**: Expert guidance for creating, implementing, and troubleshooting AC (Access Control) Rules
+  - Use when working with AC Rules, Query Filters, AC Resources, AC Actions
+  - Covers rule evaluation, SQL generation, integration with DocTypes/Reports
+  - Location: `.github/skills/ac-rules-expert/`
+
+- **sync-job-expert**: Expert guidance for the Sync Job framework
+  - Use when working with Sync Job Types, Sync Job controllers, enqueueing
+  - Covers implementation, debugging, lifecycle and hooks
+  - Location: `.github/skills/sync-job-expert/`
+
+- **doctype-schema-expert**: Expert guidance on Frappe DocType schemas
+  - Use when creating, modifying, or analyzing DocType JSON files
+  - Covers field types, properties, naming conventions, best practices
+  - Location: `.github/skills/doctype-schema-expert/`
+
+- **skill-creator**: Guide for creating effective skills
+  - Use when creating or updating skills
+  - Covers skill structure, progressive disclosure, best practices
+  - Location: `.github/skills/skill-creator/`
+
+### Using Skills
+
+To invoke a skill:
+```
+Use the skill "skill-name"
+```
+
+Skills provide specialized knowledge and are preferred over instruction files when available for a specific task.
+
 ## Additional Resources
 
 - Frappe Documentation: https://frappeframework.com/docs
