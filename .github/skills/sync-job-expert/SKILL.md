@@ -21,30 +21,11 @@ Expert guidance for the Frappe Tweaks Sync Job framework - a queue-based system 
 
 ## Implementation Modes
 
-### Standard Mode (Recommended)
+Choose one of 3 paths (see [references/implementation.md](references/implementation.md) for details):
 
-Framework handles workflow. Implement these hooks:
-
-**Required:**
-- `get_target_document(sync_job, source_doc)` - Return target metadata dict
-- `update_target_doc(sync_job, source_doc, target_doc)` - Update target fields
-
-**Optional:**
-- `get_multiple_target_documents()` - Return list of targets (creates child jobs if > 1)
-- `after_start()` - Initialize before sync
-- `before_relay()/after_relay()` - Handle batch operations
-- `before_sync()/after_sync()` - Pre/post save hooks
-- `finished()` - Post-processing after success
-
-### Bypass Mode (Advanced)
-
-Full control over sync process. Implement:
-
-```python
-def execute(sync_job, source_doc):
-    """Returns dict: {target_doc, operation, diff}"""
-    pass
-```
+1. **Single Target** (Standard): One-to-one sync - implement `get_target_document()` + `update_target_doc()`
+2. **Multiple Targets** (Standard): One-to-many sync - implement `get_multiple_target_documents()` + `update_target_doc()`
+3. **Bypass**: Full control - implement `execute()`
 
 ## Controller Patterns
 
@@ -150,7 +131,7 @@ def update_target_doc(sync_job, source_doc, target_doc):
 **Sync Job Type defaults (can override per job):**
 - Queue: "default", "short", "long"
 - Timeout: seconds
-- Retry Delay: seconds between retries
+- Retry Delay: minutes between retries
 - Max Retries: maximum attempts
 - Verbose Logging: preserve data snapshots (disabled by default)
 

@@ -2,6 +2,34 @@
 
 Step-by-step guide for implementing sync job controllers.
 
+## Implementation Paths
+
+There are **3 distinct implementation paths**, each with different required functions:
+
+### Path 1: Single Target (Standard Mode)
+**Use when**: One source document syncs to one target document
+
+**Required functions:**
+- `get_target_document(sync_job, source_doc)` - Return single target metadata
+- `update_target_doc(sync_job, source_doc, target_doc)` - Update target fields
+
+### Path 2: Multiple Targets (Standard Mode)
+**Use when**: One source document syncs to multiple target documents (creates child jobs)
+
+**Required functions:**
+- `get_multiple_target_documents(sync_job, source_doc)` - Return list of targets
+- `update_target_doc(sync_job, source_doc, target_doc)` - Update target fields
+
+**Note:** Do NOT implement both `get_target_document()` and `get_multiple_target_documents()`. Framework checks for `get_multiple_target_documents()` first.
+
+### Path 3: Bypass Mode
+**Use when**: You need full control over the sync process (custom transactions, external APIs, complex logic)
+
+**Required function:**
+- `execute(sync_job, source_doc)` - Complete sync logic, returns dict with target_doc, operation, diff
+
+**Note:** In Bypass mode, you handle everything including dry run mode. Check `sync_job.get("dry_run")`.
+
 ## Creating a Sync Job Type
 
 ### Step 1: Create via UI
@@ -20,7 +48,7 @@ Optional configuration:
   - Options: "default", "short", "long"
   - Use "long" for heavy operations
 - **Timeout**: Job timeout in seconds (default: 300)
-- **Retry Delay**: Seconds between retries (default: 5)
+- **Retry Delay**: Minutes between retries (default: 5)
 - **Max Retries**: Maximum retry attempts (default: 3)
 - **Verbose Logging**: Preserve data snapshots after completion (default: unchecked)
   - When disabled: Clears `current_data` and `updated_data` fields when job finishes

@@ -108,9 +108,9 @@ job = enqueue_sync_job(
 - **Description**: Maximum execution time before job is terminated
 
 ### retry_delay
-- **Type**: `int` (seconds)
+- **Type**: `int` (minutes)
 - **Default**: From Sync Job Type (default: `5`)
-- **Description**: Base delay between retry attempts
+- **Description**: Base delay in minutes between retry attempts
 
 ### max_retries
 - **Type**: `int`
