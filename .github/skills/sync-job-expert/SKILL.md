@@ -15,24 +15,9 @@ Expert guidance for the Frappe Tweaks Sync Job framework - a queue-based system 
 
 ## Quick Start
 
-### Creating a Sync Job Type
-
-1. Navigate to **Sync Job Type > New**
-2. Set name, source doctype, target doctype
-3. Save (in developer mode, creates controller at `{app}/{module}/sync_job_type/{scrubbed_name}/{scrubbed_name}.py`)
-4. Implement sync logic in controller
-
-### Enqueue a Sync Job
-
-```python
-from tweaks.utils.sync_job import enqueue_sync_job
-
-sync_job = enqueue_sync_job(
-    sync_job_type="SAP Customer Sync",
-    source_document_name="CUST-00001",
-    context={"force_update": True}
-)
-```
+**Creating**: Navigate to **Sync Job Type > New**, set name and doctypes, save to generate controller  
+**Enqueueing**: See [references/enqueueing.md](references/enqueueing.md) for `enqueue_sync_job()` parameters and examples  
+**Implementing**: See [references/implementation.md](references/implementation.md) for step-by-step controller implementation
 
 ## Implementation Modes
 
