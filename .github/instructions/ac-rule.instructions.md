@@ -1112,7 +1112,7 @@ conditions = f"owner = {frappe.db.escape(user_input)}"  # Safe
 ## Related Documentation
 
 - Main Instructions: `.github/copilot-instructions.md`
-- Sync Job Framework: `.github/instructions/sync-job.instructions.md`
+- Sync Job Framework: Use the `sync-job-expert` skill (`.github/skills/sync-job-expert/`)
 - OpenObserve API: `.github/instructions/open-observe-api.instructions.md`
 - Instructions Guidelines: `.github/instructions/instructions.instructions.md`
 - TODO Tracking: `docs/todo/README.md`

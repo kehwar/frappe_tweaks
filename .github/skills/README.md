@@ -18,6 +18,23 @@ The skill-creator provides comprehensive guidance for creating effective skills.
 - `references/workflows.md` - Best practices for workflow patterns
 - `references/output-patterns.md` - Best practices for output formatting
 
+### sync-job-expert
+
+The sync-job-expert provides expert guidance for creating, implementing, and troubleshooting Sync Jobs in the Frappe Tweaks framework. Use when working with Sync Job Types, Sync Job controllers, sync job enqueueing, debugging sync job issues, implementing sync logic, or understanding sync job lifecycle and hooks.
+
+**Location:** `.github/skills/sync-job-expert/`
+
+**Key file:**
+- `SKILL.md` - Complete sync job framework documentation
+
+**When to use:**
+- Creating new Sync Job Types
+- Implementing sync job controllers (Standard or Bypass mode)
+- Enqueueing and configuring sync jobs
+- Understanding sync job lifecycle, statuses, and hooks
+- Troubleshooting sync job failures
+- Implementing batch operations with multiple targets
+
 **Quick start:**
 
 ```bash
