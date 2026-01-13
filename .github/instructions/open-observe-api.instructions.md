@@ -563,4 +563,4 @@ config.validate_setup()  # Raises error if invalid
 - OpenObserve Documentation: https://openobserve.ai/docs/
 - OpenObserve API Reference: https://openobserve.ai/docs/api/
 - Frappe Framework: https://frappeframework.com/docs
-- Safe Exec Documentation: See `.github/instructions/sync-job.instructions.md`
+- Safe Exec Documentation: Use the `sync-job-expert` skill (`.github/skills/sync-job-expert/`)
