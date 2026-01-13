@@ -36,6 +36,9 @@ after_migrate = [
 doc_events = {
     "*": {
         "on_change": workflow_script_hooks["doc_events"]["*"]["on_change"],
+        "before_transition": [
+            "tweaks.utils.workflow.check_workflow_transition_permission"
+        ],
     },
     "Customer": {
         "before_validate": "tweaks.custom.doctype.customer.before_validate",
@@ -51,7 +54,10 @@ permission_query_conditions = {
         + [
             "tweaks.tweaks.doctype.ac_rule.ac_rule_utils.get_permission_query_conditions"
         ]
-    )
+    ),
+    "Workflow Action": [
+        "tweaks.utils.workflow.get_workflow_action_permission_query_conditions"
+    ],
 }
 
 write_permission_query_conditions = {
@@ -71,6 +77,13 @@ get_product_discount_rule = [
 
 apply_pricing_rule_on_transaction = [
     "tweaks.custom.doctype.pricing_rule.apply_pricing_rule_on_transaction"
+]
+
+# Workflow hooks
+filter_workflow_transitions = ["tweaks.utils.workflow.filter_transitions_by_ac_rules"]
+
+has_workflow_action_permission = [
+    "tweaks.utils.workflow.has_workflow_action_permission_via_ac_rules"
 ]
 
 # Scheduled Tasks
