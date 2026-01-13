@@ -1,10 +1,182 @@
-# Common Use Cases
+# Examples
 
-Implementation patterns for common logging and monitoring scenarios.
+Comprehensive examples for OpenObserve API integration across different contexts and use cases.
 
-## 1. Logging Document Changes
+## Table of Contents
 
-Track changes to important documents:
+1. [Basic Usage](#basic-usage)
+2. [Integration Contexts](#integration-contexts)
+3. [Common Use Cases](#common-use-cases)
+
+## Basic Usage
+
+### Send Single Log Entry
+
+```python
+import frappe
+
+result = frappe.call(
+    "tweaks.tweaks.doctype.open_observe_api.open_observe_api.send_logs",
+    stream="application-logs",
+    logs=[{
+        "message": "User login successful",
+        "level": "info",
+        "user": "john@example.com",
+        "timestamp": frappe.utils.now()
+    }]
+)
+```
+
+### Send Multiple Logs
+
+```python
+import frappe
+
+logs = [
+    {"message": "Process started", "level": "info", "step": 1},
+    {"message": "Processing item 1", "level": "info", "step": 2},
+    {"message": "Processing item 2", "level": "info", "step": 3},
+    {"message": "Process completed", "level": "info", "step": 4}
+]
+
+result = frappe.call(
+    "tweaks.tweaks.doctype.open_observe_api.open_observe_api.send_logs",
+    stream="batch-processing",
+    logs=logs
+)
+```
+
+### Search Logs
+
+```python
+import frappe
+
+# Search logs from a specific time range
+result = frappe.call(
+    "tweaks.tweaks.doctype.open_observe_api.open_observe_api.search_logs",
+    sql="SELECT * FROM application_logs",
+    start_time="2025-12-26T00:00:00Z",
+    end_time="2025-12-26T23:59:59Z",
+    size=100
+)
+
+if result["success"]:
+    logs = result["response"]
+    for log in logs.get("hits", []):
+        print(log)
+```
+
+## Integration Contexts
+
+### From Server Scripts
+
+Use the safe_exec global directly:
+
+```python
+# Send logs from Server Script
+open_observe.send_logs(
+    stream="server-script-logs",
+    logs=[{
+        "message": "Server script executed",
+        "script_name": "My Server Script",
+        "user": frappe.session.user,
+        "timestamp": frappe.utils.now()
+    }]
+)
+
+# Search logs from Server Script
+results = open_observe.search_logs(
+    sql="SELECT * FROM server_script_logs",
+    start_time="2025-12-26T00:00:00Z",
+    end_time="2025-12-26T23:59:59Z"
+)
+```
+
+### From Business Logic
+
+```python
+# In a Business Logic script
+open_observe.send_logs(
+    stream="business-logic",
+    logs=[{
+        "message": "Business logic executed",
+        "doctype": doc.doctype,
+        "name": doc.name,
+        "action": "validate"
+    }]
+)
+```
+
+### From JavaScript (Client-side)
+
+```javascript
+// Send logs
+frappe.call({
+    method: 'tweaks.tweaks.doctype.open_observe_api.open_observe_api.send_logs',
+    args: {
+        stream: 'client-events',
+        logs: [{
+            message: 'Form submitted',
+            level: 'info',
+            user: frappe.session.user,
+            timestamp: frappe.datetime.now_datetime()
+        }]
+    },
+    callback: function(r) {
+        if (r.message && r.message.success) {
+            console.log('Logs sent successfully');
+        }
+    }
+});
+
+// Search logs
+frappe.call({
+    method: 'tweaks.tweaks.doctype.open_observe_api.open_observe_api.search_logs',
+    args: {
+        sql: 'SELECT * FROM client_events',
+        start_time: '2025-12-26T00:00:00Z',
+        end_time: '2025-12-26T23:59:59Z',
+        size: 50
+    },
+    callback: function(r) {
+        if (r.message && r.message.success) {
+            console.log('Search results:', r.message.response);
+        }
+    }
+});
+```
+
+### From Document Hooks
+
+```python
+# In hooks.py
+doc_events = {
+    "Sales Order": {
+        "after_save": "myapp.hooks.log_sales_order_changes"
+    }
+}
+
+# In myapp/hooks.py
+def log_sales_order_changes(doc, method):
+    open_observe.send_logs(
+        stream="sales-order-changes",
+        logs=[{
+            "doctype": doc.doctype,
+            "name": doc.name,
+            "grand_total": doc.grand_total,
+            "status": doc.status,
+            "customer": doc.customer,
+            "user": frappe.session.user,
+            "timestamp": frappe.utils.now()
+        }]
+    )
+```
+
+## Common Use Cases
+
+### Document Change Tracking
+
+Track changes to important documents with detailed field-level changes:
 
 ```python
 # In a document hook for audit logging
@@ -37,9 +209,9 @@ def log_document_changes(doc, method):
         )
 ```
 
-## 2. Error Logging with Traceback
+### Error Logging with Traceback
 
-Capture detailed error information:
+Capture detailed error information for debugging:
 
 ```python
 # In error handling
@@ -60,7 +232,7 @@ except Exception as e:
     raise
 ```
 
-## 3. Performance Monitoring
+### Performance Monitoring
 
 Track operation execution times:
 
@@ -84,7 +256,7 @@ open_observe.send_logs(
 )
 ```
 
-## 4. User Activity Tracking
+### User Activity Tracking
 
 Monitor user actions and login events:
 
@@ -101,9 +273,9 @@ open_observe.send_logs(
 )
 ```
 
-## 5. Searching and Analyzing Logs
+### Log Analysis and Pattern Detection
 
-Find patterns in logs over time:
+Search and analyze logs to find patterns:
 
 ```python
 # Search for errors in the last 24 hours
@@ -128,9 +300,9 @@ if result["success"]:
         print(f"Error: {error.get('message')} at {error.get('timestamp')}")
 ```
 
-## 6. Audit Trail Implementation
+### Complete Audit Trail
 
-Complete audit trail for compliance:
+Implement comprehensive audit trail for compliance:
 
 ```python
 # Register as a hook in hooks.py
@@ -196,7 +368,7 @@ def get_changes(new_doc, old_doc):
     return changes
 ```
 
-## 7. Batch Processing Logs
+### Batch Processing with Progress Tracking
 
 Log batch operation progress:
 
@@ -241,9 +413,9 @@ def process_batch(items):
     )
 ```
 
-## 8. API Rate Limiting Monitoring
+### API Rate Limiting and Monitoring
 
-Track API usage and rate limits:
+Track API usage and monitor rate limits:
 
 ```python
 def api_call_with_logging(endpoint, method="GET", **kwargs):

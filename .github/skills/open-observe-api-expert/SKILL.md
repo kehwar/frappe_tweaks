@@ -75,8 +75,7 @@ results = open_observe.search_logs(
 ## Detailed Documentation
 
 **API Functions**: See [references/api-reference.md](references/api-reference.md) for complete parameter documentation  
-**Integration Examples**: See [references/integration-examples.md](references/integration-examples.md) for usage in Python, Server Scripts, Business Logic, JavaScript  
-**Use Cases**: See [references/use-cases.md](references/use-cases.md) for document tracking, error logging, performance monitoring, audit trails  
+**Examples**: See [references/examples.md](references/examples.md) for comprehensive usage examples across different contexts and use cases  
 **Troubleshooting**: See [references/troubleshooting.md](references/troubleshooting.md) for common issues and solutions
 
 ## Best Practices
