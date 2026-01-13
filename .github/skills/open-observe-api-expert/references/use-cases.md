@@ -24,7 +24,7 @@ def log_document_changes(doc, method):
                         "new": new_value
                     }
         
-        frappe.open_observe.send_logs(
+        open_observe.send_logs(
             stream="audit-trail",
             logs=[{
                 "doctype": doc.doctype,
@@ -47,7 +47,7 @@ try:
     # Some operation that might fail
     process_complex_operation()
 except Exception as e:
-    frappe.open_observe.send_logs(
+    open_observe.send_logs(
         stream="application-errors",
         logs=[{
             "message": str(e),
@@ -74,7 +74,7 @@ process_data()
 
 duration = time.time() - start_time
 
-frappe.open_observe.send_logs(
+open_observe.send_logs(
     stream="performance-metrics",
     logs=[{
         "operation": "process_data",
@@ -90,7 +90,7 @@ Monitor user actions and login events:
 
 ```python
 # After user login
-frappe.open_observe.send_logs(
+open_observe.send_logs(
     stream="user-activity",
     logs=[{
         "event": "login",
@@ -112,8 +112,8 @@ from datetime import datetime, timedelta
 end_time = datetime.utcnow()
 start_time = end_time - timedelta(hours=24)
 
-result = frappe.open_observe.search_logs(
-    stream="application-errors",
+result = open_observe.search_logs(
+    sql="SELECT * FROM application_errors",
     start_time=start_time.isoformat() + "Z",
     end_time=end_time.isoformat() + "Z",
     size=100
@@ -144,7 +144,7 @@ doc_events = {
 
 # In myapp/audit.py
 def log_insert(doc, method):
-    frappe.open_observe.send_logs(
+    open_observe.send_logs(
         stream="audit-trail",
         logs=[{
             "action": "insert",
@@ -159,7 +159,7 @@ def log_update(doc, method):
     if hasattr(doc, "_doc_before_save"):
         changes = get_changes(doc, doc._doc_before_save)
         if changes:
-            frappe.open_observe.send_logs(
+            open_observe.send_logs(
                 stream="audit-trail",
                 logs=[{
                     "action": "update",
@@ -172,7 +172,7 @@ def log_update(doc, method):
             )
 
 def log_delete(doc, method):
-    frappe.open_observe.send_logs(
+    open_observe.send_logs(
         stream="audit-trail",
         logs=[{
             "action": "delete",
@@ -202,7 +202,7 @@ Log batch operation progress:
 
 ```python
 def process_batch(items):
-    frappe.open_observe.send_logs(
+    open_observe.send_logs(
         stream="batch-processing",
         logs=[{
             "message": "Batch started",
@@ -220,7 +220,7 @@ def process_batch(items):
             processed += 1
         except Exception as e:
             errors += 1
-            frappe.open_observe.send_logs(
+            open_observe.send_logs(
                 stream="batch-processing",
                 logs=[{
                     "message": f"Error processing item {item}",
@@ -230,7 +230,7 @@ def process_batch(items):
                 }]
             )
     
-    frappe.open_observe.send_logs(
+    open_observe.send_logs(
         stream="batch-processing",
         logs=[{
             "message": "Batch completed",
@@ -253,7 +253,7 @@ def api_call_with_logging(endpoint, method="GET", **kwargs):
         response = requests.request(method, endpoint, **kwargs)
         duration = time.time() - start_time
         
-        frappe.open_observe.send_logs(
+        open_observe.send_logs(
             stream="api-monitoring",
             logs=[{
                 "endpoint": endpoint,
@@ -268,7 +268,7 @@ def api_call_with_logging(endpoint, method="GET", **kwargs):
     except Exception as e:
         duration = time.time() - start_time
         
-        frappe.open_observe.send_logs(
+        open_observe.send_logs(
             stream="api-monitoring",
             logs=[{
                 "endpoint": endpoint,

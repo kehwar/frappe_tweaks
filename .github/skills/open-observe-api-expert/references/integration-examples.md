@@ -48,7 +48,7 @@ import frappe
 # Search logs from a specific time range
 result = frappe.call(
     "tweaks.tweaks.doctype.open_observe_api.open_observe_api.search_logs",
-    stream="application-logs",
+    sql="SELECT * FROM application_logs",
     start_time="2025-12-26T00:00:00Z",
     end_time="2025-12-26T23:59:59Z",
     size=100
@@ -66,7 +66,7 @@ Use the safe_exec global directly:
 
 ```python
 # Send logs from Server Script
-frappe.open_observe.send_logs(
+open_observe.send_logs(
     stream="server-script-logs",
     logs=[{
         "message": "Server script executed",
@@ -77,8 +77,8 @@ frappe.open_observe.send_logs(
 )
 
 # Search logs from Server Script
-results = frappe.open_observe.search_logs(
-    stream="server-script-logs",
+results = open_observe.search_logs(
+    sql="SELECT * FROM server_script_logs",
     start_time="2025-12-26T00:00:00Z",
     end_time="2025-12-26T23:59:59Z"
 )
@@ -88,7 +88,7 @@ results = frappe.open_observe.search_logs(
 
 ```python
 # In a Business Logic script
-frappe.open_observe.send_logs(
+open_observe.send_logs(
     stream="business-logic",
     logs=[{
         "message": "Business logic executed",
@@ -129,7 +129,7 @@ frappe.call({
 frappe.call({
     method: 'tweaks.tweaks.doctype.open_observe_api.open_observe_api.search_logs',
     args: {
-        stream: 'client-events',
+        sql: 'SELECT * FROM client_events',
         start_time: '2025-12-26T00:00:00Z',
         end_time: '2025-12-26T23:59:59Z',
         size: 50
@@ -156,7 +156,7 @@ doc_events = {
 
 # In myapp/hooks.py
 def log_sales_order_changes(doc, method):
-    frappe.open_observe.send_logs(
+    open_observe.send_logs(
         stream="sales-order-changes",
         logs=[{
             "doctype": doc.doctype,
@@ -176,14 +176,14 @@ Available in Server Scripts and Business Logic:
 
 ```python
 # Send logs
-frappe.open_observe.send_logs(
+open_observe.send_logs(
     stream="my-stream",
     logs=[{"message": "Test log", "level": "info"}]
 )
 
 # Search logs
-results = frappe.open_observe.search_logs(
-    stream="my-stream",
+results = open_observe.search_logs(
+    sql="SELECT * FROM my_stream",
     start_time="2025-12-26T00:00:00Z",
     end_time="2025-12-26T23:59:59Z"
 )

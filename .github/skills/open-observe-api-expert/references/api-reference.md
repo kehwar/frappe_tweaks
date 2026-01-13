@@ -46,17 +46,21 @@ result = send_logs(
 )
 ```
 
-## search_logs(stream, query=None, org=None, start_time=None, end_time=None, size=100)
+## search_logs(query=None, stream=None, sql=None, org=None, start_time=None, end_time=None, start=None, size=None, search_type="ui", timeout=0)
 
 Search logs from an OpenObserve stream.
 
 **Parameters:**
-- `stream` (str, required): Stream name to search logs from
-- `query` (dict, optional): SQL query or query object for filtering logs
+- `query` (dict, optional): Query object that can be complete or incomplete. Missing fields will be filled from individual parameters. Can contain sql, start_time, end_time, start, size
+- `stream` (str, optional): Stream name to search logs from (used to replace {stream} placeholder in sql)
+- `sql` (str, optional): SQL query string for filtering logs (e.g., "SELECT * FROM stream_name WHERE level='error'"). Use {stream} placeholder which will be replaced with the actual stream name
 - `org` (str, optional): Organization name (uses default_org if not provided)
-- `start_time` (str, optional): Start time in ISO format (e.g., "2025-12-26T05:00:00Z"). Auto-converted to Unix microseconds
-- `end_time` (str, optional): End time in ISO format (e.g., "2025-12-26T06:00:00Z"). Auto-converted to Unix microseconds
+- `start_time` (str/datetime/int, optional): Start time in ISO format, datetime object, or Unix timestamp in microseconds. Naive datetimes are converted to UTC
+- `end_time` (str/datetime/int, optional): End time in same formats as start_time
+- `start` (int, optional): Starting offset for pagination (default: 0). Maps to 'from' field in OpenObserve API
 - `size` (int, optional): Maximum number of logs to return (default: 100)
+- `search_type` (str, optional): Type of search, typically "ui" (default: "ui")
+- `timeout` (int, optional): Query timeout in seconds (default: 0 for no timeout)
 
 **Returns:**
 ```python
@@ -71,35 +75,39 @@ Search logs from an OpenObserve stream.
 
 **Examples:**
 ```python
-# Time-based search
+# Search with individual parameters (ISO strings)
 result = search_logs(
     stream="application-logs",
+    sql="SELECT * FROM {stream} WHERE level='error'",
     start_time="2025-12-26T05:00:00Z",
     end_time="2025-12-26T06:00:00Z",
     size=50
 )
 
-# SQL query
+# Search with complete query object (Unix timestamps)
 result = search_logs(
-    stream="error-logs",
-    query={"sql": "SELECT * FROM error_logs WHERE level='error'"},
-    size=100
+    query={
+        "sql": "SELECT * FROM application_logs",
+        "start_time": 1674789786006000,
+        "end_time": 1674789886006000,
+        "start": 0,
+        "size": 100
+    }
 )
 
-# JSON filter with bool query
+# Search with datetime objects
+from datetime import datetime, timedelta
 result = search_logs(
-    stream="sales-orders",
-    query={
-        "query": {
-            "bool": {
-                "must": [
-                    {"term": {"status": "completed"}},
-                    {"range": {"grand_total": {"gte": 1000}}}
-                ]
-            }
-        }
-    },
-    org="production"
+    sql="SELECT * FROM error_logs",
+    start_time=datetime.now() - timedelta(hours=1),
+    end_time=datetime.now()
+)
+
+# Parameter override - query provides base, parameters override
+result = search_logs(
+    query={"sql": "SELECT * FROM logs", "start_time": "2025-01-01T00:00:00Z"},
+    end_time="2025-01-01T23:59:59Z",  # Completes missing end_time
+    size=200  # Overrides default size
 )
 ```
 

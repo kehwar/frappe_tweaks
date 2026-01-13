@@ -12,7 +12,7 @@ Expert guidance for the OpenObserve API integration - a logging and observabilit
 **Configuration**: Single DocType "Open Observe API" with URL, user, password, default organization  
 **Core Functions**: `send_logs()`, `search_logs()`, `test_connection()`  
 **Access**: System Manager only  
-**Safe Exec**: Available as `frappe.open_observe.send_logs()` and `frappe.open_observe.search_logs()`
+**Safe Exec**: Available as `open_observe.send_logs()` and `open_observe.search_logs()`
 
 ## Core Concepts
 
@@ -47,7 +47,7 @@ frappe.call(
 
 **From Server Scripts/Business Logic**:
 ```python
-frappe.open_observe.send_logs(
+open_observe.send_logs(
     stream="server-logs",
     logs=[{"message": "Script executed", "user": frappe.session.user}]
 )
@@ -56,8 +56,8 @@ frappe.open_observe.send_logs(
 ### Search Logs
 
 ```python
-results = frappe.open_observe.search_logs(
-    stream="application-logs",
+results = open_observe.search_logs(
+    sql="SELECT * FROM application_logs",
     start_time="2025-12-26T00:00:00Z",
     end_time="2025-12-26T23:59:59Z",
     size=100
