@@ -22,6 +22,7 @@ The AC Rule system provides:
 **Current State**:
 - ✅ **DocTypes**: Fully implemented - Automatic permission enforcement via Frappe hooks
 - ✅ **Reports**: Fully functional - Manual integration required (call API and inject SQL)
+- 📋 **Workflows**: Planned but not yet implemented - See `.github/prompts/plan-integrate-ac-rules-with-workflow-actions.prompt.md`
 - 🔄 **Migration**: Deprecated systems (Event Scripts, Server Script Permission Policy) being phased out
 
 ## Quick Start

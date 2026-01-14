@@ -1,17 +1,24 @@
 # Integration with Frappe Permissions
 
-This document explains how AC Rules integrate with Frappe's permission system for DocTypes and Reports.
+This document explains how AC Rules integrate with Frappe's permission system for DocTypes, Reports, and future Workflow integration.
 
 ## Implementation Status
 
 **Current State**:
-- ✅ **Reports**: Fully functional - Manual integration required
-- ✅ **DocTypes**: Fully implemented - Automatic permission enforcement
+- ✅ **DocTypes**: Fully implemented - Automatic permission enforcement via Frappe hooks
+- ✅ **Reports**: Fully functional - Manual integration required (call API and inject SQL)
+- 📋 **Workflows**: Planned but not yet implemented
 - 🔄 **Migration Plan**: Migration from deprecated systems can now begin
 
 **Deprecated Systems** (Do Not Use):
 - ❌ **Event Scripts** - Legacy system, deprecated in favor of AC Rules
 - ❌ **Server Script Permission Policy** - Legacy permission system, deprecated in favor of AC Rules
+
+**Future Integration**:
+- 📋 **Workflow Actions**: Planned integration to control workflow transitions dynamically
+  - See: `.github/prompts/plan-integrate-ac-rules-with-workflow-actions.prompt.md`
+  - Will enable territory-based approvals and conditional workflow permissions
+  - Implementation requires minimal Frappe core changes (hooks) + Tweaks integration
 
 ## DocType Integration (Automatic)
 
