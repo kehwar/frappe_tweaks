@@ -32,13 +32,23 @@ frappe.query_reports['Customizations'] = {
         },
     ],
     formatter: function (value, row, column, data, default_formatter) {
-        value = default_formatter(value, row, column, data)
+
+        if (column.fieldname === 'dt' && data && data.dt) {
+            // Link to Custom Field or Property Setter list filtered by DocType
+            if (data.customization_type === 'Custom Field') {
+                const link_url = `/app/custom-field?dt=${encodeURIComponent(data.dt)}`
+                return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`
+            } else if (data.customization_type === 'Property Setter') {
+                const link_url = `/app/property-setter?doc_type=${encodeURIComponent(data.dt)}`
+                return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`
+            }
+        }
 
         if (column.fieldname === 'fieldname' && data) {
             if (data.customization_type === 'Custom Field' && data.custom_field_name) {
                 // Link to the Custom Field document using the name from the report
                 const link_url = frappe.utils.get_form_link('Custom Field', data.custom_field_name)
-                value = `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`
+                return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`
             } else if (data.customization_type === 'Property Setter') {
                 // Link to Property Setter list filtered by doc_type, doctype_or_field, and field_name
                 let link_url = `/app/property-setter?doc_type=${encodeURIComponent(data.dt)}`
@@ -56,10 +66,10 @@ frappe.query_reports['Customizations'] = {
                     }
                 }
                 
-                value = `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`
+                return `<a href="${link_url}">${frappe.utils.escape_html(value)}</a>`
             }
         }
 
-        return value
+        return default_formatter(value, row, column, data)
     },
 }
