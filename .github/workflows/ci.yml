@@ -3,8 +3,6 @@ name: Server Tests
 on:
   pull_request:
   workflow_dispatch:
-  push:
-    branches: [main, develop, custom]
 
 concurrency:
   group: server-${{ github.event_name }}-${{ github.event.number || github.ref }}
