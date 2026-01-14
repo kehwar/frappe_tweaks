@@ -594,6 +594,11 @@ def has_ac_permission(
     if not query:
         return frappe._dict({"access": False, "unmanaged": False})
     
+    # Validate doctype to prevent SQL injection
+    # DocType names must be valid Frappe doctypes and cannot contain special characters
+    if not frappe.db.table_exists(f"tab{doctype}"):
+        frappe.throw(_("Invalid DocType: {0}").format(doctype))
+    
     # Execute SQL to check if this document matches the AC Rules filter
     sql = f"""
         SELECT COUNT(*) as count
@@ -602,8 +607,8 @@ def has_ac_permission(
         AND ({query})
     """
     
-    result = frappe.db.sql(sql, as_dict=True)
-    has_access = result[0].get("count", 0) > 0 if result else False
+    query_result = frappe.db.sql(sql, as_dict=True)
+    has_access = query_result[0].get("count", 0) > 0 if query_result and len(query_result) > 0 else False
     
     return frappe._dict({"access": has_access, "unmanaged": False})
 

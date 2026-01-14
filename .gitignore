@@ -197,3 +197,6 @@ cypress/videos
 billing/node_modules
 frappe/public/billing
 frappe/www/billing.html
+
+# Manual test scripts
+test_has_ac_permission.py
