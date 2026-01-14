@@ -22,7 +22,7 @@ bench get-app https://github.com/kehwar/erpnext --branch custom
 echo "::endgroup::"
 
 echo "::group::Get Tweaks App"
-bench get-app ${GITHUB_WORKSPACE}
+bench get-app "${GITHUB_WORKSPACE}"
 echo "::endgroup::"
 
 echo "::group::Create Test Site"
@@ -31,13 +31,15 @@ cp "${GITHUB_WORKSPACE}/.github/helper/db/$DB.json" ~/frappe-bench/sites/test_si
 
 if [ "$DB" == "mariadb" ]
 then
-  mariadb --host 127.0.0.1 --port 3306 -u root -ptravis -e "SET GLOBAL character_set_server = 'utf8mb4'";
-  mariadb --host 127.0.0.1 --port 3306 -u root -ptravis -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'";
+  export MYSQL_PWD=travis
+  mariadb --host 127.0.0.1 --port 3306 -u root -e "SET GLOBAL character_set_server = 'utf8mb4'";
+  mariadb --host 127.0.0.1 --port 3306 -u root -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'";
 
-  mariadb --host 127.0.0.1 --port 3306 -u root -ptravis -e "CREATE DATABASE test_frappe";
-  mariadb --host 127.0.0.1 --port 3306 -u root -ptravis -e "CREATE USER 'test_frappe'@'localhost' IDENTIFIED BY 'test_frappe'";
-  mariadb --host 127.0.0.1 --port 3306 -u root -ptravis -e "GRANT ALL PRIVILEGES ON \`test_frappe\`.* TO 'test_frappe'@'localhost'";
-  mariadb --host 127.0.0.1 --port 3306 -u root -ptravis -e "FLUSH PRIVILEGES";
+  mariadb --host 127.0.0.1 --port 3306 -u root -e "CREATE DATABASE test_frappe";
+  mariadb --host 127.0.0.1 --port 3306 -u root -e "CREATE USER 'test_frappe'@'localhost' IDENTIFIED BY 'test_frappe'";
+  mariadb --host 127.0.0.1 --port 3306 -u root -e "GRANT ALL PRIVILEGES ON \`test_frappe\`.* TO 'test_frappe'@'localhost'";
+  mariadb --host 127.0.0.1 --port 3306 -u root -e "FLUSH PRIVILEGES";
+  unset MYSQL_PWD
 fi
 
 if [ "$DB" == "postgres" ]
