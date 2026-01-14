@@ -1,116 +1,116 @@
-name: CI
+name: Server Tests
 
 on:
   pull_request:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: server-${{ github.event_name }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   test:
+    name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
     services:
       mariadb:
-        image: mariadb:10.6
+        image: mariadb:10.6.24
         env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_CHARACTER_SET_SERVER: utf8mb4
-          MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+          MARIADB_ROOT_PASSWORD: travis
         ports:
           - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping --silent"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-
-      redis-cache:
-        image: redis:alpine
-        ports:
-          - 6379:6379
-
-      redis-queue:
-        image: redis:alpine
-        ports:
-          - 6380:6379
-
-      redis-socketio:
-        image: redis:alpine
-        ports:
-          - 6381:6379
+        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
 
     steps:
-      - name: Checkout code
+      - name: Clone
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
-      - name: Set up Node.js
+      - name: Check for valid Python & Merge Conflicts
+        run: |
+          python -m compileall -q -f "${GITHUB_WORKSPACE}"
+          if grep -lr --exclude-dir=node_modules "^<<<<<<< " "${GITHUB_WORKSPACE}"
+              then echo "Found merge conflicts"
+              exit 1
+          fi
+
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 24
           check-latest: true
 
-      - name: Add to PATH
-        run: echo "/home/runner/.local/bin" >> $GITHUB_PATH
+      - name: Add to Hosts
+        run: |
+          echo "127.0.0.1 test_site" | sudo tee -a /etc/hosts
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt', '**/pyproject.toml', '**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache yarn
+        uses: actions/cache@v4
+        id: yarn-cache
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install Yarn
+        run: npm install -g yarn
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            redis-tools \
-            mariadb-client \
-            wkhtmltopdf \
-            libcups2-dev
+          echo "::group::apt packages"
+          sudo apt update
+          sudo apt remove mysql-server mysql-client
+          sudo apt install libcups2-dev redis-server mariadb-client
+          echo "::endgroup::"
+          
+          echo "::group::wkhtmltopdf"
+          install_wkhtmltopdf() {
+            wget -q https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.jammy_amd64.deb
+            sudo apt install ./wkhtmltox_0.12.6.1-2.jammy_amd64.deb
+          }
+          install_wkhtmltopdf &
+          echo "::endgroup::"
 
-      - name: Install Frappe bench
-        run: |
-          pip install frappe-bench
+      - name: Install Dependencies
+        run: bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
+        env:
+          TYPE: server
+          DB: mariadb
 
-      - name: Initialize bench with custom Frappe
-        run: |
-          bench init --skip-redis-config-generation --frappe-path https://github.com/kehwar/frappe --frappe-branch custom frappe-bench
+      - name: Run Tests
+        run: bench --site test_site run-parallel-tests --app tweaks
+        working-directory: /home/runner/frappe-bench
 
-      - name: Setup hosts
+      - name: Show bench output
+        if: ${{ always() }}
         run: |
-          echo "127.0.0.1 test.localhost" | sudo tee -a /etc/hosts
-
-      - name: Get ERPNext
-        working-directory: ./frappe-bench
-        run: |
-          bench get-app https://github.com/kehwar/erpnext --branch custom
-
-      - name: Create site
-        working-directory: ./frappe-bench
-        run: |
-          bench new-site test.localhost \
-            --db-root-password root \
-            --admin-password admin \
-            --no-mariadb-socket
-
-      - name: Install ERPNext
-        working-directory: ./frappe-bench
-        run: |
-          bench --site test.localhost install-app erpnext
-
-      - name: Get app
-        working-directory: ./frappe-bench
-        run: |
-          bench get-app $GITHUB_WORKSPACE
-
-      - name: Install app
-        working-directory: ./frappe-bench
-        run: |
-          bench --site test.localhost install-app tweaks
-
-      - name: Run tests
-        working-directory: ./frappe-bench
-        run: |
-          bench --site test.localhost run-tests --app tweaks
+          cd ~/frappe-bench
+          cat bench_start.log || true
+          cd logs
+          for f in ./*.log*; do
+            echo "Printing log: $f";
+            cat $f
+          done
