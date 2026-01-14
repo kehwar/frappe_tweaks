@@ -152,7 +152,17 @@ def get_custom_fields(filters):
     )
 
     # Process the data to match the report format
+    result = []
+    ui_field_types = ["Column Break", "Section Break", "Tab Break"]
+
     for field in custom_fields:
+        # Skip UI fields if show_ui_fields is not checked
+        if (
+            not filters.get("show_ui_fields")
+            and field.get("fieldtype") in ui_field_types
+        ):
+            continue
+
         field["customization_type"] = "Custom Field"
 
         # Build properties string
@@ -164,8 +174,9 @@ def get_custom_fields(filters):
         field["properties"] = "; ".join(props)
 
         field["custom_field_name"] = field["name"]
+        result.append(field)
 
-    return custom_fields
+    return result
 
 
 def get_property_setters(filters):

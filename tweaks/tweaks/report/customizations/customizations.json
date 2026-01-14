@@ -37,6 +37,13 @@
    "label": "Show System Generated",
    "mandatory": 0,
    "wildcard_filter": 0
+  },
+  {
+   "fieldname": "show_ui_fields",
+   "fieldtype": "Check",
+   "label": "Show UI Fields",
+   "mandatory": 0,
+   "wildcard_filter": 0
   }
  ],
  "idx": 0,

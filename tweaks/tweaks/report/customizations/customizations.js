@@ -30,6 +30,11 @@ frappe.query_reports['Customizations'] = {
             label: __('Show System Generated'),
             fieldtype: 'Check',
         },
+        {
+            fieldname: 'show_ui_fields',
+            label: __('Show UI Fields'),
+            fieldtype: 'Check',
+        },
     ],
     formatter: function (value, row, column, data, default_formatter) {
 
