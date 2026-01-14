@@ -8,7 +8,10 @@ Send logs to an OpenObserve stream.
 
 **Parameters:**
 - `stream` (str, required): Stream name to send logs to
-- `logs` (list, required): List of log dictionaries to send
+- `logs` (list, required): List of log dictionaries to send. Each log can contain:
+  - Standard fields: `message`, `level`, etc.
+  - **Timestamp field**: Use `_timestamp` or `@timestamp` (Unix timestamp in microseconds)
+  - If no timestamp field is provided, OpenObserve uses ingestion time
 - `org` (str, optional): Organization name (uses default_org if not provided)
 
 **Returns:**
@@ -24,18 +27,20 @@ Send logs to an OpenObserve stream.
 
 **Examples:**
 ```python
-# Single log entry
+from datetime import datetime
+
+# With explicit timestamp (Unix microseconds)
 result = send_logs(
     stream="application-logs",
     logs=[{
         "message": "User login successful",
         "level": "info",
         "user": "john@example.com",
-        "timestamp": "2025-12-26T02:20:00Z"
+        "_timestamp": int(datetime.utcnow().timestamp() * 1000000)
     }]
 )
 
-# Multiple logs with custom organization
+# Without timestamp (uses ingestion time)
 result = send_logs(
     stream="error-logs",
     logs=[
