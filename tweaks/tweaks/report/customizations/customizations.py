@@ -51,12 +51,6 @@ def get_columns():
     """Define report columns"""
     return [
         {
-            "fieldname": "customization_type",
-            "label": _("Customization Type"),
-            "fieldtype": "Data",
-            "width": 150,
-        },
-        {
             "fieldname": "dt",
             "label": _("DocType"),
             "fieldtype": "Link",
@@ -70,10 +64,10 @@ def get_columns():
             "width": 200,
         },
         {
-            "fieldname": "property_count",
-            "label": _("Property Count"),
-            "fieldtype": "Int",
-            "width": 120,
+            "fieldname": "customization_type",
+            "label": _("Customization Type"),
+            "fieldtype": "Data",
+            "width": 150,
         },
         {
             "fieldname": "properties",
@@ -86,12 +80,6 @@ def get_columns():
             "label": _("Module"),
             "fieldtype": "Link",
             "options": "Module Def",
-            "width": 120,
-        },
-        {
-            "fieldname": "is_system_generated",
-            "label": _("System Generated"),
-            "fieldtype": "Check",
             "width": 120,
         },
         {
@@ -130,97 +118,115 @@ def get_data(filters):
     ):
         data.extend(get_property_setters(filters))
 
+    # Sort by DocType
+    data.sort(key=lambda x: (x["dt"], x["fieldname"]))
+
     return data
 
 
 def get_custom_fields(filters):
     """Get Custom Fields data"""
-    conditions = []
-    values = {}
+    filter_dict = {}
 
     if filters.get("doctype"):
-        conditions.append("dt = %(doctype)s")
-        values["doctype"] = filters.get("doctype")
+        filter_dict["dt"] = filters.get("doctype")
 
     if filters.get("module"):
-        conditions.append("module = %(module)s")
-        values["module"] = filters.get("module")
+        filter_dict["module"] = filters.get("module")
 
-    where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
-
-    custom_fields = frappe.db.sql(
-        f"""
-        SELECT 
-            'Custom Field' as customization_type,
-            dt,
-            fieldname,
-            NULL as property_count,
-            CONCAT('fieldtype=', COALESCE(fieldtype, ''), '; label=', COALESCE(label, '')) as properties,
-            module,
-            is_system_generated,
-            name as custom_field_name
-        FROM `tabCustom Field`
-        {where_clause}
-        ORDER BY dt, fieldname
-    """,
-        values,
-        as_dict=1,
+    custom_fields = frappe.get_all(
+        "Custom Field",
+        filters=filter_dict,
+        fields=[
+            "dt",
+            "fieldname",
+            "fieldtype",
+            "label",
+            "module",
+            "name",
+        ],
+        order_by="dt, fieldname",
     )
+
+    # Process the data to match the report format
+    for field in custom_fields:
+        field["customization_type"] = "Custom Field"
+
+        # Build properties string
+        props = []
+        if field.get("fieldtype"):
+            props.append(f"fieldtype={field['fieldtype']}")
+        if field.get("label"):
+            props.append(f"label={field['label']}")
+        field["properties"] = "; ".join(props)
+
+        field["custom_field_name"] = field["name"]
 
     return custom_fields
 
 
 def get_property_setters(filters):
     """Get Property Setters data, aggregated by DocType or DocType/Fieldname"""
-    conditions = []
-    values = {}
+    filter_dict = {}
 
     if filters.get("doctype"):
-        conditions.append("doc_type = %(doctype)s")
-        values["doctype"] = filters.get("doctype")
+        filter_dict["doc_type"] = filters.get("doctype")
 
     if filters.get("module"):
-        conditions.append("module = %(module)s")
-        values["module"] = filters.get("module")
+        filter_dict["module"] = filters.get("module")
 
-    where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
-
-    # Get property setters aggregated by doc_type and field_name
-    property_setters = frappe.db.sql(
-        f"""
-        SELECT 
-            'Property Setter' as customization_type,
-            doc_type as dt,
-            CASE 
-                WHEN doctype_or_field = 'DocType' THEN doc_type
-                WHEN doctype_or_field = 'DocField' THEN CONCAT(doc_type, ' / ', field_name)
-                ELSE CONCAT(doc_type, ' / ', COALESCE(field_name, row_name))
-            END as fieldname,
-            COUNT(*) as property_count,
-            GROUP_CONCAT(
-                CONCAT(property, '=', value) 
-                ORDER BY property 
-                SEPARATOR '; '
-            ) as properties,
-            module,
-            MAX(is_system_generated) as is_system_generated,
-            NULL as custom_field_name,
-            doctype_or_field
-        FROM `tabProperty Setter`
-        {where_clause}
-        GROUP BY 
-            doc_type,
-            CASE 
-                WHEN doctype_or_field = 'DocType' THEN doc_type
-                WHEN doctype_or_field = 'DocField' THEN CONCAT(doc_type, ' / ', field_name)
-                ELSE CONCAT(doc_type, ' / ', COALESCE(field_name, row_name))
-            END,
-            module,
-            doctype_or_field
-        ORDER BY doc_type, fieldname
-    """,
-        values,
-        as_dict=1,
+    property_setters = frappe.get_all(
+        "Property Setter",
+        filters=filter_dict,
+        fields=[
+            "doc_type",
+            "doctype_or_field",
+            "field_name",
+            "row_name",
+            "property",
+            "value",
+            "module",
+        ],
+        order_by="doc_type, field_name",
     )
 
-    return property_setters
+    # Aggregate property setters by doc_type and field grouping
+    aggregated = {}
+    for ps in property_setters:
+        # Determine the fieldname key for aggregation
+        if ps["doctype_or_field"] == "DocType":
+            fieldname = ps["doc_type"]
+        elif ps["doctype_or_field"] == "DocField":
+            fieldname = f"{ps['doc_type']} / {ps['field_name']}"
+        else:
+            fieldname = (
+                f"{ps['doc_type']} / {ps.get('field_name') or ps.get('row_name')}"
+            )
+
+        # Create aggregation key
+        key = (ps["doc_type"], fieldname, ps["module"], ps["doctype_or_field"])
+
+        if key not in aggregated:
+            aggregated[key] = {
+                "customization_type": "Property Setter",
+                "dt": ps["doc_type"],
+                "fieldname": fieldname,
+                "properties": [],
+                "module": ps["module"],
+                "custom_field_name": None,
+                "doctype_or_field": ps["doctype_or_field"],
+            }
+
+        aggregated[key]["properties"].append(f"{ps['property']}={ps['value']}")
+
+    # Convert to list and format properties
+    result = []
+    for data in aggregated.values():
+        # Sort properties and join with separator
+        data["properties"] = "; ".join(sorted(data["properties"]))
+        result.append(data)
+
+    # Sort by doc_type and fieldname
+    result.sort(key=lambda x: (x["dt"], x["fieldname"]))
+
+    return result
