@@ -49,7 +49,11 @@ This is a Frappe app that must be installed within a Frappe bench environment. I
 
 ## Domain-Specific Knowledge
 
-This project uses **skills** extensively to provide domain-specific guidance and expertise. Skills are specialized agents that help with specific areas of the codebase. When working on domain-specific tasks, relevant skills will be automatically invoked to provide contextual guidance.
+This project uses **skills** extensively to provide domain-specific guidance and expertise. Skills are specialized agents that help with specific areas of the codebase. 
+
+**IMPORTANT**: Always check if relevant skills are available before working on tasks.
+
+When working on any feature or debugging any issue, first consult the skills list to see if there's specialized knowledge available for that domain.
 
 ## Additional Resources
 
