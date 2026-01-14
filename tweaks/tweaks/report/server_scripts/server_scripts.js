@@ -17,6 +17,13 @@ frappe.query_reports["Server Scripts"] = {
             "fieldtype": "Link",
             "options": "DocType",
             "reqd": 0
+        },
+        {
+            "fieldname": "doctype_event",
+            "label": __("DocType Event"),
+            "fieldtype": "Select",
+            "options": ["\n", "Before Naming", "Before Insert", "Before Validate", "Before Save", "After Validate", "After Insert", "After Save", "Before Rename", "After Rename", "Before Submit", "After Submit", "Before Cancel", "After Cancel", "Before Delete", "After Delete", "Before Save (Submitted Document)", "After Save (Submitted Document)", "Before Print", "On Payment Authorization", "Before Change", "After Change", "Before Export", "Before Import", "Before Workflow Transition", "After Workflow Transition"],
+            "reqd": 0
         }
     ],
     "onload": function(report) {

@@ -167,4 +167,8 @@ def get_conditions(filters):
     if filters.get("reference_doctype"):
         conditions["reference_doctype"] = filters.get("reference_doctype")
 
+    # Filter by doctype event if specified
+    if filters.get("doctype_event"):
+        conditions["doctype_event"] = filters.get("doctype_event")
+
     return conditions

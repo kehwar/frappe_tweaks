@@ -20,6 +20,13 @@
             "fieldtype": "Link",
             "options": "DocType",
             "reqd": 0
+        },
+        {
+            "fieldname": "doctype_event",
+            "label": "DocType Event",
+            "fieldtype": "Select",
+            "options": "\nBefore Naming\nBefore Insert\nBefore Validate\nBefore Save\nAfter Validate\nAfter Insert\nAfter Save\nBefore Rename\nAfter Rename\nBefore Submit\nAfter Submit\nBefore Cancel\nAfter Cancel\nBefore Delete\nAfter Delete\nBefore Save (Submitted Document)\nAfter Save (Submitted Document)\nBefore Print\nOn Payment Authorization\nBefore Change\nAfter Change\nBefore Export\nBefore Import\nBefore Workflow Transition\nAfter Workflow Transition",
+            "reqd": 0
         }
     ],
     "idx": 0,
