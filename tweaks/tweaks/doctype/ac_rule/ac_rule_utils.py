@@ -526,7 +526,6 @@ def has_resource_access(
 
 @frappe.whitelist()
 def has_ac_permission(
-    doc=None,
     docname="",
     doctype="",
     action="",
@@ -539,33 +538,27 @@ def has_ac_permission(
     for the given user and action, then executes it to determine permission.
     
     Args:
-        doc: Document object (optional, will be loaded if not provided)
-        docname: Document name (used if doc not provided)
+        docname: Document name
         doctype: DocType name
         action: Action name (e.g., "read", "write", "approve", "reject")
-        user: User name (defaults to current user)
+        user: User name (defaults to current user, only System Manager can check for other users)
     
     Returns:
-        dict: {
-            "access": bool,      # True if user has permission
-            "unmanaged": bool    # True if resource not managed by AC Rules
-        }
+        bool: True if user has permission, False otherwise
     """
+    # Only System Manager can check permissions for other users
+    if user and user != frappe.session.user:
+        frappe.only_for("System Manager")
+    
     user = user or frappe.session.user
     
     # Administrator always has full access
     if user == "Administrator":
-        return frappe._dict({"access": True, "unmanaged": False})
+        return True
     
-    # Load document if not provided
-    if not doc:
-        if not docname or not doctype:
-            frappe.throw(_("Either doc or (docname and doctype) is required"))
-        doc = frappe.get_doc(doctype, docname)
-    
-    # Ensure we have doctype and action
-    if not doctype:
-        doctype = doc.doctype
+    # Validate required parameters
+    if not docname or not doctype:
+        frappe.throw(_("docname and doctype are required"))
     if not action:
         frappe.throw(_("Action is required"))
     
@@ -579,20 +572,20 @@ def has_ac_permission(
     
     # If unmanaged, return True (fall through to standard Frappe permissions)
     if result.get("unmanaged"):
-        return frappe._dict({"access": True, "unmanaged": True})
+        return True
     
     # If no access at all, return False
     if result.get("access") == "none":
-        return frappe._dict({"access": False, "unmanaged": False})
+        return False
     
     # If total access, return True
     if result.get("access") == "total":
-        return frappe._dict({"access": True, "unmanaged": False})
+        return True
     
     # Partial access - need to check if this specific document matches the filter
     query = result.get("query", "")
     if not query:
-        return frappe._dict({"access": False, "unmanaged": False})
+        return False
     
     # Validate doctype to prevent SQL injection
     # DocType names must be valid Frappe doctypes and cannot contain special characters
@@ -609,14 +602,14 @@ def has_ac_permission(
     sql = f"""
         SELECT COUNT(*) as count
         FROM `tab{doctype}`
-        WHERE `tab{doctype}`.`name` = {frappe.db.escape(doc.name)}
+        WHERE `tab{doctype}`.`name` = {frappe.db.escape(docname)}
         AND ({query})
     """
     
     query_result = frappe.db.sql(sql, as_dict=True)
     has_access = query_result[0].get("count", 0) > 0 if query_result else False
     
-    return frappe._dict({"access": has_access, "unmanaged": False})
+    return has_access
 
 
 def _get_permission_query_conditions_for_doctype(doctype, user=None, action="read"):

@@ -153,7 +153,6 @@ endpoints:
   file: tweaks/doctype/ac_rule/ac_rule_utils.py
   line: 528
   arguments:
-  - doc
   - docname
   - doctype
   - action
@@ -161,19 +160,17 @@ endpoints:
   docstring: "Check if a user has AC Rules permission for a specific document and action.\n\
     \nThis function generates SQL to verify if a specific document matches the AC Rules\n\
     for the given user and action, then executes it to determine permission.\n\
-    \nArgs:\n    doc: Document object (optional, will be loaded if not provided)\n\
-    \    docname: Document name (used if doc not provided)\n    doctype: DocType name\n\
+    \nArgs:\n    docname: Document name\n    doctype: DocType name\n\
     \    action: Action name (e.g., \"read\", \"write\", \"approve\", \"reject\")\n\
-    \    user: User name (defaults to current user)\n\nReturns:\n    dict: {\n\
-    \        \"access\": bool,      # True if user has permission\n        \"unmanaged\": bool\
-    \    # True if resource not managed by AC Rules\n    }"
+    \    user: User name (defaults to current user, only System Manager can check for other users)\n\
+    \nReturns:\n    bool: True if user has permission, False otherwise"
   security_checks:
-    has_frappe_only_for: false
+    has_frappe_only_for: true
     has_frappe_get_list: false
     has_frappe_has_permission: false
     has_permission_check: true
   reviewed: true
-  notes: "New function to check document-level AC Rules permission. Validates doctype to prevent SQL injection and properly handles empty query results."
+  notes: "New function to check document-level AC Rules permission. Validates doctype to prevent SQL injection. Only System Manager can check permissions for other users. Returns boolean instead of dict."
 - function: clear_ac_cache
   file: tweaks/doctype/ac_settings/ac_settings.py
   line: 13

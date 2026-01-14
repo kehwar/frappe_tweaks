@@ -31,22 +31,20 @@ def check_workflow_transition_permission(doc, method=None, transition=None):
     user = frappe.session.user
 
     # Check if user has AC Rules permission to perform this action on this specific document
-    result = has_ac_permission(
-        doc=doc,
+    has_permission = has_ac_permission(
+        docname=doc.name,
         doctype=doc.doctype,
         action=transition.action,  # e.g., "Approve", "Submit"
         user=user,
     )
 
-    if not result.get("unmanaged"):
-        # AC Rules are managing this workflow action
-        if not result.get("access"):
-            frappe.throw(
-                _("You do not have permission to perform this workflow action"),
-                frappe.PermissionError,
-            )
+    if not has_permission:
+        frappe.throw(
+            _("You do not have permission to perform this workflow action"),
+            frappe.PermissionError,
+        )
 
-    # If unmanaged or has access, do nothing (let transition proceed)
+    # If has permission, let transition proceed
 
 
 def filter_transitions_by_ac_rules(doc, transitions, workflow):
@@ -69,20 +67,14 @@ def filter_transitions_by_ac_rules(doc, transitions, workflow):
 
     for transition in transitions:
         # Check if user has AC Rules permission to perform this action on this specific document
-        result = has_ac_permission(
-            doc=doc, 
-            doctype=doc.doctype, 
-            action=transition.action, 
+        has_permission = has_ac_permission(
+            docname=doc.name,
+            doctype=doc.doctype,
+            action=transition.action,
             user=user
         )
 
-        if not result.get("unmanaged"):
-            # Managed by AC Rules - check permission
-            if result.get("access"):
-                filtered_transitions.append(transition)
-            # If no access, skip this transition
-        else:
-            # Unmanaged by AC Rules - include it
+        if has_permission:
             filtered_transitions.append(transition)
 
     return filtered_transitions
@@ -243,16 +235,11 @@ def has_workflow_action_permission_via_ac_rules(user, transition, doc):
     action_scrubbed = frappe.scrub(action)
 
     # Check if user has AC Rules permission to perform this action on this specific document
-    result = has_ac_permission(
-        doc=doc, 
-        doctype=doc.doctype, 
-        action=action_scrubbed, 
+    has_permission = has_ac_permission(
+        docname=doc.name,
+        doctype=doc.doctype,
+        action=action_scrubbed,
         user=user
     )
 
-    if result.get("unmanaged"):
-        # Not managed by AC Rules, user already passed role check
-        return True
-
-    # Return AC Rules access result
-    return bool(result.get("access"))
+    return has_permission

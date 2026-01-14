@@ -284,7 +284,6 @@ Checks if a user has any access to a resource/action.
 ```python
 @frappe.whitelist()
 def has_ac_permission(
-    doc=None,
     docname="",
     doctype="",
     action="",
@@ -301,20 +300,18 @@ Checks if a user has AC Rules permission for a specific document and action.
 - Executes SQL to determine permission
 - Validates doctype to prevent SQL injection
 - Handles unmanaged resources, Administrator user, and all access levels (total, partial, none)
+- Only System Manager can check permissions for other users
 
 **Arguments**:
-- `doc`: Document object (optional, will be loaded if not provided)
-- `docname`: Document name (used if doc not provided)
+- `docname`: Document name
 - `doctype`: DocType name
 - `action`: Action name (e.g., "read", "write", "approve", "reject")
-- `user`: User name (defaults to current user)
+- `user`: User name (defaults to current user, only System Manager can check for other users)
 
 **Response**:
 ```python
-{
-    "access": True,      # True if user has permission for this specific document
-    "unmanaged": False   # True if resource not managed by AC Rules
-}
+True  # User has permission for this specific document
+False # User does not have permission
 ```
 
 **Usage Example**:
@@ -322,16 +319,16 @@ Checks if a user has AC Rules permission for a specific document and action.
 from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import has_ac_permission
 
 # Check if user can approve a specific Purchase Order
-doc = frappe.get_doc("Purchase Order", "PO-0001")
-result = has_ac_permission(
-    doc=doc,
+has_permission = has_ac_permission(
+    docname="PO-0001",
     doctype="Purchase Order",
     action="approve",
-    user="user@example.com"
+    user="user@example.com"  # Only System Manager can pass different user
 )
 
-if result.get("access"):
+if has_permission:
     # User has permission to approve this specific PO
+    doc = frappe.get_doc("Purchase Order", "PO-0001")
     doc.approve()
 else:
     frappe.throw("You don't have permission to approve this Purchase Order")
@@ -344,7 +341,7 @@ result1 = has_resource_access(doctype="Purchase Order", action="approve")
 # Returns True if user has some rule for PO approval (even if not for this specific PO)
 
 # has_ac_permission: Checks if user can act on THIS document
-result2 = has_ac_permission(doc=doc, doctype="Purchase Order", action="approve")
+result2 = has_ac_permission(docname="PO-0001", doctype="Purchase Order", action="approve")
 # Returns True only if user has permission to approve THIS specific PO
 ```
 
