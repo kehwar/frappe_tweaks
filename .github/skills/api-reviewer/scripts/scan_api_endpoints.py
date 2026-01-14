@@ -10,15 +10,16 @@ Usage:
 
 Examples:
     python scan_api_endpoints.py --path tweaks
-    python scan_api_endpoints.py --path /path/to/app --output api-endpoints.yaml
+    python scan_api_endpoints.py --path /path/to/app --output ../../../docs/api-review.yaml
 """
 
-import ast
 import argparse
+import ast
 import os
 import re
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 import yaml
 
 
@@ -32,7 +33,7 @@ class APIEndpointVisitor(ast.NodeVisitor):
     def visit_FunctionDef(self, node: ast.FunctionDef):
         """Visit function definitions to check for whitelist decorator"""
         has_whitelist = False
-        
+
         for decorator in node.decorator_list:
             # Check for @frappe.whitelist() or @frappe.whitelist
             if isinstance(decorator, ast.Call):
@@ -190,7 +191,7 @@ def merge_endpoints(
 def save_endpoints(endpoints_data: Dict[str, Any], yaml_file: Path):
     """Save endpoints to YAML file"""
     yaml_file.parent.mkdir(parents=True, exist_ok=True)
-    
+
     with open(yaml_file, "w") as f:
         yaml.dump(
             endpoints_data,
@@ -212,8 +213,8 @@ def main():
     )
     parser.add_argument(
         "--output",
-        default="../assets/api-endpoints.yaml",
-        help="Output YAML file path (default: ../assets/api-endpoints.yaml)",
+        default="../../../docs/api-review.yaml",
+        help="Output YAML file path (default: ../../../docs/api-review.yaml)",
     )
 
     args = parser.parse_args()

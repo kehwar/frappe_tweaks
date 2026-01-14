@@ -31,10 +31,10 @@ Use the included script to discover all `@frappe.whitelist()` decorated function
 
 ```bash
 cd .github/skills/api-reviewer/scripts
-python3 scan_api_endpoints.py --path /path/to/app --output ../assets/api-endpoints.yaml
+python3 scan_api_endpoints.py --path /path/to/app
 ```
 
-The script creates/updates `assets/api-endpoints.yaml` with:
+The script creates/updates `docs/api-review.yaml` (at the app root) with:
 - Function name and location
 - Function arguments
 - Detected security checks
@@ -136,9 +136,9 @@ Python script that scans Python files for `@frappe.whitelist()` decorators and e
 - Preserves review notes when re-scanning
 - Generates summary statistics
 
-### assets/api-endpoints.yaml
+### docs/api-review.yaml
 
-YAML database of discovered API endpoints with security analysis. Updated by the scan script and manually annotated during review.
+YAML database of discovered API endpoints with security analysis. Located at the app root in the `docs/` directory. Updated by the scan script and manually annotated during review.
 
 **Structure**:
 - `scan_info`: Statistics (total, reviewed, unreviewed)
@@ -178,7 +178,7 @@ python3 scan_api_endpoints.py --path tweaks
 
 **Example 3: Reviewing specific endpoint**
 ```bash
-# Find endpoint in assets/api-endpoints.yaml
+# Find endpoint in docs/api-review.yaml
 # Check security_checks flags
 # Read the actual code at the file:line location
 # Apply fixes based on security-best-practices.md

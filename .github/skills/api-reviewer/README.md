@@ -13,11 +13,11 @@ cd .github/skills/api-reviewer/scripts
 python3 scan_api_endpoints.py --path /path/to/your/app
 ```
 
-This creates/updates `assets/api-endpoints.yaml` with all discovered endpoints.
+This creates/updates `docs/api-review.yaml` (at the app root) with all discovered endpoints.
 
 ### 2. Review the YAML File
 
-Open `assets/api-endpoints.yaml` and look for endpoints with security issues:
+Open `docs/api-review.yaml` and look for endpoints with security issues:
 
 - `has_frappe_only_for: false` - No role restriction
 - `has_frappe_has_permission: false` - No permission check
@@ -53,7 +53,7 @@ def get_records(doctype):
 
 ### 4. Mark as Reviewed
 
-Update the endpoint in `api-endpoints.yaml`:
+Update the endpoint in `docs/api-review.yaml`:
 
 ```yaml
 - function: my_function
@@ -77,7 +77,7 @@ For each API endpoint, verify:
 - `SKILL.md` - Complete skill documentation
 - `scripts/scan_api_endpoints.py` - Scanner script
 - `scripts/test_scanner.py` - Test suite for the scanner
-- `assets/api-endpoints.yaml` - Generated endpoint database
+- `../../docs/api-review.yaml` - Generated endpoint database (at app root)
 - `references/security-best-practices.md` - Detailed security guide
 
 ## Running Tests
