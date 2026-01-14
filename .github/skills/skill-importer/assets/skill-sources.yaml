@@ -30,3 +30,11 @@ skills:
     url: https://github.com/kehwar/frappe/tree/custom/.github/skills/bench-commands
     enabled: true
     description: Expert guidance for Frappe bench commands and operations
+  - name: permissions-expert
+    url: https://github.com/kehwar/frappe/tree/custom/.github/skills/permissions-expert
+    enabled: true
+    description: Expert guidance for Frappe permissions and access control
+  - name: report-expert
+    url: https://github.com/kehwar/frappe/tree/custom/.github/skills/report-expert
+    enabled: true
+    description: Expert guidance for Frappe reports and query reports
