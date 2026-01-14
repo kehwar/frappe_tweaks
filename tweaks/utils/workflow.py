@@ -26,12 +26,13 @@ def check_workflow_transition_permission(doc, method=None, transition=None):
     if not transition:
         return
 
-    from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import has_resource_access
+    from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import has_ac_permission
 
     user = frappe.session.user
 
-    # Check if AC Rules manage this workflow action
-    result = has_resource_access(
+    # Check if user has AC Rules permission to perform this action on this specific document
+    result = has_ac_permission(
+        doc=doc,
         doctype=doc.doctype,
         action=transition.action,  # e.g., "Approve", "Submit"
         user=user,
@@ -61,15 +62,18 @@ def filter_transitions_by_ac_rules(doc, transitions, workflow):
     Returns:
         Filtered list of transitions
     """
-    from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import has_resource_access
+    from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import has_ac_permission
 
     user = frappe.session.user
     filtered_transitions = []
 
     for transition in transitions:
-        # Check if AC Rules manage this workflow action
-        result = has_resource_access(
-            doctype=doc.doctype, action=transition.action, user=user
+        # Check if user has AC Rules permission to perform this action on this specific document
+        result = has_ac_permission(
+            doc=doc, 
+            doctype=doc.doctype, 
+            action=transition.action, 
+            user=user
         )
 
         if not result.get("unmanaged"):
@@ -230,7 +234,7 @@ def has_workflow_action_permission_via_ac_rules(user, transition, doc):
     Returns:
         bool: True if user has permission (or action is unmanaged), False otherwise
     """
-    from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import has_resource_access
+    from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import has_ac_permission
 
     action = transition.get("action")
     if not action:
@@ -238,8 +242,13 @@ def has_workflow_action_permission_via_ac_rules(user, transition, doc):
 
     action_scrubbed = frappe.scrub(action)
 
-    # Check if user has AC Rules access to this action
-    result = has_resource_access(doctype=doc.doctype, action=action_scrubbed, user=user)
+    # Check if user has AC Rules permission to perform this action on this specific document
+    result = has_ac_permission(
+        doc=doc, 
+        doctype=doc.doctype, 
+        action=action_scrubbed, 
+        user=user
+    )
 
     if result.get("unmanaged"):
         # Not managed by AC Rules, user already passed role check
