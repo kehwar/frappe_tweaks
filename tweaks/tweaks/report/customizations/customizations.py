@@ -70,18 +70,6 @@ def get_columns():
             "width": 200,
         },
         {
-            "fieldname": "label",
-            "label": _("Label"),
-            "fieldtype": "Data",
-            "width": 150,
-        },
-        {
-            "fieldname": "fieldtype",
-            "label": _("Field Type"),
-            "fieldtype": "Data",
-            "width": 120,
-        },
-        {
             "fieldname": "property_count",
             "label": _("Property Count"),
             "fieldtype": "Int",
@@ -166,10 +154,8 @@ def get_custom_fields(filters):
             'Custom Field' as customization_type,
             dt,
             fieldname,
-            label,
-            fieldtype,
             NULL as property_count,
-            NULL as properties,
+            CONCAT('fieldtype=', COALESCE(fieldtype, ''), '; label=', COALESCE(label, '')) as properties,
             module,
             is_system_generated,
             name as custom_field_name
@@ -210,8 +196,6 @@ def get_property_setters(filters):
                 WHEN doctype_or_field = 'DocField' THEN CONCAT(doc_type, ' / ', field_name)
                 ELSE CONCAT(doc_type, ' / ', COALESCE(field_name, row_name))
             END as fieldname,
-            NULL as label,
-            NULL as fieldtype,
             COUNT(*) as property_count,
             GROUP_CONCAT(
                 CONCAT(property, '=', value) 
