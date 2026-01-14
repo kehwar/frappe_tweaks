@@ -269,12 +269,83 @@ def has_resource_access(
 
 Checks if a user has any access to a resource/action.
 
+**Note**: This function only checks if the user has ANY rule for the doctype/action combination. It does NOT verify permission for a specific document. For document-level permission checks, use `has_ac_permission` instead.
+
 **Response**:
 ```python
 {
     "access": True,
     "unmanaged": False
 }
+```
+
+### 5. Check AC Permission (Document-Level)
+
+```python
+@frappe.whitelist()
+def has_ac_permission(
+    doc=None,
+    docname="",
+    doctype="",
+    action="",
+    user="",
+)
+```
+
+Checks if a user has AC Rules permission for a specific document and action.
+
+**This is the recommended function for workflow and action permission checks** as it verifies that the user has permission to perform the action on the specific document, not just any document of that type.
+
+**Key Features**:
+- Generates SQL to verify if the specific document matches the AC Rules filters
+- Executes SQL to determine permission
+- Validates doctype to prevent SQL injection
+- Handles unmanaged resources, Administrator user, and all access levels (total, partial, none)
+
+**Arguments**:
+- `doc`: Document object (optional, will be loaded if not provided)
+- `docname`: Document name (used if doc not provided)
+- `doctype`: DocType name
+- `action`: Action name (e.g., "read", "write", "approve", "reject")
+- `user`: User name (defaults to current user)
+
+**Response**:
+```python
+{
+    "access": True,      # True if user has permission for this specific document
+    "unmanaged": False   # True if resource not managed by AC Rules
+}
+```
+
+**Usage Example**:
+```python
+from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import has_ac_permission
+
+# Check if user can approve a specific Purchase Order
+doc = frappe.get_doc("Purchase Order", "PO-0001")
+result = has_ac_permission(
+    doc=doc,
+    doctype="Purchase Order",
+    action="approve",
+    user="user@example.com"
+)
+
+if result.get("access"):
+    # User has permission to approve this specific PO
+    doc.approve()
+else:
+    frappe.throw("You don't have permission to approve this Purchase Order")
+```
+
+**Comparison with has_resource_access**:
+```python
+# has_resource_access: Checks if user has ANY rule
+result1 = has_resource_access(doctype="Purchase Order", action="approve")
+# Returns True if user has some rule for PO approval (even if not for this specific PO)
+
+# has_ac_permission: Checks if user can act on THIS document
+result2 = has_ac_permission(doc=doc, doctype="Purchase Order", action="approve")
+# Returns True only if user has permission to approve THIS specific PO
 ```
 
 ## Deprecated Systems
