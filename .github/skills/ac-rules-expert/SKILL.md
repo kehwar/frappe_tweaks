@@ -108,6 +108,21 @@ Common patterns and complete examples:
 
 See [references/examples.md](references/examples.md) for complete code examples.
 
+## Debugging and Auditing
+
+**Available Reports** (System Manager role required):
+
+1. **AC Permissions** - System-wide access audit (who has access to what)
+2. **Query Filters** - Debug filter SQL generation with user impersonation
+3. **AC Principal Query Filters** - See which users match each principal filter
+
+**Common Workflows**:
+- Why does User X have access? → AC Permissions Report
+- Test a Query Filter → Query Filters Report with impersonation
+- Who matches a Principal Filter? → AC Principal Query Filters Report
+
+See [references/debugging-reports.md](references/debugging-reports.md) for detailed documentation and workflows.
+
 ## Troubleshooting
 
 Common issues:
@@ -146,4 +161,5 @@ For detailed information:
 - **[rule-evaluation.md](references/rule-evaluation.md)**: Rule map generation, permission evaluation, SQL generation
 - **[integration.md](references/integration.md)**: DocType and Report integration, API endpoints
 - **[examples.md](references/examples.md)**: Complete usage examples and code patterns
+- **[debugging-reports.md](references/debugging-reports.md)**: Reports for debugging and auditing permissions
 - **[troubleshooting.md](references/troubleshooting.md)**: Common issues, debugging techniques, solutions

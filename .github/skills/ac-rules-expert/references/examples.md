@@ -456,13 +456,25 @@ conditions = f"`tabDocType`.`owner` = {frappe.db.escape(user)}"
 filters = frappe.as_json([["name", "in", ["Sales User", "Sales Manager"]]])
 ```
 
-### 3. Dynamic Field-Based Filtering
+### 3. Dynamic Field-Based Filtering (using conditions)
 
 ```python
+# Python filter - using conditions variable
 filters = """
 user_value = frappe.db.get_value("User", frappe.session.user, "custom_field")
 conditions = f"`tabDocType`.`field` = {frappe.db.escape(user_value)}"
 """
+```
+
+### 3b. Dynamic Field-Based Filtering (using filters)
+
+```python
+# Python filter - using filters variable (like JSON)
+filters = """
+user_value = frappe.db.get_value("User", frappe.session.user, "custom_field")
+filters = [["field", "=", user_value]]
+"""
+# This is converted to SQL just like JSON filters
 ```
 
 ### 4. Time-Based Filtering
@@ -482,14 +494,34 @@ filters = frappe.as_json([
 ])
 ```
 
-### 6. Hierarchical Filtering
+### 6. Hierarchical Filtering (using conditions)
 
 ```python
+# Python filter - using conditions variable for complex SQL
 filters = """
-EXISTS (
+conditions = f'''EXISTS (
     SELECT 1 FROM `tabEmployee`
-    WHERE reports_to = '{user}'
+    WHERE reports_to = {frappe.db.escape(frappe.session.user)}
     AND name = `tabDocType`.`employee`
-)
+)'''
+"""
+```
+
+### 7. Python Filter with Fallback
+
+```python
+# Python filter - try conditions first, fallback to filters
+filters = """
+# Try to build complex SQL condition
+try:
+    user_dept = frappe.db.get_value("User", frappe.session.user, "department")
+    if user_dept:
+        conditions = f"`tabDocType`.`department` = {frappe.db.escape(user_dept)}"
+    else:
+        # Fallback to filters dict
+        filters = [["department", "is", "set"]]
+except:
+    # Error case - block all
+    conditions = "1=0"
 """
 ```

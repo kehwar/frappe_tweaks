@@ -63,9 +63,24 @@ Reusable filter definitions used in both principal and resource filtering.
 - Used for complex conditions
 
 ### 3. Python Filters
-- Python code that sets `conditions` variable
-- Example: `conditions = f"status = 'Active' AND tenant_id = {frappe.db.get_value('User', frappe.session.user, 'tenant_id')}"`
+- Python code that sets `conditions` variable OR `filters` variable
+- **Two output options**:
+  1. **conditions**: Set SQL WHERE clause directly (returned as-is)
+  2. **filters**: Set Frappe filter dict/array (converted to SQL like JSON filters)
+- If both are set, `conditions` takes precedence
+- If neither is set, returns "1=0" (no match)
 - Used for dynamic filtering based on context
+
+**Examples**:
+```python
+# Option 1: Using conditions (direct SQL)
+conditions = f"status = 'Active' AND tenant_id = {frappe.db.get_value('User', frappe.session.user, 'tenant_id')}"
+
+# Option 2: Using filters (like JSON)
+filters = [["status", "=", "Active"], ["tenant_id", "=", 1]]
+# or
+filters = {"status": "Active", "tenant_id": 1}
+```
 
 **Important Methods**:
 - `get_sql()`: Converts filter to SQL WHERE clause
@@ -78,9 +93,15 @@ def get_sql(query_filter):
         return filters  # Direct SQL
     
     if filters_type == "Python":
-        # Execute Python code and return conditions variable
+        # Execute Python code with conditions and filters variables
         safe_exec(filters, ...)
-        return conditions
+        # Check conditions first
+        if conditions:
+            return conditions
+        # Fall back to filters dict/array
+        if filters is not None:
+            return build_sql_from_filters(filters)
+        return "1=0"  # Neither set
     
     if filters_type == "JSON":
         # Use frappe.get_all() to generate SQL
