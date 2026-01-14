@@ -41,7 +41,7 @@
  "module": "Tweaks",
  "name": "Customizations",
  "owner": "Administrator",
- "prepared_report": 0,
+ "prepared_report": 1,
  "ref_doctype": "Custom Field",
  "report_name": "Customizations",
  "report_type": "Script Report",

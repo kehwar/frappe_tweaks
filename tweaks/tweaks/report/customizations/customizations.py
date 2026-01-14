@@ -106,6 +106,20 @@ def get_columns():
             "fieldtype": "Check",
             "width": 120,
         },
+        {
+            "fieldname": "custom_field_name",
+            "label": _("Custom Field Name"),
+            "fieldtype": "Data",
+            "width": 0,
+            "hidden": 1,
+        },
+        {
+            "fieldname": "doctype_or_field",
+            "label": _("Applied For"),
+            "fieldtype": "Data",
+            "width": 0,
+            "hidden": 1,
+        },
     ]
 
 
@@ -157,7 +171,8 @@ def get_custom_fields(filters):
             NULL as property_count,
             NULL as properties,
             module,
-            is_system_generated
+            is_system_generated,
+            name as custom_field_name
         FROM `tabCustom Field`
         {where_clause}
         ORDER BY dt, fieldname
@@ -204,7 +219,9 @@ def get_property_setters(filters):
                 SEPARATOR '; '
             ) as properties,
             module,
-            MAX(is_system_generated) as is_system_generated
+            MAX(is_system_generated) as is_system_generated,
+            NULL as custom_field_name,
+            doctype_or_field
         FROM `tabProperty Setter`
         {where_clause}
         GROUP BY 
@@ -214,7 +231,8 @@ def get_property_setters(filters):
                 WHEN doctype_or_field = 'DocField' THEN CONCAT(doc_type, ' / ', field_name)
                 ELSE CONCAT(doc_type, ' / ', COALESCE(field_name, row_name))
             END,
-            module
+            module,
+            doctype_or_field
         ORDER BY doc_type, fieldname
     """,
         values,
