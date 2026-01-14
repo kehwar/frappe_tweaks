@@ -11,6 +11,7 @@ Send logs to an OpenObserve stream.
 - `logs` (list, required): List of log dictionaries to send. Each log can contain:
   - Standard fields: `message`, `level`, etc.
   - **Timestamp field**: Use `_timestamp` or `@timestamp` (Unix timestamp in microseconds)
+  - **Important**: Frappe datetime objects are timezone-naive. Use `frappe.utils.convert_timezone_to_utc()` before converting to Unix timestamps
   - If no timestamp field is provided, OpenObserve uses ingestion time
 - `org` (str, optional): Organization name (uses default_org if not provided)
 
@@ -27,16 +28,20 @@ Send logs to an OpenObserve stream.
 
 **Examples:**
 ```python
-from datetime import datetime
+from frappe.utils import convert_timezone_to_utc, now_datetime
 
-# With explicit timestamp (Unix microseconds)
+# With explicit timestamp (Unix microseconds) - correct way
+dt = now_datetime()
+dt_utc = convert_timezone_to_utc(dt)
+timestamp = int(dt_utc.timestamp() * 1000000)
+
 result = send_logs(
     stream="application-logs",
     logs=[{
         "message": "User login successful",
         "level": "info",
         "user": "john@example.com",
-        "_timestamp": int(datetime.utcnow().timestamp() * 1000000)
+        "_timestamp": timestamp
     }]
 )
 
@@ -48,6 +53,8 @@ result = send_logs(
         {"message": "Retry failed", "level": "error", "code": 503}
     ],
     org="production"
+)
+```
 )
 ```
 

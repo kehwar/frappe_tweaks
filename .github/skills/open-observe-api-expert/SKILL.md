@@ -19,7 +19,8 @@ Expert guidance for the OpenObserve API integration - a logging and observabilit
 **OpenObserve**: Open-source observability platform for logs, metrics, and traces  
 **Stream**: Named channel for organizing logs (e.g., "application-logs", "error-logs")  
 **Organization**: Namespace for separating environments (defaults to configured default_org)  
-**Safe Exec Global**: Access API from Server Scripts/Business Logic without importing
+**Safe Exec Global**: Access API from Server Scripts/Business Logic without importing  
+**Timestamps**: Use `_timestamp` or `@timestamp` fields (Unix microseconds). Frappe datetimes are timezone-naive—use `frappe.utils.convert_timezone_to_utc()` for accurate timestamps
 
 ## Common Tasks
 
