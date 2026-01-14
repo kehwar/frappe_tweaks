@@ -525,3 +525,301 @@ except:
     conditions = "1=0"
 """
 ```
+
+## Example 7: Workflow - Territory-Based Approval
+
+**Goal**: Sales Managers can only approve Sales Orders in their assigned territories.
+
+### Step 1: Create Principal Filter (Sales Managers)
+
+```python
+principal_filter = frappe.get_doc({
+    "doctype": "Query Filter",
+    "filter_name": "Sales Managers",
+    "reference_doctype": "User",
+    "filters_type": "JSON",
+    "filters": frappe.as_json([["role", "=", "Sales Manager"]])
+}).insert()
+```
+
+### Step 2: Create Resource Filter (Territory-Based Orders)
+
+```python
+resource_filter = frappe.get_doc({
+    "doctype": "Query Filter",
+    "filter_name": "Sales Orders in My Territory",
+    "reference_doctype": "Sales Order",
+    "filters_type": "SQL",
+    "filters": """
+        territory IN (
+            SELECT territory FROM `tabSales Team`
+            WHERE parent = '{user}' AND parenttype = 'User'
+        )
+    """
+}).insert()
+```
+
+### Step 3: Create AC Action for Workflow
+
+```python
+# Note: Use scrubbed name (lowercase, underscored)
+# "Approve" workflow action -> "approve" AC Action
+frappe.get_doc({
+    "doctype": "AC Action",
+    "action": "approve"
+}).insert()
+```
+
+### Step 4: Create AC Resource
+
+```python
+ac_resource = frappe.get_doc({
+    "doctype": "AC Resource",
+    "type": "DocType",
+    "doctype": "Sales Order",
+    "managed_actions": "Select",
+    "actions": [{"action": "approve"}]
+}).insert()
+```
+
+### Step 5: Create AC Rule
+
+```python
+frappe.get_doc({
+    "doctype": "AC Rule",
+    "title": "Territory-Based Sales Order Approval",
+    "rule_type": "Permit",
+    "resource": ac_resource.name,
+    "principals": [{"principal": principal_filter.name}],
+    "resources": [{"resource": resource_filter.name}],
+    "actions": [{"action": "approve"}],
+    "disabled": 0
+}).insert()
+```
+
+### Testing
+
+```python
+# Test if user can see the approve transition
+from tweaks.custom.doctype.workflow import get_transitions
+
+doc = frappe.get_doc("Sales Order", "SO-0001")
+transitions = get_transitions(doc, user="sales.manager@example.com")
+print([t.action for t in transitions])  # Should include "Approve" if in territory
+
+# Test AC Rules directly
+from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import has_resource_access
+
+result = has_resource_access(
+    doctype="Sales Order",
+    action="approve",
+    user="sales.manager@example.com"
+)
+print(result)  # {"access": True/False, "unmanaged": False}
+```
+
+## Example 8: Workflow - Amount-Based Approval Hierarchy
+
+**Goal**: Different approval limits based on manager level:
+- Regular managers: up to 50k
+- Senior managers: 50k-200k
+- Directors: over 200k
+
+### Step 1: Create Amount-Based Resource Filters
+
+```python
+# POs under 50k
+low_amount = frappe.get_doc({
+    "doctype": "Query Filter",
+    "filter_name": "PO Under 50k",
+    "reference_doctype": "Purchase Order",
+    "filters_type": "SQL",
+    "filters": "grand_total <= 50000"
+}).insert()
+
+# POs 50k-200k
+medium_amount = frappe.get_doc({
+    "doctype": "Query Filter",
+    "filter_name": "PO 50k-200k",
+    "reference_doctype": "Purchase Order",
+    "filters_type": "SQL",
+    "filters": "grand_total > 50000 AND grand_total <= 200000"
+}).insert()
+
+# POs over 200k
+high_amount = frappe.get_doc({
+    "doctype": "Query Filter",
+    "filter_name": "PO Over 200k",
+    "reference_doctype": "Purchase Order",
+    "filters_type": "SQL",
+    "filters": "grand_total > 200000"
+}).insert()
+```
+
+### Step 2: Create Role-Based Principal Filters
+
+```python
+manager = frappe.get_doc({
+    "doctype": "Query Filter",
+    "filter_name": "Regular Managers",
+    "reference_doctype": "User",
+    "filters_type": "JSON",
+    "filters": frappe.as_json([["role", "=", "Manager"]])
+}).insert()
+
+senior_manager = frappe.get_doc({
+    "doctype": "Query Filter",
+    "filter_name": "Senior Managers",
+    "reference_doctype": "User",
+    "filters_type": "JSON",
+    "filters": frappe.as_json([["role", "=", "Senior Manager"]])
+}).insert()
+
+director = frappe.get_doc({
+    "doctype": "Query Filter",
+    "filter_name": "Directors",
+    "reference_doctype": "User",
+    "filters_type": "JSON",
+    "filters": frappe.as_json([["role", "=", "Director"]])
+}).insert()
+```
+
+### Step 3: Create AC Resource
+
+```python
+ac_resource = frappe.get_doc({
+    "doctype": "AC Resource",
+    "type": "DocType",
+    "doctype": "Purchase Order",
+    "managed_actions": "Select",
+    "actions": [{"action": "approve"}]
+}).insert()
+```
+
+### Step 4: Create Hierarchical Rules
+
+```python
+# Managers approve up to 50k
+frappe.get_doc({
+    "doctype": "AC Rule",
+    "title": "Managers Approve PO Under 50k",
+    "rule_type": "Permit",
+    "resource": ac_resource.name,
+    "principals": [{"principal": manager.name}],
+    "resources": [{"resource": low_amount.name}],
+    "actions": [{"action": "approve"}]
+}).insert()
+
+# Senior Managers approve 50k-200k
+frappe.get_doc({
+    "doctype": "AC Rule",
+    "title": "Senior Managers Approve PO 50k-200k",
+    "rule_type": "Permit",
+    "resource": ac_resource.name,
+    "principals": [{"principal": senior_manager.name}],
+    "resources": [{"resource": medium_amount.name}],
+    "actions": [{"action": "approve"}]
+}).insert()
+
+# Directors approve over 200k
+frappe.get_doc({
+    "doctype": "AC Rule",
+    "title": "Directors Approve PO Over 200k",
+    "rule_type": "Permit",
+    "resource": ac_resource.name,
+    "principals": [{"principal": director.name}],
+    "resources": [{"resource": high_amount.name}],
+    "actions": [{"action": "approve"}]
+}).insert()
+```
+
+## Example 9: Workflow - Multiple Actions with Different Rules
+
+**Goal**: Control both Approve and Reject actions with different logic:
+- Anyone with role can reject (no restrictions)
+- Only territory managers can approve
+
+### Step 1: Create Filters
+
+```python
+# Territory managers
+territory_mgr = frappe.get_doc({
+    "doctype": "Query Filter",
+    "filter_name": "Territory Managers",
+    "reference_doctype": "User",
+    "filters_type": "SQL",
+    "filters": """
+        EXISTS (
+            SELECT 1 FROM `tabUser Territory`
+            WHERE parent = `tabUser`.name
+        )
+    """
+}).insert()
+
+# Approvers (for reject)
+approvers = frappe.get_doc({
+    "doctype": "Query Filter",
+    "filter_name": "Sales Approvers",
+    "reference_doctype": "User",
+    "filters_type": "JSON",
+    "filters": frappe.as_json([["role", "=", "Sales Approver"]])
+}).insert()
+```
+
+### Step 2: Create AC Actions
+
+```python
+# Both workflow actions as AC Actions
+frappe.get_doc({
+    "doctype": "AC Action",
+    "action": "approve"
+}).insert()
+
+frappe.get_doc({
+    "doctype": "AC Action",
+    "action": "reject"
+}).insert()
+```
+
+### Step 3: Create AC Resource
+
+```python
+ac_resource = frappe.get_doc({
+    "doctype": "AC Resource",
+    "type": "DocType",
+    "doctype": "Sales Order",
+    "managed_actions": "Select",
+    "actions": [
+        {"action": "approve"},
+        {"action": "reject"}
+    ]
+}).insert()
+```
+
+### Step 4: Create Separate Rules
+
+```python
+# Approve: Only territory managers
+approve_rule = frappe.get_doc({
+    "doctype": "AC Rule",
+    "title": "Territory Managers Can Approve",
+    "rule_type": "Permit",
+    "resource": ac_resource.name,
+    "principals": [{"principal": territory_mgr.name}],
+    "resources": [],  # All records
+    "actions": [{"action": "approve"}]
+}).insert()
+
+# Reject: Anyone with role
+reject_rule = frappe.get_doc({
+    "doctype": "AC Rule",
+    "title": "Approvers Can Reject",
+    "rule_type": "Permit",
+    "resource": ac_resource.name,
+    "principals": [{"principal": approvers.name}],
+    "resources": [],  # All records
+    "actions": [{"action": "reject"}]
+}).insert()
+```
+
+**Result**: Territory managers see both "Approve" and "Reject", non-territory approvers only see "Reject"

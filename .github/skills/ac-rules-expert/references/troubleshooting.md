@@ -449,6 +449,285 @@ customers = frappe.get_all("Customer")
 print(frappe.db.sql_list)
 ```
 
+## Workflow-Specific Issues
+
+### Workflow Transitions Not Filtered
+
+**Symptoms**:
+- User sees workflow transitions they shouldn't have access to
+- AC Rules don't seem to affect workflow actions
+
+**Common Causes & Solutions**:
+
+1. **Action name mismatch**
+   ```python
+   # Check action names - workflow actions are scrubbed
+   workflow = frappe.get_doc("Workflow", workflow_name)
+   for t in workflow.transitions:
+       print(f"Workflow action: '{t.action}' -> Scrubbed: '{frappe.scrub(t.action)}'")
+   
+   # AC Action must use scrubbed name
+   # "Approve" -> "approve"
+   # "Submit for Review" -> "submit_for_review"
+   ```
+
+2. **Resource not managing the action**
+   ```python
+   resource = frappe.get_doc("AC Resource", resource_name)
+   print(f"Managed actions: {resource.managed_actions}")  # Should be "Select"
+   print(f"Actions: {[a.action for a in resource.actions]}")  # Must include workflow action
+   ```
+
+3. **No Permit rules for the action**
+   ```python
+   # Check if any rules permit the action
+   from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import get_resource_rules
+   
+   result = get_resource_rules(
+       doctype="Sales Order",
+       action="approve",
+       user="test@example.com"
+   )
+   print(f"Rules found: {len(result.get('rules', []))}")
+   print(f"Unmanaged: {result.get('unmanaged')}")
+   ```
+
+4. **Hook not registered**
+   ```python
+   # Verify hooks are registered in tweaks/hooks.py
+   import tweaks.hooks as hooks
+   print(f"Filter transitions hook: {hooks.filter_workflow_transitions}")
+   print(f"Has permission hook: {hooks.has_workflow_action_permission}")
+   ```
+
+### Workflow Action Blocked with Permission Error
+
+**Symptoms**:
+- User sees the transition option
+- Gets "Permission denied" when trying to execute it
+
+**Common Causes & Solutions**:
+
+1. **Forbid rule blocking the action**
+   ```python
+   # Check for Forbid rules
+   from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import get_resource_filter_query
+   
+   result = get_resource_filter_query(
+       doctype="Sales Order",
+       action="approve",
+       user="test@example.com"
+   )
+   print(f"Access: {result.get('access')}")  # Should be "partial" or "total"
+   print(f"Query: {result.get('query')}")
+   ```
+
+2. **Document doesn't match resource filter**
+   ```python
+   # Test if document matches the filter
+   doc = frappe.get_doc("Sales Order", "SO-0001")
+   
+   # Get the filter query
+   result = get_resource_filter_query(
+       doctype="Sales Order",
+       action="approve",
+       user="test@example.com"
+   )
+   
+   # Test if document would pass the filter
+   if result.get("query"):
+       match = frappe.db.sql(f"""
+           SELECT 1 FROM `tabSales Order`
+           WHERE name = {frappe.db.escape(doc.name)}
+           AND ({result.get('query')})
+       """)
+       print(f"Document matches filter: {bool(match)}")
+   ```
+
+3. **before_transition hook blocking**
+   ```python
+   # Check if custom before_transition logic exists
+   doc = frappe.get_doc("Sales Order", "SO-0001")
+   
+   # See if document has before_transition method
+   if hasattr(doc, "before_transition"):
+       print("Document has custom before_transition method")
+       # Review the method for additional permission checks
+   ```
+
+### Workflow Action List (Desk) Shows Wrong Items
+
+**Symptoms**:
+- Workflow Action doctype list shows items user can't actually action
+- Or doesn't show items user should be able to action
+
+**Common Causes & Solutions**:
+
+1. **Permission query conditions not working**
+   ```python
+   # Test the permission query conditions function directly
+   from tweaks.utils.workflow import get_workflow_action_permission_query_conditions
+   
+   conditions = get_workflow_action_permission_query_conditions(
+       user="test@example.com",
+       doctype="Workflow Action"
+   )
+   print(f"Conditions: {conditions}")
+   
+   # If empty, AC Rules might not be managing any workflow actions
+   # If complex, verify the SQL is correct
+   ```
+
+2. **Multiple workflows with different actions**
+   ```python
+   # Check all workflows and their actions
+   workflows = frappe.get_all("Workflow", fields=["name", "document_type"])
+   for w in workflows:
+       workflow = frappe.get_doc("Workflow", w.name)
+       print(f"\nWorkflow: {w.name} (DocType: {w.document_type})")
+       for t in workflow.transitions:
+           print(f"  - {t.action} ({t.state} -> {t.next_state})")
+   ```
+
+3. **Resource not configured for all actions**
+   ```python
+   # Check which actions are managed
+   resources = frappe.get_all("AC Resource", 
+       filters={"type": "DocType"},
+       fields=["name", "doctype", "managed_actions"]
+   )
+   for r in resources:
+       res = frappe.get_doc("AC Resource", r.name)
+       print(f"{r.doctype}: {[a.action for a in res.actions]}")
+   ```
+
+### Workflow Transition Filtering is Slow
+
+**Symptoms**:
+- Long delays when loading workflow actions
+- Timeout errors when viewing documents with workflows
+
+**Common Causes & Solutions**:
+
+1. **Complex resource filters with subqueries**
+   ```python
+   # Check Query Filter SQL complexity
+   filter_doc = frappe.get_doc("Query Filter", filter_name)
+   print(filter_doc.filters)
+   
+   # Simplify if possible:
+   # - Add database indexes on joined columns
+   # - Use EXISTS instead of IN with subqueries
+   # - Cache user-specific data in User doctype fields
+   ```
+
+2. **Too many workflow states/transitions**
+   ```python
+   # Check workflow complexity
+   workflow = frappe.get_doc("Workflow", workflow_name)
+   print(f"States: {len(workflow.states)}")
+   print(f"Transitions: {len(workflow.transitions)}")
+   
+   # If very high (>20 transitions), consider:
+   # - Breaking into multiple workflows
+   # - Reducing managed actions
+   # - Using unmanaged for less critical actions
+   ```
+
+3. **get_workflow_action_permission_query_conditions generating complex SQL**
+   ```python
+   # Profile the query generation
+   import time
+   start = time.time()
+   
+   from tweaks.utils.workflow import get_workflow_action_permission_query_conditions
+   conditions = get_workflow_action_permission_query_conditions(
+       user="test@example.com"
+   )
+   
+   elapsed = time.time() - start
+   print(f"Query generation took: {elapsed:.2f}s")
+   print(f"SQL length: {len(conditions)} chars")
+   
+   # If slow:
+   # - Consider caching strategy
+   # - Reduce number of managed workflow actions
+   # - Simplify AC Rules filters
+   ```
+
+### Auto-Apply Transitions Not Working with AC Rules
+
+**Symptoms**:
+- Auto-apply transitions aren't executing automatically
+- Manual transitions work but auto ones don't
+
+**Solution**:
+
+Auto-apply workflow transitions are controlled by the `tweaks.custom.doctype.workflow` module. AC Rules are checked during the `before_transition` event:
+
+```python
+# Verify the workflow transition has auto_apply enabled
+workflow = frappe.get_doc("Workflow", workflow_name)
+for t in workflow.transitions:
+    if t.action == "Your Action":
+        print(f"Auto apply: {t.auto_apply}")  # Should be 1
+
+# Check if user has permission for auto-apply
+from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import has_resource_access
+
+result = has_resource_access(
+    doctype="Sales Order",
+    action="approve",  # scrubbed action name
+    user=frappe.session.user
+)
+print(f"User has permission: {result.get('access')}")
+```
+
+### Testing Workflow AC Rules
+
+**Quick Test Script**:
+
+```python
+def test_workflow_ac_rules(doctype, doc_name, action, user):
+    """Test if user can perform workflow action on document."""
+    from tweaks.custom.doctype.workflow import get_transitions
+    from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import has_resource_access
+    
+    doc = frappe.get_doc(doctype, doc_name)
+    action_scrubbed = frappe.scrub(action)
+    
+    # Test 1: Check if action appears in transitions list
+    transitions = get_transitions(doc, user=user)
+    action_available = any(t.action == action for t in transitions)
+    print(f"Action '{action}' in transitions list: {action_available}")
+    
+    # Test 2: Check AC Rules directly
+    result = has_resource_access(
+        doctype=doctype,
+        action=action_scrubbed,
+        user=user
+    )
+    print(f"AC Rules check: {result}")
+    
+    # Test 3: Try to apply the workflow
+    try:
+        from tweaks.custom.doctype.workflow import apply_workflow
+        apply_workflow(doc, action, update=False, user=user)
+        print(f"Workflow application: SUCCESS (dry run)")
+    except Exception as e:
+        print(f"Workflow application: FAILED - {str(e)}")
+    
+    return action_available and result.get("access")
+
+# Usage
+test_workflow_ac_rules(
+    doctype="Sales Order",
+    doc_name="SO-0001",
+    action="Approve",
+    user="test@example.com"
+)
+```
+
 ## Getting Help
 
 If you're still stuck after trying these debugging steps:
@@ -457,4 +736,7 @@ If you're still stuck after trying these debugging steps:
 2. **Test in isolation**: Create a simple test case with minimal rules
 3. **Verify prerequisites**: Ensure all components (Rule, Resource, Filters) are properly configured
 4. **Check documentation**: Review the integration and core components documentation
-5. **Ask for help**: Provide error messages, rule configuration, and what you've tried
+5. **Test with Administrator**: Verify workflow works without AC Rules (Administrator bypasses all AC Rules)
+6. **Verify hook registration**: Ensure `filter_workflow_transitions` and `has_workflow_action_permission` hooks are registered
+7. **Check action naming**: Confirm AC Action names match scrubbed workflow action names
+8. **Ask for help**: Provide error messages, rule configuration, workflow setup, and what you've tried
