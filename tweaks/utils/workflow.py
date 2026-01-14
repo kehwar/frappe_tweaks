@@ -155,10 +155,7 @@ def get_workflow_action_permission_query_conditions(user=None, doctype=None):
 
             # Get filter query from AC Rules
             result = get_resource_filter_query(
-                doctype=reference_doctype,
-                action=action_scrubbed,
-                user=user,
-                debug=False,
+                doctype=reference_doctype, action=action_scrubbed, user=user
             )
 
             if result.get("unmanaged") or result.get("access") == "total":
