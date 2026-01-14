@@ -592,10 +592,10 @@ def has_ac_permission(
     if not frappe.db.table_exists(f"tab{doctype}"):
         frappe.throw(_("Invalid DocType: {0}").format(doctype))
     
-    # Additional security: escape doctype for use in table name
+    # Additional security: ensure doctype only contains alphanumeric characters and underscores
     # While frappe.db.table_exists validates the doctype exists, we also
-    # ensure it only contains alphanumeric characters and underscores
-    if not doctype.replace("_", "").replace(" ", "").isalnum():
+    # ensure it only contains safe characters (no spaces or special characters)
+    if not doctype.replace("_", "").isalnum():
         frappe.throw(_("Invalid DocType name: {0}").format(doctype))
     
     # Execute SQL to check if this document matches the AC Rules filter
