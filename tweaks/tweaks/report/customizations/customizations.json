@@ -30,6 +30,13 @@
    "mandatory": 0,
    "options": "\nCustom Field\nProperty Setter",
    "wildcard_filter": 0
+  },
+  {
+   "fieldname": "show_system_generated",
+   "fieldtype": "Check",
+   "label": "Show System Generated",
+   "mandatory": 0,
+   "wildcard_filter": 0
   }
  ],
  "idx": 0,

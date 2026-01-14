@@ -134,6 +134,9 @@ def get_custom_fields(filters):
     if filters.get("module"):
         filter_dict["module"] = filters.get("module")
 
+    if not filters.get("show_system_generated"):
+        filter_dict["is_system_generated"] = 0
+
     custom_fields = frappe.get_all(
         "Custom Field",
         filters=filter_dict,
@@ -174,6 +177,9 @@ def get_property_setters(filters):
 
     if filters.get("module"):
         filter_dict["module"] = filters.get("module")
+
+    if not filters.get("show_system_generated"):
+        filter_dict["is_system_generated"] = 0
 
     property_setters = frappe.get_all(
         "Property Setter",
