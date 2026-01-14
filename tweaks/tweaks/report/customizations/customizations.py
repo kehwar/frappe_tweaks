@@ -72,8 +72,8 @@ def get_columns():
         {
             "fieldname": "properties",
             "label": _("Properties"),
-            "fieldtype": "Small Text",
-            "width": 300,
+            "fieldtype": "Text",
+            "width": 500,
         },
         {
             "fieldname": "module",
