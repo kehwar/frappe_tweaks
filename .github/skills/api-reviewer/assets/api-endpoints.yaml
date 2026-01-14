@@ -1,0 +1,937 @@
+scan_info:
+  total_endpoints: 39
+  reviewed: 0
+  unreviewed: 39
+endpoints:
+- function: apply_workflow
+  file: custom/doctype/workflow.py
+  line: 90
+  arguments:
+  - doc
+  - action
+  - update
+  - workflow
+  - user
+  docstring: "Perform a workflow action on the current document.\n\nArgs:\n    doc:\
+    \ The document to which the workflow action is applied.\n    action: The intended\
+    \ workflow action.\n    update: Whether to update the document after applying\
+    \ the workflow.\n    workflow: Workflow object (optional).\n    user: The user\
+    \ context for the workflow.\n\nReturns:\n    Updated document after applying the\
+    \ workflow action."
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: get_transitions
+  file: custom/doctype/workflow.py
+  line: 52
+  arguments:
+  - doc
+  - workflow
+  - raise_exception
+  - user
+  docstring: Return list of possible transitions for the given doc
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: inspect_permissions
+  file: custom/utils/permissions.py
+  line: 106
+  arguments:
+  - doctype
+  - doc
+  - ptype
+  - user
+  docstring: null
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: true
+    has_permission_check: true
+  reviewed: false
+  notes: null
+- function: get_query_filters_for_resource
+  file: tweaks/doctype/ac_rule/ac_rule.py
+  line: 262
+  arguments:
+  - doctype
+  - txt
+  - searchfield
+  - start
+  - page_len
+  - filters
+  docstring: 'Query method to filter Query Filters based on the selected AC Resource.
+
+    Only returns Query Filters that match the resource''s doctype or report.'
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: get_resource_filter_query
+  file: tweaks/doctype/ac_rule/ac_rule_utils.py
+  line: 406
+  arguments:
+  - resource
+  - doctype
+  - report
+  - type
+  - key
+  - fieldname
+  - action
+  - user
+  docstring: null
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: get_resource_rules
+  file: tweaks/doctype/ac_rule/ac_rule_utils.py
+  line: 353
+  arguments:
+  - resource
+  - doctype
+  - report
+  - type
+  - key
+  - fieldname
+  - action
+  - user
+  docstring: null
+  security_checks:
+    has_frappe_only_for: true
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: get_rule_map
+  file: tweaks/doctype/ac_rule/ac_rule_utils.py
+  line: 152
+  arguments: []
+  docstring: null
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: has_resource_access
+  file: tweaks/doctype/ac_rule/ac_rule_utils.py
+  line: 498
+  arguments:
+  - resource
+  - doctype
+  - report
+  - type
+  - key
+  - fieldname
+  - action
+  - user
+  docstring: null
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: clear_ac_cache
+  file: tweaks/doctype/ac_settings/ac_settings.py
+  line: 13
+  arguments: []
+  docstring: Clear all AC Rule caches
+  security_checks:
+    has_frappe_only_for: true
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: get_resolved_script_map
+  file: tweaks/doctype/event_script/event_script.py
+  line: 190
+  arguments:
+  - cached
+  docstring: null
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: inspect_permissions
+  file: tweaks/doctype/event_script/event_script.py
+  line: 416
+  arguments:
+  - doctype
+  - doc
+  - ptype
+  - user
+  docstring: null
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: true
+    has_permission_check: true
+  reviewed: false
+  notes: null
+- function: search_logs
+  file: tweaks/doctype/open_observe_api/open_observe_api.py
+  line: 275
+  arguments:
+  - query
+  - stream
+  - sql
+  - org
+  - start_time
+  - end_time
+  - start
+  - size
+  - search_type
+  - timeout
+  docstring: "Search logs in OpenObserve stream.\n\nThis function is whitelisted and\
+    \ can only be called by System Managers.\nIt searches log data from OpenObserve\
+    \ using SQL queries and time ranges.\n\nArgs:\n    query: Query object that can\
+    \ be complete or incomplete. Missing fields will be filled\n           from individual\
+    \ parameters. Can contain sql, start_time, end_time, start, size.\n          \
+    \ Time values can be ISO strings, datetime objects, or Unix timestamps in microseconds.\
+    \ (optional)\n    stream: Stream name to search logs from (optional, used to replace\
+    \ {stream} placeholder in sql)\n    sql: SQL query string for filtering logs (e.g.,\
+    \ \"SELECT * FROM stream_name WHERE level='error'\").\n         Use {stream} placeholder\
+    \ which will be replaced with the actual stream name. (optional)\n    org: Organization\
+    \ name (optional, uses default_org from config if not provided)\n    start_time:\
+    \ Start time for log search. Accepts:\n                - ISO format string (e.g.,\
+    \ \"2025-12-26T05:00:00Z\")\n                - datetime object (naive or timezone-aware)\n\
+    \                - Unix timestamp in microseconds (int)\n                Naive\
+    \ datetimes are converted to UTC. (optional)\n    end_time: End time for log search.\
+    \ Accepts same formats as start_time. (optional)\n    start: Starting offset for\
+    \ pagination (default: 0 if not in query object).\n           Maps to 'from' field\
+    \ in OpenObserve API.\n    size: Maximum number of logs to return (default: 100\
+    \ if not in query object)\n    search_type: Type of search, typically \"ui\" (default:\
+    \ \"ui\")\n    timeout: Query timeout in seconds (default: 0 for no timeout)\n\
+    \nReturns:\n    Dictionary containing API response with keys:\n    - success:\
+    \ Boolean indicating if the operation was successful\n    - response: The API\
+    \ response data with search results\n    - status_code: HTTP status code\n\nRaises:\n\
+    \    frappe.PermissionError: If the current user is not a System Manager\n   \
+    \ frappe.ValidationError: If sql, start_time, or end_time are missing in final\
+    \ query\n    Exception: If the API call fails\n\nExample:\n    >>> # Search with\
+    \ complete query object (Unix timestamps)\n    >>> search_logs(\n    ...     query={\n\
+    \    ...         \"sql\": \"SELECT * FROM application_logs\",\n    ...       \
+    \  \"start_time\": 1674789786006000,\n    ...         \"end_time\": 1674789886006000,\n\
+    \    ...         \"start\": 0,\n    ...         \"size\": 100\n    ...     }\n\
+    \    ... )\n\n    >>> # Search with incomplete query object, completed with parameters\n\
+    \    >>> search_logs(\n    ...     query={\"sql\": \"SELECT * FROM application_logs\"\
+    },\n    ...     start_time=\"2025-12-26T05:00:00Z\",\n    ...     end_time=\"\
+    2025-12-26T06:00:00Z\",\n    ...     size=50\n    ... )\n\n    >>> # Search with\
+    \ individual parameters only (ISO strings)\n    >>> search_logs(\n    ...    \
+    \ stream=\"application-logs\",\n    ...     sql=\"SELECT * FROM {stream} WHERE\
+    \ level='error'\",\n    ...     start_time=\"2025-12-26T05:00:00Z\",\n    ...\
+    \     end_time=\"2025-12-26T06:00:00Z\",\n    ...     size=50\n    ... )\n\n \
+    \   >>> # Search with datetime objects\n    >>> from datetime import datetime,\
+    \ timedelta\n    >>> search_logs(\n    ...     sql=\"SELECT * FROM error_logs\"\
+    ,\n    ...     start_time=datetime.now() - timedelta(hours=1),\n    ...     end_time=datetime.now()\n\
+    \    ... )\n\n    >>> # Parameter override - query provides base, parameters override\n\
+    \    >>> search_logs(\n    ...     query={\"sql\": \"SELECT * FROM logs\", \"\
+    start_time\": \"2025-01-01T00:00:00Z\"},\n    ...     end_time=\"2025-01-01T23:59:59Z\"\
+    ,  # Completes missing end_time\n    ...     size=200  # Overrides default size\n\
+    \    ... )"
+  security_checks:
+    has_frappe_only_for: true
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: send_logs
+  file: tweaks/doctype/open_observe_api/open_observe_api.py
+  line: 117
+  arguments:
+  - stream
+  - logs
+  - org
+  docstring: "Send logs to OpenObserve stream.\n\nThis function is whitelisted and\
+    \ can only be called by System Managers.\nIt sends log data to an OpenObserve\
+    \ stream for monitoring and analysis.\n\nArgs:\n    stream: Stream name to send\
+    \ logs to\n    logs: List of log dictionaries to send. Each log can contain any\
+    \ fields.\n    org: Organization name (optional, uses default_org from config\
+    \ if not provided)\n\nReturns:\n    Dictionary containing API response with keys:\n\
+    \    - success: Boolean indicating if the operation was successful\n    - response:\
+    \ The API response data\n    - status_code: HTTP status code\n\nRaises:\n    frappe.PermissionError:\
+    \ If the current user is not a System Manager\n    Exception: If the API call\
+    \ fails\n\nExample:\n    >>> # Send a single log entry\n    >>> send_logs(\n \
+    \   ...     stream=\"application-logs\",\n    ...     logs=[{\n    ...       \
+    \  \"message\": \"User login successful\",\n    ...         \"level\": \"info\"\
+    ,\n    ...         \"user\": \"john@example.com\",\n    ...         \"timestamp\"\
+    : \"2025-12-26T02:20:00Z\"\n    ...     }]\n    ... )\n\n    >>> # Send multiple\
+    \ log entries with custom organization\n    >>> send_logs(\n    ...     stream=\"\
+    error-logs\",\n    ...     logs=[\n    ...         {\"message\": \"Error occurred\"\
+    , \"level\": \"error\", \"code\": 500},\n    ...         {\"message\": \"Retry\
+    \ failed\", \"level\": \"error\", \"code\": 503}\n    ...     ],\n    ...    \
+    \ org=\"production\"\n    ... )"
+  security_checks:
+    has_frappe_only_for: true
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: test_connection
+  file: tweaks/doctype/open_observe_api/open_observe_api.py
+  line: 236
+  arguments: []
+  docstring: "Test connection to OpenObserve API.\n\nThis function is whitelisted\
+    \ and can only be called by System Managers.\nIt sends a test log entry to verify\
+    \ the configuration is correct.\n\nReturns:\n    Dictionary with test results\n\
+    \nRaises:\n    frappe.PermissionError: If the current user is not a System Manager"
+  security_checks:
+    has_frappe_only_for: true
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: create_customer
+  file: tweaks/doctype/peru_api_com/peru_api_com.py
+  line: 659
+  arguments:
+  - rut
+  docstring: "Create or sync a customer in the system using a provided tax ID.\n\n\
+    Args:\n    rut (str): The customer's tax ID (RUC/DNI).\n\nReturns:\n    dict:\
+    \ Customer details as a dictionary."
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: get_customer
+  file: tweaks/doctype/peru_api_com/peru_api_com.py
+  line: 686
+  arguments:
+  - rut
+  - customer
+  docstring: "Fetch and update customer details with data fetched from API.\n\nArgs:\n\
+    \    rut (str): The customer's tax ID (RUC/DNI).\n    customer (Document, optional):\
+    \ Existing customer document to update.\n\nReturns:\n    Document: Updated customer\
+    \ document."
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: get_default_settings
+  file: tweaks/doctype/peru_api_com/peru_api_com.py
+  line: 619
+  arguments: []
+  docstring: "Get default configuration settings for PERU API COM without saving changes.\n\
+    \nThis function retrieves a copy of the PERU API COM configuration with all\n\
+    fields set to their default values. Useful for comparing current settings\nagainst\
+    \ defaults or for configuration management. Only System Managers\ncan access this\
+    \ function.\n\nReturns:\n    Dictionary containing all default configuration values\
+    \ including:\n    - website_url: Base URL for the API service\n    - ruc_url:\
+    \ Endpoint URL for RUC queries\n    - ruc_suc_url: Endpoint URL for RUC branch\
+    \ queries\n    - dni_url: Endpoint URL for DNI queries\n    - tc_url: Endpoint\
+    \ URL for exchange rate queries\n    - auth_header: Custom authorization header\
+    \ name\n    - cache: Default caching behavior setting\n\nRaises:\n    frappe.PermissionError:\
+    \ If the current user is not a System Manager\n\nExample:\n    >>> defaults =\
+    \ get_default_settings()\n    >>> print(f\"Default API URL: {defaults['website_url']}\"\
+    )\n    >>> print(f\"Caching enabled by default: {defaults['cache']}\")\n\nNote:\n\
+    \    This function does NOT save any changes to the database. It only\n    returns\
+    \ the default values for inspection or comparison purposes."
+  security_checks:
+    has_frappe_only_for: true
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: get_dni
+  file: tweaks/doctype/peru_api_com/peru_api_com.py
+  line: 489
+  arguments:
+  - dni
+  - cache
+  - raise_exception
+  docstring: "Get DNI (national ID) information from PERU API COM service.\n\nDNI\
+    \ (Documento Nacional de Identidad) contains personal information\nfor Peruvian\
+    \ citizens including names and basic identification data.\n\nArgs:\n    dni: The\
+    \ 8-digit DNI number to look up\n    cache: Whether to use cached data if available\
+    \ (default: True)\n    raise_exception: Whether to raise exceptions on API errors\
+    \ (default: True)\n\nReturns:\n    Dictionary containing personal information\
+    \ with keys:\n    - dni: The DNI number\n    - cliente: Full name (complete name\
+    \ string)\n    - nombres: First and middle names\n    - apellido_paterno: Paternal\
+    \ surname\n    - apellido_materno: Maternal surname\n    - mensaje: Response message\
+    \ (usually \"OK\")\n    - code: HTTP response code (usually \"200\")\n\nExample:\n\
+    \    >>> person = get_dni(\"70613577\")\n    >>> print(f\"Full name: {person['cliente']}\"\
+    )\n    >>> print(f\"First names: {person['nombres']}\")\n    >>> print(f\"Surnames:\
+    \ {person['apellido_paterno']} {person['apellido_materno']}\")\n    >>> print(f\"\
+    DNI: {person['dni']}\")\n\nNote:\n    The API returns basic identification information.\
+    \ Additional fields\n    like address or birth date are not included in this service."
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: get_ruc
+  file: tweaks/doctype/peru_api_com/peru_api_com.py
+  line: 387
+  arguments:
+  - ruc
+  - cache
+  - sucursales
+  - raise_exception
+  docstring: "Get RUC (company registration) information from PERU API COM service.\n\
+    \nRUC (Registro Único de Contribuyentes) contains company information\nincluding\
+    \ business name, tax status, address, and location details.\n\nArgs:\n    ruc:\
+    \ The 11-digit RUC number to look up\n    cache: Whether to use cached data if\
+    \ available (default: True)\n    sucursales: Whether to include branch/subsidiary\
+    \ information (default: False)\n    raise_exception: Whether to raise exceptions\
+    \ on API errors (default: True)\n\nReturns:\n    Dictionary containing RUC information\
+    \ with keys:\n    - ruc: The RUC number\n    - razon_social: Company legal name\n\
+    \    - estado: Tax status (ACTIVO, etc.)\n    - condicion: Tax condition (HABIDO,\
+    \ etc.)\n    - direccion: Registered address\n    - ubigeo: Geographic location\
+    \ code (6-digit)\n    - departamento: Department/state name\n    - provincia:\
+    \ Province name\n    - distrito: District name\n    - fecha_actualizacion: Last\
+    \ update timestamp\n    - mensaje: Response message (usually \"OK\")\n    - code:\
+    \ HTTP response code (usually \"200\")\n    - sucursales: List of branches (only\
+    \ if sucursales=True)\n\nExample:\n    >>> # Basic company information\n    >>>\
+    \ company = get_ruc(\"20100121809\")\n    >>> print(f\"{company['razon_social']}\
+    \ - {company['estado']}\")\n    >>> print(f\"Address: {company['direccion']},\
+    \ {company['distrito']}\")\n\n    >>> # Include branch information\n    >>> company_with_branches\
+    \ = get_ruc(\"20100121809\", sucursales=True)\n    >>> for branch in company_with_branches.get('sucursales',\
+    \ []):\n    ...     print(f\"Branch: {branch['direccion']}\")"
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: get_ruc_suc
+  file: tweaks/doctype/peru_api_com/peru_api_com.py
+  line: 436
+  arguments:
+  - ruc
+  - cache
+  - raise_exception
+  docstring: "Get RUC branch/subsidiary (sucursal) information from PERU API COM service.\n\
+    \nThis endpoint provides information about all registered branches and subsidiaries\n\
+    of a company, including their addresses and location details.\n\nArgs:\n    ruc:\
+    \ The 11-digit RUC number to look up branches for\n    cache: Whether to use cached\
+    \ data if available (default: True)\n    raise_exception: Whether to raise exceptions\
+    \ on API errors (default: True)\n\nReturns:\n    Dictionary containing branch\
+    \ information with structure:\n    - ruc: The RUC number\n    - razon_social:\
+    \ Company legal name\n    - estado: Tax status (ACTIVO, etc.)\n    - condicion:\
+    \ Tax condition (HABIDO, etc.)\n    - direccion: Registered address\n    - ubigeo:\
+    \ Geographic location code (6-digit)\n    - departamento: Department/state name\n\
+    \    - provincia: Province name\n    - distrito: District name\n    - fecha_actualizacion:\
+    \ Last update timestamp\n    - total_sucursales: Total number of branches\n  \
+    \  - has_sucursales: Boolean indicating if company has branches\n    - ultima_actualizacion_sucursales:\
+    \ Last update timestamp for branch data\n    - sucursales: List of branch objects,\
+    \ each containing:\n      - direccion: Branch address\n      - ubigeo: Geographic\
+    \ location code (6-digit)\n      - departamento: Department/state name\n     \
+    \ - provincia: Province name\n      - distrito: District name\n      - fecha_actualizacion:\
+    \ Last update timestamp for this branch\n    - mensaje: Response message (usually\
+    \ \"OK\")\n    - code: HTTP response code (usually \"200\")\n\nExample:\n    >>>\
+    \ branches = get_ruc_suc(\"20100121809\")\n    >>> print(f\"Company: {branches['razon_social']}\"\
+    )\n    >>> print(f\"Total branches: {branches['total_sucursales']}\")\n    >>>\
+    \ for branch in branches.get('sucursales', []):\n    ...     print(f\"Branch:\
+    \ {branch['direccion']}\")\n    ...     print(f\"Location: {branch['distrito']},\
+    \ {branch['provincia']}\")"
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: get_rut
+  file: tweaks/doctype/peru_api_com/peru_api_com.py
+  line: 347
+  arguments:
+  - rut
+  - cache
+  - sucursales
+  - raise_exception
+  docstring: "Get RUT information by routing to appropriate service based on number\
+    \ length.\n\nRUT (Registro Único de Tributarios) is a tax identification number\
+    \ that can\nbe either a DNI (8 digits for individuals) or RUC (11 digits for companies).\n\
+    This function automatically determines the correct endpoint based on length.\n\
+    \nArgs:\n    rut: The RUT number (8 digits for DNI, 11 digits for RUC)\n    cache:\
+    \ Whether to use cached data if available (default: True)\n    sucursales: Whether\
+    \ to include branch information (default: False)\n    raise_exception: Whether\
+    \ to raise exceptions on API errors (default: True)\n\nReturns:\n    Dictionary\
+    \ containing RUT information. Structure varies based on type:\n    - DNI: Personal\
+    \ information (names, identification data)\n    - RUC: Company information (business\
+    \ name, status, address, etc.)\n\nExample:\n    >>> # For DNI (8 digits)\n   \
+    \ >>> person_data = get_rut(\"70613577\")\n    >>> print(person_data['cliente'])\
+    \  # Full name\n    >>> print(person_data['nombres'])  # First names\n\n    >>>\
+    \ # For RUC (11 digits)\n    >>> company_data = get_rut(\"20100121809\")\n   \
+    \ >>> print(company_data['razon_social'])  # Company name"
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: get_tc
+  file: tweaks/doctype/peru_api_com/peru_api_com.py
+  line: 528
+  arguments:
+  - date
+  - cache
+  - raise_exception
+  docstring: "Get exchange rate (tipo de cambio) information from PERU API COM service.\n\
+    \nRetrieves USD to PEN exchange rates for a specific date. Rates include\nboth\
+    \ purchase and sale prices from official sources.\n\nArgs:\n    date: The date\
+    \ to get exchange rate for. Accepts:\n          - datetime.date object\n     \
+    \     - String in YYYY-MM-DD format\n          - None (defaults to current date)\n\
+    \    cache: Whether to use cached data if available (default: True)\n    raise_exception:\
+    \ Whether to raise exceptions on API errors (default: True)\n\nReturns:\n    Dictionary\
+    \ containing exchange rate information:\n    - fecha: The date for the exchange\
+    \ rate (YYYY-MM-DD format)\n    - compra: Purchase rate (buying USD with PEN)\n\
+    \    - venta: Sale rate (selling USD for PEN)\n    - moneda: Currency code (always\
+    \ \"USD\")\n    - fuente: Data source (e.g., \"SUNAT\")\n    - updated_at: Last\
+    \ update timestamp\n    - mensaje: Response message (usually \"OK\")\n    - code:\
+    \ HTTP response code (usually \"200\")\n\nExample:\n    >>> # Get today's exchange\
+    \ rate\n    >>> today_tc = get_tc()\n    >>> print(f\"USD Purchase: {today_tc['compra']}\
+    \ PEN\")\n    >>> print(f\"USD Sale: {today_tc['venta']} PEN\")\n    >>> print(f\"\
+    Source: {today_tc['fuente']}\")\n\n    >>> # Get specific date exchange rate\n\
+    \    >>> historical_tc = get_tc(\"2025-10-17\")\n    >>> print(f\"Rate on {historical_tc['fecha']}:\
+    \ {historical_tc['venta']}\")\n    >>> print(f\"Updated: {historical_tc['updated_at']}\"\
+    )\n\nNote:\n    Exchange rates may not be available for all dates depending on\n\
+    \    the data source and API service availability."
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: restore_defaults
+  file: tweaks/doctype/peru_api_com/peru_api_com.py
+  line: 583
+  arguments:
+  - only_if_missing
+  docstring: "Restore default configuration values for PERU API COM settings.\n\n\
+    This function resets the API configuration to default values, useful for\ninitial\
+    \ setup or when configuration becomes corrupted. Only System Managers\ncan execute\
+    \ this function for security reasons.\n\nArgs:\n    only_if_missing: If True,\
+    \ only restore fields that are currently empty.\n                    If False,\
+    \ restore all fields to defaults regardless of current values.\n\nRaises:\n  \
+    \  frappe.PermissionError: If the current user is not a System Manager\n\nExample:\n\
+    \    >>> # Restore only empty fields\n    >>> restore_defaults(only_if_missing=True)\n\
+    \n    >>> # Reset all configuration to defaults\n    >>> restore_defaults(only_if_missing=False)\n\
+    \nNote:\n    This function saves the document after restoring defaults, so changes\n\
+    \    are immediately persisted to the database."
+  security_checks:
+    has_frappe_only_for: true
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: set_currency_exchange
+  file: tweaks/doctype/peru_api_com/peru_api_com.py
+  line: 846
+  arguments:
+  - date
+  - from_currency
+  - to_currency
+  - exchange_rate
+  docstring: "Create or update a currency exchange rate record for a specific date\
+    \ and currency pair.\n\nArgs:\n    date: The date for the exchange rate\n    from_currency:\
+    \ The source currency code (e.g., 'USD')\n    to_currency: The target currency\
+    \ code (e.g., 'PEN')\n    exchange_rate: The exchange rate value\n\nReturns:\n\
+    \    The created or updated CurrencyExchange document"
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: update_currency_exchange
+  file: tweaks/doctype/peru_api_com/peru_api_com.py
+  line: 783
+  arguments:
+  - date
+  - cache
+  - raise_exception
+  docstring: "Update currency exchange rates in the system using PERU API COM service.\n\
+    \nThis function fetches exchange rate data from PERU API COM and creates or updates\n\
+    Currency Exchange records in the system for both USD->PEN and PEN->USD conversions.\n\
+    \nArgs:\n    date: The date for which to update exchange rates. If None, uses\
+    \ current date.\n    cache: Whether to use cached data if available (default:\
+    \ False for fresh rates).\n    raise_exception: Whether to raise exceptions on\
+    \ API errors (default: True)\n\nReturns:\n    Dictionary containing the exchange\
+    \ rate data that was processed.\n\nRaises:\n    Exception: If API call fails or\
+    \ exchange rate data is invalid.\n\nExample:\n    >>> # Update today's rates\n\
+    \    >>> tc_data = update_currency_exchange()\n    >>> print(f\"Updated rates\
+    \ for {tc_data['fecha']}\")\n\n    >>> # Update specific date rates\n    >>> tc_data\
+    \ = update_currency_exchange(\"2025-01-15\")"
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: search
+  file: tweaks/doctype/peru_api_com_console/peru_api_com_console.py
+  line: 31
+  arguments:
+  - doc
+  docstring: "Search for data using Peru API services based on search type.\n\nThis\
+    \ function processes search requests for different Peru API services:\n- RUC:\
+    \ Search for company information by RUC number\n- DNI: Search for person information\
+    \ by DNI number\n- TC: Get exchange rate information\n\nArgs:\n    doc (str):\
+    \ JSON string representation of the document containing search parameters\n  \
+    \            Expected fields:\n              - search: Type of search (\"RUC\"\
+    , \"DNI\", or \"TC\")\n              - search_ruc: RUC number to search (when\
+    \ search=\"RUC\")\n              - search_dni: DNI number to search (when search=\"\
+    DNI\")\n              - search_tc: Exchange rate parameters (when search=\"TC\"\
+    )\n              - ignore_cache: Boolean flag to bypass cache\n\nReturns:\n  \
+    \  Document: Updated document with search results in 'data' field or error in\
+    \ 'error' field\n\nRaises:\n    Exception: Any errors during API calls are caught\
+    \ and stored in doc.error"
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: clear_api_logs
+  file: tweaks/doctype/peru_api_com_log/peru_api_com_log.py
+  line: 92
+  arguments: []
+  docstring: 'Flush all Error Logs.
+
+
+    This function is whitelisted and can only be called by System Managers.
+
+    It truncates the entire PERU API COM Log table.'
+  security_checks:
+    has_frappe_only_for: true
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: get_sql
+  file: tweaks/doctype/query_filter/query_filter.py
+  line: 39
+  arguments: []
+  docstring: null
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: cancel_sync
+  file: tweaks/doctype/sync_job/sync_job.py
+  line: 190
+  arguments:
+  - reason
+  docstring: "Cancel sync job (only Pending, Queued or Failed)\n\nArgs:\n    reason:\
+    \ Optional cancellation reason"
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: clear_all_logs
+  file: tweaks/doctype/sync_job/sync_job.py
+  line: 828
+  arguments: []
+  docstring: 'Clear all Sync Job logs.
+
+
+    This function is whitelisted and can only be called by System Managers.
+
+    It truncates the entire Sync Job table.'
+  security_checks:
+    has_frappe_only_for: true
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: execute
+  file: tweaks/doctype/sync_job/sync_job.py
+  line: 268
+  arguments:
+  - job_id
+  docstring: Execute the sync job
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: retry
+  file: tweaks/doctype/sync_job/sync_job.py
+  line: 217
+  arguments: []
+  docstring: Retry failed sync job
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: start
+  file: tweaks/doctype/sync_job/sync_job.py
+  line: 241
+  arguments: []
+  docstring: Manually start a pending sync job
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: group_aggregate
+  file: utils/groupby.py
+  line: 30
+  arguments:
+  - rows
+  - group_fields
+  - aggregations
+  docstring: "Group and aggregate a list of dict rows.\n\nParams:\n  rows: list of\
+    \ dicts\n  group_fields: ordered list of fields to group by (e.g., [\"country\"\
+    , \"city\", \"user.name\"])\n    - Supports dot notation for nested fields (e.g.,\
+    \ \"user.profile.name\")\n  aggregations: list of { \"op\": \"sum|count|average\"\
+    , \"field\": <str or None>, \"name\": <optional str> }\n    - For \"count\", \"\
+    field\" may be None. Count is number of rows in the group.\n    - \"name\" optional;\
+    \ default uses the field name.\n    - Fields support dot notation for nested properties\
+    \ (e.g., \"sales.amount\")\n\nReturns:\n  A dict with:\n    {\n      \"group\"\
+    : [],  # root level has empty group\n      \"aggregations\": [ [name, value],\
+    \ ... ],\n      \"level\": int,  # depth level in the grouping hierarchy (0 =\
+    \ root)\n      \"levels\": int,  # total number of grouping levels\n      \"index_in_parent\"\
+    : int,  # 0-based index of this node among its siblings\n      \"count_in_parent\"\
+    : int,  # total count of siblings at this level\n      \"groups\": [ ... ] or\
+    \ \"rows\": [...]\n    }"
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: export_query
+  file: utils/query_report.py
+  line: 12
+  arguments:
+  - report_name
+  - extension
+  - data
+  - filters
+  - file_name
+  - pdf_generator
+  docstring: null
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: export_query_in_background
+  file: utils/query_report.py
+  line: 87
+  arguments:
+  - report_name
+  - extension
+  - data
+  - filters
+  - file_name
+  - send_email
+  - send_notification
+  - user
+  - pdf_generator
+  docstring: null
+  security_checks:
+    has_frappe_only_for: true
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: check_sync_job_module_exists
+  file: utils/sync_job.py
+  line: 387
+  arguments:
+  - module
+  - name
+  docstring: "Check if sync job module exists (for JS callback)\n\nArgs:\n    module:\
+    \ Module name\n    name: Sync Job Type name\n\nReturns:\n    True if module exists,\
+    \ False otherwise"
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: create_sync_job
+  file: utils/sync_job.py
+  line: 18
+  arguments:
+  - sync_job_type
+  - source_doc
+  - source_document_type
+  - source_document_name
+  - operation
+  - context
+  - target_doc
+  - target_document_type
+  - target_document_name
+  - parent_sync_job
+  - queue
+  - timeout
+  - retry_delay
+  - max_retries
+  - trigger_type
+  - triggered_by_doc
+  - triggered_by_document_type
+  - triggered_by_document_name
+  - trigger_document_timestamp
+  - queue_on_insert
+  - dry_run
+  - insert_enabled
+  - update_enabled
+  - delete_enabled
+  - update_without_changes_enabled
+  docstring: "Create a sync job (synchronously)\n\nParameters can be passed individually\
+    \ or as a single dictionary in the first argument.\n\nArgs:\n    sync_job_type:\
+    \ Name of Sync Job Type (or dict containing all parameters)\n    source_doc: Optional\
+    \ source document object (extracts type and name from it)\n    source_document_type:\
+    \ Optional pre-specified source document type (overrides job type default)\n \
+    \   source_document_name: Optional name of source document (can be None if source\
+    \ was deleted)\n    operation: Optional pre-specified operation (Insert/Update/Delete)\n\
+    \    context: Optional context dictionary (required when source_document_name\
+    \ is None)\n    target_doc: Optional target document object (extracts type and\
+    \ name from it)\n    target_document_type: Optional pre-specified target document\
+    \ type (overrides job type default)\n    target_document_name: Optional pre-specified\
+    \ target document name\n    parent_sync_job: Optional parent sync job name\n \
+    \   queue: Optional queue override\n    timeout: Optional timeout override\n \
+    \   retry_delay: Optional retry delay override\n    max_retries: Optional max\
+    \ retries override\n    trigger_type: How the job was triggered (default: Manual)\n\
+    \    triggered_by_doc: Optional document that triggered this sync job\n    triggered_by_document_type:\
+    \ Optional document type that triggered this sync job\n    triggered_by_document_name:\
+    \ Optional document name that triggered this sync job\n    trigger_document_timestamp:\
+    \ Optional timestamp of the triggering document\n    queue_on_insert: Whether\
+    \ to queue job on insert (default: None - False in dev, True in production)\n\
+    \    dry_run: Whether to calculate diff only without saving (default: False)\n\
+    \    insert_enabled: Allow insert operations (default: True)\n    update_enabled:\
+    \ Allow update operations (default: True)\n    delete_enabled: Allow delete operations\
+    \ (default: True)\n    update_without_changes_enabled: Save even if no changes\
+    \ (default: False)\n\nReturns:\n    Sync Job document\n\nExamples:\n    # Individual\
+    \ parameters\n    create_sync_job(\n        sync_job_type=\"SAP Customer Sync\"\
+    ,\n        source_document_name=\"CUST-00001\",\n        context={\"force_update\"\
+    : True}\n    )\n\n    # Dictionary of parameters\n    create_sync_job({\n    \
+    \    \"sync_job_type\": \"SAP Customer Sync\",\n        \"source_document_name\"\
+    : \"CUST-00001\",\n        \"context\": {\"force_update\": True}\n    })"
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
+- function: enqueue_sync_job
+  file: utils/sync_job.py
+  line: 210
+  arguments:
+  - sync_job_type
+  - source_doc
+  - source_document_type
+  - source_document_name
+  - operation
+  - context
+  - target_doc
+  - target_document_type
+  - target_document_name
+  - parent_sync_job
+  - queue
+  - timeout
+  - retry_delay
+  - max_retries
+  - trigger_type
+  - triggered_by_doc
+  - triggered_by_document_type
+  - triggered_by_document_name
+  - trigger_document_timestamp
+  - queue_on_insert
+  - dry_run
+  - insert_enabled
+  - update_enabled
+  - delete_enabled
+  - update_without_changes_enabled
+  docstring: "Enqueue a sync job creation in the background\n\nParameters can be passed\
+    \ individually or as a single dictionary in the first argument.\n\nArgs:\n   \
+    \ sync_job_type: Name of Sync Job Type (or dict containing all parameters)\n \
+    \   source_doc: Optional source document object (extracts type and name from it)\n\
+    \    source_document_type: Optional pre-specified source document type (overrides\
+    \ job type default)\n    source_document_name: Optional name of source document\
+    \ (can be None if source was deleted)\n    operation: Optional pre-specified operation\
+    \ (Insert/Update/Delete)\n    context: Optional context dictionary (required when\
+    \ source_document_name is None)\n    target_doc: Optional target document object\
+    \ (extracts type and name from it)\n    target_document_type: Optional pre-specified\
+    \ target document type (overrides job type default)\n    target_document_name:\
+    \ Optional pre-specified target document name\n    parent_sync_job: Optional parent\
+    \ sync job name\n    queue: Optional queue override\n    timeout: Optional timeout\
+    \ override\n    retry_delay: Optional retry delay override\n    max_retries: Optional\
+    \ max retries override\n    trigger_type: How the job was triggered (default:\
+    \ Manual)\n    triggered_by_doc: Optional document that triggered this sync job\n\
+    \    triggered_by_document_type: Optional document type that triggered this sync\
+    \ job\n    triggered_by_document_name: Optional document name that triggered this\
+    \ sync job\n    trigger_document_timestamp: Optional timestamp of the triggering\
+    \ document\n    queue_on_insert: Whether to queue job on insert (default: None\
+    \ - False in dev, True in production)\n    dry_run: Whether to calculate diff\
+    \ only without saving (default: False)\n    insert_enabled: Allow insert operations\
+    \ (default: True)\n    update_enabled: Allow update operations (default: True)\n\
+    \    delete_enabled: Allow delete operations (default: True)\n    update_without_changes_enabled:\
+    \ Save even if no changes (default: False)\n\nReturns:\n    Job\n\nExamples:\n\
+    \    # Individual parameters\n    enqueue_sync_job(\n        sync_job_type=\"\
+    SAP Customer Sync\",\n        source_document_name=\"CUST-00001\",\n        context={\"\
+    force_update\": True}\n    )\n\n    # Dictionary of parameters\n    enqueue_sync_job({\n\
+    \        \"sync_job_type\": \"SAP Customer Sync\",\n        \"source_document_name\"\
+    : \"CUST-00001\",\n        \"context\": {\"force_update\": True}\n    })"
+  security_checks:
+    has_frappe_only_for: false
+    has_frappe_get_list: false
+    has_frappe_has_permission: false
+    has_permission_check: false
+  reviewed: false
+  notes: null
