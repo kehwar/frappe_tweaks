@@ -524,6 +524,94 @@ def has_resource_access(
     return frappe._dict({"access": access})
 
 
+@frappe.whitelist()
+def has_ac_permission(
+    docname="",
+    doctype="",
+    action="",
+    user="",
+):
+    """
+    Check if a user has AC Rules permission for a specific document and action.
+    
+    This function generates SQL to verify if a specific document matches the AC Rules
+    for the given user and action, then executes it to determine permission.
+    
+    Args:
+        docname: Document name
+        doctype: DocType name
+        action: Action name (e.g., "read", "write", "approve", "reject")
+        user: User name (defaults to current user, only System Manager can check for other users)
+    
+    Returns:
+        bool: True if user has permission, False otherwise
+    """
+    # Only System Manager can check permissions for other users
+    if user and user != frappe.session.user:
+        frappe.only_for("System Manager")
+    
+    user = user or frappe.session.user
+    
+    # Administrator always has full access
+    if user == "Administrator":
+        return True
+    
+    # Validate required parameters
+    if not docname or not doctype:
+        frappe.throw(_("docname and doctype are required"))
+    if not action:
+        frappe.throw(_("Action is required"))
+    
+    # Normalize action name
+    action = scrub(action)
+    
+    # Get filter query from AC Rules
+    result = get_resource_filter_query(
+        doctype=doctype, action=action, user=user
+    )
+    
+    # If unmanaged, return True (fall through to standard Frappe permissions)
+    if result.get("unmanaged"):
+        return True
+    
+    # If no access at all, return False
+    if result.get("access") == "none":
+        return False
+    
+    # If total access, return True
+    if result.get("access") == "total":
+        return True
+    
+    # Partial access - need to check if this specific document matches the filter
+    query = result.get("query", "")
+    if not query:
+        return False
+    
+    # Validate doctype to prevent SQL injection
+    # DocType names must be valid Frappe doctypes and cannot contain special characters
+    if not frappe.db.table_exists(f"tab{doctype}"):
+        frappe.throw(_("Invalid DocType: {0}").format(doctype))
+    
+    # Additional security: ensure doctype only contains alphanumeric characters and underscores
+    # While frappe.db.table_exists validates the doctype exists, we also
+    # ensure it only contains safe characters (no spaces or special characters)
+    if not doctype.replace("_", "").isalnum():
+        frappe.throw(_("Invalid DocType name: {0}").format(doctype))
+    
+    # Execute SQL to check if this document matches the AC Rules filter
+    sql = f"""
+        SELECT COUNT(*) as count
+        FROM `tab{doctype}`
+        WHERE `tab{doctype}`.`name` = {frappe.db.escape(docname)}
+        AND ({query})
+    """
+    
+    query_result = frappe.db.sql(sql, as_dict=True)
+    has_access = query_result[0].get("count", 0) > 0 if query_result else False
+    
+    return has_access
+
+
 def _get_permission_query_conditions_for_doctype(doctype, user=None, action="read"):
     """
     Internal helper to get permission query conditions for a specific action.
