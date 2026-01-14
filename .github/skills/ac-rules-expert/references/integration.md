@@ -17,7 +17,8 @@ This document explains how AC Rules integrate with Frappe's permission system fo
 **Future Integration**:
 - 📋 **Workflow Actions**: Planned integration to control workflow transitions dynamically
   - See: `.github/prompts/plan-integrate-ac-rules-with-workflow-actions.prompt.md`
-  - Will enable territory-based approvals and conditional workflow permissions
+  - Will enable AC Rules to manage workflow action permissions (e.g., approve, reject, submit)
+  - Use cases include territory-based approvals, conditional validations, and complex approval logic
   - Implementation requires minimal Frappe core changes (hooks) + Tweaks integration
 
 ## DocType Integration (Automatic)
