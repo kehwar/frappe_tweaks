@@ -395,6 +395,58 @@ class TestWorkflowACRules(FrappeTestCase):
         frappe.delete_doc("AC Rule", forbid_rule, force=True)
         frappe.delete_doc("AC Rule", permit_rule, force=True)
 
+    def test_unmanaged_resource_allows_all(self):
+        """Test that unmanaged resources (no AC Rules) allow all users"""
+        # Create a test document WITHOUT any AC Rules
+        # First, temporarily delete all AC Rules
+        all_rules = frappe.get_all("AC Rule", filters={"name": ["like", "Test Workflow AC Rule%"]})
+        for rule in all_rules:
+            frappe.delete_doc("AC Rule", rule.name, force=True)
+        
+        # Clear cache
+        frappe.cache.delete_value("ac_rule_map")
+        
+        # Create test document
+        doc = create_test_workflow_document()
+        
+        # Mock transition
+        transition = {"action": "Approve"}
+        
+        # Check permission for test_user_1 - should be True (unmanaged)
+        has_permission = has_workflow_action_permission_via_ac_rules(
+            self.test_user_1, transition, doc
+        )
+        
+        self.assertTrue(has_permission, "Unmanaged resource should allow all users")
+        
+        # Check permission for test_user_2 - should also be True (unmanaged)
+        has_permission = has_workflow_action_permission_via_ac_rules(
+            self.test_user_2, transition, doc
+        )
+        
+        self.assertTrue(has_permission, "Unmanaged resource should allow all users")
+        
+        # Cleanup
+        frappe.delete_doc("Test Workflow DocType", doc.name, force=True)
+
+    def test_transition_without_action(self):
+        """Test that transitions without action are allowed by default"""
+        # Create test document
+        doc = create_test_workflow_document()
+        
+        # Mock transition without action
+        transition = {}
+        
+        # Check permission - should be True (no action specified)
+        has_permission = has_workflow_action_permission_via_ac_rules(
+            self.test_user_1, transition, doc
+        )
+        
+        self.assertTrue(has_permission, "Transition without action should be allowed")
+        
+        # Cleanup
+        frappe.delete_doc("Test Workflow DocType", doc.name, force=True)
+
 
 # Helper functions
 
