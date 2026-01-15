@@ -85,3 +85,61 @@ def setup_standard_actions():
                 "is_standard": 1,
             }
         ).insert(ignore_permissions=True)
+
+
+@frappe.whitelist()
+def get_workflow_actions_without_ac_action():
+    """Get all Workflow Action Masters that don't have a corresponding AC Action"""
+    # Get all workflow action names
+    workflow_actions = frappe.get_all(
+        "Workflow Action Master",
+        pluck="name",
+        order_by="name",
+    )
+
+    # Get all AC Action names
+    ac_actions = frappe.get_all("AC Action", pluck="action")
+
+    # Filter workflow actions that don't have corresponding AC actions
+    missing_actions = [name for name in workflow_actions if name not in ac_actions]
+
+    return missing_actions
+
+
+@frappe.whitelist()
+def create_ac_actions_from_workflow(workflow_actions):
+    """Create AC Actions from selected Workflow Action Masters
+
+    Args:
+        workflow_actions: JSON string or list of workflow action names
+    """
+    import json
+
+    if isinstance(workflow_actions, str):
+        workflow_actions = json.loads(workflow_actions)
+
+    created = []
+    skipped = []
+
+    for action_name in workflow_actions:
+        # Check if it already exists
+        if frappe.db.exists("AC Action", action_name):
+            skipped.append(action_name)
+            continue
+
+        # Create the AC Action
+        try:
+            doc = frappe.get_doc(
+                {
+                    "doctype": "AC Action",
+                    "action": action_name,
+                    "is_standard": 0,
+                }
+            )
+            doc.insert(ignore_permissions=True)
+            created.append(action_name)
+        except Exception as e:
+            frappe.log_error(f"Error creating AC Action for {action_name}: {str(e)}")
+            skipped.append(action_name)
+
+    return {"created": created, "skipped": skipped}
