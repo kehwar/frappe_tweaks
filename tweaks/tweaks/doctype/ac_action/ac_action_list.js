@@ -20,10 +20,18 @@ function show_workflow_action_migration_dialog() {
 
             const workflow_actions = r.message
             
-            // Build fields dynamically
+            // Build fields dynamically with 2 columns
             const fields = []
+            const items_per_column = Math.ceil(workflow_actions.length / 2)
             
             workflow_actions.forEach((name, idx) => {
+                // Add column break after each column (except first)
+                if (idx > 0 && idx % items_per_column === 0) {
+                    fields.push({
+                        fieldtype: 'Column Break'
+                    })
+                }
+                
                 fields.push({
                     fieldtype: 'Check',
                     fieldname: `action_${idx}`,
