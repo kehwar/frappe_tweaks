@@ -13,9 +13,9 @@ def has_permissions(doc=None, ptype=None, user=None):
 
 def after_install():
 
-    from tweaks.tweaks.doctype.ac_action.ac_action import insert_standard_actions
+    from tweaks.tweaks.doctype.ac_action.ac_action import setup_standard_actions
 
-    insert_standard_actions()
+    setup_standard_actions()
 
 
 def clear_ac_rule_cache():

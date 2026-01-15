@@ -53,7 +53,7 @@ class ACAction(Document):
         clear_ac_rule_cache()
 
 
-def insert_standard_actions():
+def setup_standard_actions():
 
     actions = [
         "Read",
