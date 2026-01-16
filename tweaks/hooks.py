@@ -35,10 +35,12 @@ after_migrate = [
 
 doc_events = {
     "*": {
-        "on_change": workflow_script_hooks["doc_events"]["*"]["on_change"],
+        "on_change": workflow_script_hooks["doc_events"]["*"]["on_change"]
+        + ["tweaks.utils.document_review.evaluate_document_reviews"],
         "before_transition": [
             "tweaks.utils.workflow.check_workflow_transition_permission"
         ],
+        "before_submit": ["tweaks.utils.document_review.check_mandatory_reviews"],
     },
     "Customer": {
         "before_validate": "tweaks.custom.doctype.customer.before_validate",
