@@ -282,6 +282,22 @@ def _create_or_update_review(doc, rule, result):
         review_doc.insert(ignore_permissions=True)
 
 
+@frappe.whitelist()
+def submit_document_review(review_name):
+    """
+    Submit a Document Review.
+
+    Args:
+        review_name: Name of the Document Review to submit
+
+    Returns:
+        dict: Success message
+    """
+    doc = frappe.get_doc("Document Review", review_name)
+    doc.submit()
+    return doc
+
+
 def get_document_reviews_for_timeline(doctype, docname):
     """
     Get Document Reviews for a document to display in the timeline.
@@ -339,13 +355,8 @@ def get_document_reviews_for_timeline(doctype, docname):
                 <div style="margin-top: 10px;">
                     <button class="btn btn-xs btn-primary" 
                         onclick="frappe.call({{
-                            method: 'frappe.client.submit',
-                            args: {{
-                                doc: {{
-                                    doctype: 'Document Review',
-                                    name: '{review.name}'
-                                }}
-                            }},
+                            method: 'tweaks.utils.document_review.submit_document_review',
+                            args: {{ review_name: '{review.name}' }},
                             callback: function(r) {{
                                 if (!r.exc) {{
                                     cur_frm.reload_doc();
