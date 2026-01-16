@@ -327,8 +327,36 @@ def get_document_reviews_for_timeline(doctype, docname):
             doc_status = _("Approved")
             status_indicator = "green"
         else:
-            doc_status = _("Cancelled")
+            doc_status = _("Rejected")
             status_indicator = "grey"
+
+        # Build content with submit button for draft reviews
+        content = frappe.utils.markdown(review.message) if review.message else ""
+
+        if review.docstatus == 0:
+            # Add submit button for pending reviews
+            content += f"""
+                <div style="margin-top: 10px;">
+                    <button class="btn btn-xs btn-primary" 
+                        onclick="frappe.call({{
+                            method: 'frappe.client.submit',
+                            args: {{
+                                doc: {{
+                                    doctype: 'Document Review',
+                                    name: '{review.name}'
+                                }}
+                            }},
+                            callback: function(r) {{
+                                if (!r.exc) {{
+                                    cur_frm.reload_doc();
+                                }}
+                            }}
+                        }}); return false;">
+                        <svg class="icon icon-sm" style=""><use href="#icon-check"></use></svg>
+                        {_("Approve")}
+                    </button>
+                </div>
+            """
 
         # Prepare template data for timeline_message_box
         # Template expects { doc: {...} } context
@@ -336,9 +364,7 @@ def get_document_reviews_for_timeline(doctype, docname):
             "doc": {
                 "owner": review.modified_by,
                 "creation": review.creation,
-                "content": (
-                    frappe.utils.markdown(review.message) if review.message else ""
-                ),
+                "content": content,
                 "_url": frappe.utils.get_url_to_form("Document Review", review.name),
                 "_doc_status": doc_status,
                 "_doc_status_indicator": status_indicator,
