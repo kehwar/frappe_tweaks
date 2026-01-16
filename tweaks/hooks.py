@@ -103,3 +103,6 @@ website_route_rules = [
 additional_timeline_content = {
     "*": ["tweaks.utils.document_review.get_document_reviews_for_timeline"]
 }
+
+# Boot info hooks
+get_additional_bootinfo = ["tweaks.utils.document_review.add_document_review_bootinfo"]

@@ -298,6 +298,56 @@ def submit_document_review(review_name):
     return doc
 
 
+def add_document_review_bootinfo(bootinfo):
+    """
+    Add Document Review related data to bootinfo.
+
+    Args:
+        bootinfo: Dict to add data to
+    """
+    bootinfo["doctypes_with_document_review_rules"] = get_doctypes_with_rules()
+
+
+@frappe.whitelist()
+def get_doctypes_with_rules():
+    """
+    Get list of all doctypes that have active Document Review Rules.
+
+    Returns:
+        list: List of doctype names
+    """
+    return frappe.get_all(
+        "Document Review Rule",
+        filters={"disabled": 0},
+        pluck="reference_doctype",
+        distinct=True,
+    )
+
+
+@frappe.whitelist()
+def get_pending_review_count(doctype, docname):
+    """
+    Get count of pending Document Reviews for a document.
+
+    Args:
+        doctype: Document type
+        docname: Document name
+
+    Returns:
+        int: Count of pending reviews
+    """
+    frappe.has_permission(doctype, doc=docname, ptype="read", throw=True)
+
+    return frappe.db.count(
+        "Document Review",
+        {
+            "reference_doctype": doctype,
+            "reference_name": docname,
+            "docstatus": 0,
+        },
+    )
+
+
 def get_document_reviews_for_timeline(doctype, docname):
     """
     Get Document Reviews for a document to display in the timeline.
@@ -379,6 +429,7 @@ def get_document_reviews_for_timeline(doctype, docname):
                 "_url": frappe.utils.get_url_to_form("Document Review", review.name),
                 "_doc_status": doc_status,
                 "_doc_status_indicator": status_indicator,
+                "type": "Document Review",
             }
         }
 
