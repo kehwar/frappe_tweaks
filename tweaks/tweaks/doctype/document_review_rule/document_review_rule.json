@@ -67,8 +67,13 @@
   }
  ],
  "index_web_pages_for_search": 1,
- "links": [],
- "modified": "2026-01-16 13:58:08.571121",
+ "links": [
+  {
+   "link_doctype": "Document Review",
+   "link_fieldname": "review_rule"
+  }
+ ],
+ "modified": "2026-01-16 14:00:37.287876",
  "modified_by": "sistemas2@soldamundoperu.com",
  "module": "Tweaks",
  "name": "Document Review Rule",
