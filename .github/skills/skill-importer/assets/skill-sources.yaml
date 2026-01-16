@@ -38,3 +38,7 @@ skills:
     url: https://github.com/kehwar/frappe/tree/custom/.github/skills/report-expert
     enabled: true
     description: Expert guidance for Frappe reports and query reports
+  - name: workflow-expert
+    url: https://github.com/kehwar/frappe/tree/custom/.github/skills/workflow-expert
+    enabled: true
+    description: Expert guidance for Frappe workflows and workflow actions
