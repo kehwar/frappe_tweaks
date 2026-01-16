@@ -1,8 +1,3 @@
-from tweaks.custom.doctype.server_script_customization import server_script_hooks
-from tweaks.custom.doctype.workflow import workflow_script_hooks
-from tweaks.custom.utils.permissions import permission_hooks
-from tweaks.tweaks.doctype.event_script.event_script import event_script_hooks
-
 # App data
 
 app_name = "tweaks"
@@ -17,16 +12,12 @@ required_apps = ["kehwar/frappe", "kehwar/erpnext"]
 
 app_include_js = "frappe_tweaks.bundle.js"
 
-after_install = (
-    [
-        "tweaks.custom.doctype.pricing_rule.install_pricing_rule_customizations",
-        "tweaks.custom.doctype.user_group.apply_user_group_patches",
-        "tweaks.custom.doctype.role.apply_role_patches",
-        "tweaks.tweaks.doctype.ac_rule.ac_rule_utils.after_install",
-    ]
-    + workflow_script_hooks["after_install"]
-    + server_script_hooks["after_install"]
-)
+after_install = [
+    "tweaks.custom.doctype.pricing_rule.install_pricing_rule_customizations",
+    "tweaks.custom.doctype.user_group.apply_user_group_patches",
+    "tweaks.custom.doctype.role.apply_role_patches",
+    "tweaks.tweaks.doctype.ac_rule.ac_rule_utils.after_install",
+]
 
 after_migrate = [
     "tweaks.utils.sync_job_type.sync_job_types",
@@ -35,8 +26,7 @@ after_migrate = [
 
 doc_events = {
     "*": {
-        "on_change": workflow_script_hooks["doc_events"]["*"]["on_change"]
-        + ["tweaks.utils.document_review.evaluate_document_reviews"],
+        "on_change": ["tweaks.utils.document_review.evaluate_document_reviews"],
         "before_transition": [
             "tweaks.utils.workflow.check_workflow_transition_permission"
         ],
@@ -50,13 +40,9 @@ doc_events = {
 }
 
 permission_query_conditions = {
-    "*": (
-        event_script_hooks["permission_query_conditions"]["*"]
-        + permission_hooks["permission_query_conditions"]["*"]
-        + [
-            "tweaks.tweaks.doctype.ac_rule.ac_rule_utils.get_permission_query_conditions"
-        ]
-    ),
+    "*": [
+        "tweaks.tweaks.doctype.ac_rule.ac_rule_utils.get_permission_query_conditions"
+    ],
     "Workflow Action": [
         "tweaks.utils.workflow.get_workflow_action_permission_query_conditions"
     ],
@@ -70,7 +56,6 @@ write_permission_query_conditions = {
 
 override_doctype_class = {
     "Reminder": "tweaks.custom.doctype.reminder.TweaksReminder",
-    "Server Script": "tweaks.custom.doctype.server_script.TweaksServerScript",
 }
 
 get_product_discount_rule = [
