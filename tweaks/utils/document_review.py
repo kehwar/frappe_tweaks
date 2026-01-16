@@ -430,6 +430,7 @@ def get_document_reviews_for_timeline(doctype, docname):
                 "_doc_status": doc_status,
                 "_doc_status_indicator": status_indicator,
                 "type": "Document Review",
+                "review_docstatus": review.docstatus,
             }
         }
 

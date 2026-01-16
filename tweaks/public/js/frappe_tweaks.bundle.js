@@ -15,22 +15,18 @@ function showPendingReviewsBanner(frm) {
         return;
     }
 
-    // Get pending review count
-    frappe.call({
-        method: "tweaks.utils.document_review.get_pending_review_count",
-        args: {
-            doctype: frm.doctype,
-            docname: frm.doc.name,
-        },
-        callback: (r) => {
-            if (r.message && r.message > 0) {
-                frm.set_intro(
-                    __("This document has {0} pending review(s). Please review before proceeding.", [r.message]),
-                    "orange"
-                );
-            }
-        },
-    });
+    // Check additional timeline content for pending reviews
+    const additionalContent = frm.timeline?.doc_info?.additional_timeline_content || [];
+    const pendingReviews = additionalContent.filter(
+        (item) => item.template_data?.doc?.review_docstatus === 0
+    );
+    
+    if (pendingReviews.length > 0) {
+        frm.set_intro(
+            __("This document has {0} pending review(s). Please review before proceeding.", [pendingReviews.length]),
+            "orange"
+        );
+    }
 }
 
 // Register handler for all doctypes using wildcard
