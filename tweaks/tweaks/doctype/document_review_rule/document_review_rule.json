@@ -34,7 +34,6 @@
    "search_index": 1
   },
   {
-   "description": "Return None if no review needed, or dict with 'message' (str) and 'data' (dict) keys.\n<br>Data should contain only values used to detect significant changes.\n<br>Example:\n<pre>if doc.grand_total &gt; 100000:\n    return {\n        \"message\": f\"High value order: {frappe.utils.fmt_money(doc.grand_total)}\",\n        \"data\": {\"total\": doc.grand_total}\n    }\nreturn None</pre>",
    "fieldname": "script",
    "fieldtype": "Code",
    "label": "Script",
@@ -69,7 +68,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-16 13:55:27.486898",
+ "modified": "2026-01-16 13:58:08.571121",
  "modified_by": "sistemas2@soldamundoperu.com",
  "module": "Tweaks",
  "name": "Document Review Rule",
