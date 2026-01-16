@@ -98,3 +98,8 @@ auth_hooks = ["tweaks.custom.utils.authentication.validate_user_password"]
 website_route_rules = [
     {"from_route": "/h/<file_name>", "to_route": "html-file"},
 ]
+
+# Timeline hooks
+additional_timeline_content = {
+    "*": ["tweaks.utils.document_review.get_document_reviews_for_timeline"]
+}

@@ -280,3 +280,79 @@ def _create_or_update_review(doc, rule, result):
             }
         )
         review_doc.insert(ignore_permissions=True)
+
+
+def get_document_reviews_for_timeline(doctype, docname):
+    """
+    Get Document Reviews for a document to display in the timeline.
+
+    This function is called via the additional_timeline_content hook.
+
+    Args:
+            doctype: Reference document type
+            docname: Reference document name
+
+    Returns:
+            List of Document Review dicts for timeline display
+    """
+    frappe.has_permission(doctype, doc=docname, ptype="read", throw=True)
+
+    reviews = frappe.get_all(
+        "Document Review",
+        filters={
+            "reference_doctype": doctype,
+            "reference_name": docname,
+        },
+        fields=[
+            "name",
+            "creation",
+            "modified",
+            "owner",
+            "modified_by",
+            "docstatus",
+            "review_rule",
+            "message",
+            "mandatory",
+        ],
+        order_by="creation desc",
+    )
+
+    timeline_contents = []
+    for review in reviews:
+        # Build status for indicator pill
+        if review.docstatus == 0:
+            doc_status = _("Pending Review")
+            status_indicator = "orange"
+        elif review.docstatus == 1:
+            doc_status = _("Approved")
+            status_indicator = "green"
+        else:
+            doc_status = _("Cancelled")
+            status_indicator = "grey"
+
+        # Prepare template data for timeline_message_box
+        # Template expects { doc: {...} } context
+        template_data = {
+            "doc": {
+                "owner": review.modified_by,
+                "creation": review.creation,
+                "content": (
+                    frappe.utils.markdown(review.message) if review.message else ""
+                ),
+                "_url": frappe.utils.get_url_to_form("Document Review", review.name),
+                "_doc_status": doc_status,
+                "_doc_status_indicator": status_indicator,
+            }
+        }
+
+        timeline_contents.append(
+            {
+                "icon": "milestone",
+                "is_card": True,
+                "creation": review.modified,
+                "template": "timeline_message_box",
+                "template_data": template_data,
+            }
+        )
+
+    return timeline_contents
