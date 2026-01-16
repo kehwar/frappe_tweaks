@@ -403,16 +403,8 @@ def get_document_reviews_for_timeline(doctype, docname):
             # Add submit button for pending reviews
             content += f"""
                 <div style="margin-top: 10px;">
-                    <button class="btn btn-xs btn-primary" 
-                        onclick="frappe.call({{
-                            method: 'tweaks.utils.document_review.submit_document_review',
-                            args: {{ review_name: '{review.name}' }},
-                            callback: function(r) {{
-                                if (!r.exc) {{
-                                    cur_frm.reload_doc();
-                                }}
-                            }}
-                        }}); return false;">
+                    <button class="btn btn-xs btn-primary document-review-approve-btn" 
+                        onclick="cur_frm.trigger('document_review_approve', '{review.name}'); return false;">
                         <svg class="icon icon-sm" style=""><use href="#icon-check"></use></svg>
                         {_("Approve")}
                     </button>

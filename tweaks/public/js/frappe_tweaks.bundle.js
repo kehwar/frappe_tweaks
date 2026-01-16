@@ -42,4 +42,19 @@ frappe.ui.form.on("*", {
     refresh: (frm) => {
         showPendingReviewsBanner(frm);
     },
+    document_review_approve: (frm, reviewName) => {
+        frappe.call({
+            method: "tweaks.utils.document_review.submit_document_review",
+            args: { review_name: reviewName },
+            callback: function(r) {
+                if (!r.exc) {
+                    frappe.show_alert({
+                        message: __("Review approved"),
+                        indicator: "green"
+                    });
+                    frm.reload_doc();
+                }
+            }
+        });
+    }
 });
