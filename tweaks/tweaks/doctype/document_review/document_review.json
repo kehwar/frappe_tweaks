@@ -12,7 +12,7 @@
   "reference_doctype",
   "section_break_details",
   "message",
-  "remarks",
+  "review",
   "section_break_data",
   "review_data",
   "amended_from",
@@ -122,7 +122,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "remarks",
+   "fieldname": "review",
    "fieldtype": "Text Editor",
    "label": "Review"
   }
@@ -130,7 +130,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-16 13:48:57.822764",
+ "modified": "2026-01-16 17:09:56.000992",
  "modified_by": "sistemas2@soldamundoperu.com",
  "module": "Tweaks",
  "name": "Document Review",

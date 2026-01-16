@@ -39,3 +39,9 @@ class DocumentReview(Document):
                     self.reference_title = self.reference_name
             except Exception:
                 self.reference_title = self.reference_name
+
+    def on_change(self):
+        """Notify linked document about the change."""
+
+        reference_doc = frappe.get_doc(self.reference_doctype, self.reference_name)
+        reference_doc.notify_update()

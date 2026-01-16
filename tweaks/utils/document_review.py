@@ -283,18 +283,24 @@ def _create_or_update_review(doc, rule, result):
 
 
 @frappe.whitelist()
-def submit_document_review(review_name):
+def submit_document_review(review_name, review=None, action="approve"):
     """
     Submit a Document Review.
 
     Args:
         review_name: Name of the Document Review to submit
+        review: Optional review comments
+        action: Either 'approve' or 'reject'
 
     Returns:
         dict: Success message
     """
     doc = frappe.get_doc("Document Review", review_name)
+    doc.review = review
     doc.submit()
+    if action == "reject":
+        doc.cancel()
+
     return doc
 
 
@@ -305,46 +311,11 @@ def add_document_review_bootinfo(bootinfo):
     Args:
         bootinfo: Dict to add data to
     """
-    bootinfo["doctypes_with_document_review_rules"] = get_doctypes_with_rules()
-
-
-@frappe.whitelist()
-def get_doctypes_with_rules():
-    """
-    Get list of all doctypes that have active Document Review Rules.
-
-    Returns:
-        list: List of doctype names
-    """
-    return frappe.get_all(
+    bootinfo["doctypes_with_document_review_rules"] = frappe.get_all(
         "Document Review Rule",
         filters={"disabled": 0},
         pluck="reference_doctype",
         distinct=True,
-    )
-
-
-@frappe.whitelist()
-def get_pending_review_count(doctype, docname):
-    """
-    Get count of pending Document Reviews for a document.
-
-    Args:
-        doctype: Document type
-        docname: Document name
-
-    Returns:
-        int: Count of pending reviews
-    """
-    frappe.has_permission(doctype, doc=docname, ptype="read", throw=True)
-
-    return frappe.db.count(
-        "Document Review",
-        {
-            "reference_doctype": doctype,
-            "reference_name": docname,
-            "docstatus": 0,
-        },
     )
 
 
@@ -405,8 +376,7 @@ def get_document_reviews_for_timeline(doctype, docname):
                 <div style="margin-top: 10px;">
                     <button class="btn btn-xs btn-primary document-review-approve-btn" 
                         onclick="cur_frm.trigger('document_review_approve', '{review.name}'); return false;">
-                        <svg class="icon icon-sm" style=""><use href="#icon-check"></use></svg>
-                        {_("Approve")}
+                        {_("Review")}
                     </button>
                 </div>
             """

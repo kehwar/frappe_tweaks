@@ -43,18 +43,49 @@ frappe.ui.form.on("*", {
         showPendingReviewsBanner(frm);
     },
     document_review_approve: (frm, reviewName) => {
-        frappe.call({
-            method: "tweaks.utils.document_review.submit_document_review",
-            args: { review_name: reviewName },
-            callback: function(r) {
-                if (!r.exc) {
-                    frappe.show_alert({
-                        message: __("Review approved"),
-                        indicator: "green"
-                    });
-                    frm.reload_doc();
+        // Show dialog for review with Approve/Reject options
+        const dialog = new frappe.ui.Dialog({
+            title: __("Complete Review"),
+            fields: [
+                {
+                    fieldname: "review",
+                    fieldtype: "Text Editor",
+                    label: __("Review Comments"),
+                    description: __("Add any comments or notes about this review")
                 }
+            ],
+            primary_action_label: __("Approve"),
+            primary_action: (values) => {
+                submitReview(reviewName, values.review || "", "approve");
+                dialog.hide();
+            },
+            secondary_action_label: __("Reject"),
+            secondary_action: (values) => {
+                submitReview(reviewName, values.review || "", "reject");
+                dialog.hide();
             }
         });
+        
+        function submitReview(reviewName, review, action) {
+            frappe.call({
+                method: "tweaks.utils.document_review.submit_document_review",
+                args: { 
+                    review_name: reviewName,
+                    review: review,
+                    action: action
+                },
+                callback: function(r) {
+                    if (!r.exc) {
+                        frappe.show_alert({
+                            message: action === "approve" ? __("Review approved") : __("Review rejected"),
+                            indicator: action === "approve" ? "green" : "red"
+                        });
+                        frm.reload_doc();
+                    }
+                }
+            });
+        }
+        
+        dialog.show();
     }
 });
