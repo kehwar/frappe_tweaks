@@ -26,6 +26,11 @@ function showPendingReviewsBanner(frm) {
             __("This document has {0} pending review(s). Please review before proceeding.", [pendingReviews.length]),
             "orange"
         );
+        
+        // Add button to scroll to reviews
+        frm.add_custom_button(__("See Pending Reviews"), () => {
+            frappe.utils.scroll_to(frm.footer.wrapper.find(".comment-box"), true);
+        });
     }
 }
 
