@@ -29,7 +29,10 @@ function showPendingReviewsBanner(frm) {
         
         // Add button to scroll to reviews
         frm.add_custom_button(__("See Pending Reviews"), () => {
-            frappe.utils.scroll_to(frm.footer.wrapper.find(".comment-box"), true);
+            const firstPendingReview = frm.footer.wrapper.find('[data-communication-type="Document Review::0"]').first();
+            if (firstPendingReview.length) {
+                frappe.utils.scroll_to(firstPendingReview);
+            }
         });
     }
 }
