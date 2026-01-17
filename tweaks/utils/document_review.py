@@ -304,6 +304,86 @@ def submit_document_review(review_name, review=None, action="approve"):
     return doc
 
 
+@frappe.whitelist()
+def approve_all_document_reviews(reference_doctype, reference_name, review=None):
+    """
+    Approve all pending Document Reviews for a specific document.
+
+    Uses frappe.get_list to respect user permissions - only reviews
+    visible to the user will be approved.
+
+    Args:
+        reference_doctype: Reference document type
+        reference_name: Reference document name
+        review: Optional review comments to apply to all approvals
+
+    Returns:
+        dict: Summary of approved reviews with counts and details
+    """
+    # Use get_list instead of get_all to respect user permissions
+    # This ensures only reviews the user can see/approve are retrieved
+    pending_reviews = frappe.get_list(
+        "Document Review",
+        filters={
+            "reference_doctype": reference_doctype,
+            "reference_name": reference_name,
+            "docstatus": 0,
+        },
+        fields=["name", "review_rule", "mandatory"],
+        order_by="creation asc",
+    )
+
+    if not pending_reviews:
+        return {
+            "success": True,
+            "message": _("No pending reviews to approve"),
+            "approved_count": 0,
+            "approved_reviews": [],
+        }
+
+    approved_reviews = []
+    failed_reviews = []
+
+    for review_item in pending_reviews:
+        try:
+            # Get and submit the review document
+            review_doc = frappe.get_doc("Document Review", review_item["name"])
+            if review:
+                review_doc.review = review
+            review_doc.submit()
+
+            approved_reviews.append(
+                {
+                    "name": review_item["name"],
+                    "review_rule": review_item["review_rule"],
+                    "mandatory": review_item["mandatory"],
+                }
+            )
+        except Exception as e:
+            failed_reviews.append(
+                {
+                    "name": review_item["name"],
+                    "review_rule": review_item["review_rule"],
+                    "error": str(e),
+                }
+            )
+
+    result = {
+        "success": len(failed_reviews) == 0,
+        "message": _("Approved {0} of {1} reviews").format(
+            len(approved_reviews), len(pending_reviews)
+        ),
+        "approved_count": len(approved_reviews),
+        "approved_reviews": approved_reviews,
+    }
+
+    if failed_reviews:
+        result["failed_count"] = len(failed_reviews)
+        result["failed_reviews"] = failed_reviews
+
+    return result
+
+
 def add_document_review_bootinfo(bootinfo):
     """
     Add Document Review related data to bootinfo.
