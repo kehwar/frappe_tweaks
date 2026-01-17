@@ -82,7 +82,7 @@
   {
    "fieldname": "users",
    "fieldtype": "Table",
-   "label": "Users to Assign",
+   "label": "Assign Users",
    "options": "Document Review User"
   },
   {

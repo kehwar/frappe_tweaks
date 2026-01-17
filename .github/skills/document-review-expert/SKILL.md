@@ -75,7 +75,7 @@ Rules are evaluated automatically via hooks:
    - **Reference DocType**: Target DocType (e.g., "Sales Order")
    - **Script**: Python code that returns `None` or review dict
    - **Mandatory**: Check if submission should be blocked
-   - **Users to Assign** (optional): List users who should be auto-assigned to reviews
+   - **Assign Users** (optional): List users who should be auto-assigned to reviews
    - **Ignore Permissions**: Check to assign all listed users regardless of permissions
 
 Example script:
@@ -97,7 +97,7 @@ if doc.grand_total > 100000:
 
 You can configure a Document Review Rule to automatically assign specific users when a review is created:
 
-1. In the **Auto-Assignment** section, add users to the **Users to Assign** table
+1. In the **Auto-Assignment** section, add users to the **Assign Users** table
 2. Set **Ignore Permissions**:
    - **Unchecked** (default): Only users with submit permission on Document Review will be assigned
    - **Checked**: All listed users will be assigned, regardless of permissions

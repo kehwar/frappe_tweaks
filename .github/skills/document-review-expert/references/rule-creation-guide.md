@@ -54,7 +54,7 @@ Ask these questions:
    - **Mandatory**: Check if submission should be blocked
    - **Disabled**: Leave unchecked (check to temporarily disable)
 4. Configure auto-assignment (optional):
-   - In **Auto-Assignment** section, add users to **Users to Assign** table
+   - In **Auto-Assignment** section, add users to **Assign Users** table
    - Set **Ignore Permissions** based on your needs:
      - Unchecked: Only users with submit permission will be assigned
      - Checked: All listed users will be assigned regardless of permissions
