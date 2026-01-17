@@ -49,8 +49,9 @@ def get_columns_and_data():
     
     # Step 2: Get all role assignments for enabled users
     user_names = [user.name for user in users]
-    user_names_str = ", ".join([frappe.db.escape(u) for u in user_names])
     
+    # Use parameterized query with IN clause
+    placeholders = ", ".join(["%s"] * len(user_names))
     role_assignments = frappe.db.sql(
         f"""
         SELECT 
@@ -58,8 +59,9 @@ def get_columns_and_data():
             hr.role
         FROM `tabHas Role` hr
         WHERE hr.parenttype = 'User'
-        AND hr.parent IN ({user_names_str})
+        AND hr.parent IN ({placeholders})
         """,
+        tuple(user_names),
         as_dict=True,
     )
     
@@ -69,6 +71,10 @@ def get_columns_and_data():
         if assignment.user not in user_roles:
             user_roles[assignment.user] = set()
         user_roles[assignment.user].add(assignment.role)
+    
+    # If no role assignments found, return empty result
+    if not user_roles:
+        return get_empty_columns(), []
     
     # Step 4: Count users per role (only for roles with at least one enabled user)
     role_counts = {}
