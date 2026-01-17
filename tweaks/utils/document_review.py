@@ -449,3 +449,61 @@ def get_document_reviews_for_timeline(doctype, docname):
         )
 
     return timeline_contents
+
+
+def get_document_review_permission_query_conditions(user=None, doctype=None):
+    """
+    Permission query conditions for Document Review doctype.
+
+    Users can only see Document Reviews for documents they have read permission on.
+
+    Args:
+        user: User to check (defaults to session user)
+        doctype: DocType name (should be "Document Review")
+
+    Returns:
+        str: SQL WHERE conditions to filter Document Reviews
+    """
+    if not user:
+        user = frappe.session.user
+
+    # Administrator can see all reviews
+    if user == "Administrator":
+        return ""
+
+    # Get all doctypes that have Document Reviews
+    doctypes_with_reviews = frappe.get_all(
+        "Document Review",
+        pluck="reference_doctype",
+        distinct=True,
+    )
+
+    if not doctypes_with_reviews:
+        # No rules means no reviews
+        return "1=0"
+
+    # Build conditions for each doctype
+    conditions = []
+    for dt in doctypes_with_reviews:
+        try:
+            # Get the query that includes permission filtering
+            query = frappe.db.get_list(
+                dt,
+                fields=["name"],
+                run=0,
+                order_by=None,
+            )
+
+            # Build condition: reference_doctype = 'X' AND reference_name IN (query)
+            condition = f"(`tabDocument Review`.reference_doctype = {frappe.db.escape(dt)} AND `tabDocument Review`.reference_name IN ({query}))"
+            conditions.append(condition)
+        except Exception:
+            # Skip doctypes that fail (might not exist, no permission, etc.)
+            continue
+
+    if not conditions:
+        # No accessible doctypes means no reviews visible
+        return "1=0"
+
+    # OR all conditions together
+    return f"({' OR '.join(conditions)})"

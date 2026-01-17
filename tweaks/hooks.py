@@ -46,6 +46,9 @@ permission_query_conditions = {
     "Workflow Action": [
         "tweaks.utils.workflow.get_workflow_action_permission_query_conditions"
     ],
+    "Document Review": [
+        "tweaks.utils.document_review.get_document_review_permission_query_conditions"
+    ],
 }
 
 write_permission_query_conditions = {
