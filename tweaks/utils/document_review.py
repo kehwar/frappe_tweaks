@@ -92,7 +92,7 @@ def get_rules_for_doctype(doctype):
     rules = frappe.get_all(
         "Document Review Rule",
         filters={"reference_doctype": doctype, "disabled": 0},
-        fields=["name", "title", "script", "mandatory"],
+        fields=["name", "title", "script", "mandatory", "ignore_permissions"],
     )
 
     frappe.cache.set_value(cache_key, rules)
@@ -269,6 +269,8 @@ def _create_or_update_review(doc, rule, result):
         review_doc.review_data = result.get("data")
         review_doc.mandatory = rule["mandatory"]
         review_doc.save(ignore_permissions=True)
+        # Assign users to the review
+        _assign_users_to_review(review_doc.name, rule)
     else:
         # Create new draft review
         review_doc = frappe.get_doc(
@@ -283,6 +285,73 @@ def _create_or_update_review(doc, rule, result):
             }
         )
         review_doc.insert(ignore_permissions=True)
+        # Assign users to the review
+        _assign_users_to_review(review_doc.name, rule)
+
+
+def _assign_users_to_review(review_name, rule):
+    """
+    Assign users to a Document Review based on the rule's user list.
+
+    Args:
+        review_name: Name of the Document Review document
+        rule: Document Review Rule dict with 'name' and 'ignore_permissions' keys
+    """
+    # Get the full rule document to access the users child table
+    rule_doc = frappe.get_doc("Document Review Rule", rule["name"])
+
+    # If no users configured, skip assignment
+    if not rule_doc.users:
+        return
+
+    # Get list of users to assign
+    users_to_assign = []
+    for user_row in rule_doc.users:
+        user = user_row.user
+        # Check if we should filter by permissions
+        if not rule_doc.ignore_permissions:
+            # Check if user has submit permission on Document Review
+            if frappe.has_permission(
+                "Document Review", ptype="submit", user=user, doc=review_name
+            ):
+                users_to_assign.append(user)
+        else:
+            # Ignore permissions, assign to all listed users
+            users_to_assign.append(user)
+
+    # Assign to each user
+    from frappe.desk.form.assign_to import add as add_assignment
+
+    for user in users_to_assign:
+        try:
+            # Clear any existing assignments first to avoid duplicates
+            existing_assignments = frappe.get_all(
+                "ToDo",
+                filters={
+                    "reference_type": "Document Review",
+                    "reference_name": review_name,
+                    "allocated_to": user,
+                    "status": "Open",
+                },
+                pluck="name",
+            )
+
+            # Only add if not already assigned
+            if not existing_assignments:
+                add_assignment(
+                    {
+                        "doctype": "Document Review",
+                        "name": review_name,
+                        "assign_to": [user],
+                        "description": rule_doc.title,
+                    }
+                )
+        except Exception as e:
+            # Log but don't fail if assignment fails
+            frappe.log_error(
+                title=f"Failed to assign Document Review {review_name} to user {user}",
+                message=str(e),
+            )
 
 
 @frappe.whitelist()
