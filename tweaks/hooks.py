@@ -112,3 +112,8 @@ additional_timeline_content = {
 
 # Boot info hooks
 get_additional_bootinfo = ["tweaks.utils.document_review.add_document_review_bootinfo"]
+
+# Cache hooks
+clear_user_cache = [
+    "tweaks.tweaks.doctype.ac_rule.ac_rule_utils.clear_ac_rule_user_cache"
+]

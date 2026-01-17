@@ -36,6 +36,24 @@ def clear_ac_rule_cache():
         pass
 
 
+def clear_ac_rule_user_cache(user=None):
+    """
+    Clear AC rule user-specific cache.
+    Called when user cache is cleared (e.g., when user roles are updated).
+
+    Args:
+        user: Username whose cache to clear, or None to clear all user caches
+    """
+    cache = frappe.cache
+
+    if user:
+        # Clear cache for specific user: ac_rule_user_match:*:username
+        cache.delete_keys(f"ac_rule_user_match:*:{user}")
+    else:
+        # Clear all user-rule matching cache entries
+        cache.delete_keys("ac_rule_user_match:*")
+
+
 def get_user_rule_match_cache_ttl():
     """
     Get the cache TTL for user-rule matching from AC Settings.
