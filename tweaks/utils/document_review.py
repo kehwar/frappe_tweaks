@@ -157,6 +157,9 @@ def check_mandatory_reviews(doc, method=None):
     if not rules:
         return
 
+    # Approve all pending reviews before submission
+    submit_all_document_reviews(doc.doctype, doc.name)
+
     # Check for mandatory pending reviews
     pending_mandatory = frappe.get_all(
         "Document Review",
