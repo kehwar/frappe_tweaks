@@ -334,7 +334,7 @@ def _assign_users_to_review(review_name, rule):
     try:
         clear_assignments("Document Review", review_name)
     except Exception:
-        # If no assignments exist, clear will fail silently
+        # If no assignments exist, clear will raise an exception - handle gracefully
         pass
 
     # Step 5: Assign users (the utility accepts an array)
@@ -392,6 +392,10 @@ def _handle_assignments_on_submit(review_name):
     Args:
         review_name: Name of the Document Review document
     """
+    # Ensure we have a valid user session
+    if not frappe.session or not frappe.session.user:
+        return
+    
     current_user = frappe.session.user
     
     # Get all assignments for this review
@@ -405,15 +409,27 @@ def _handle_assignments_on_submit(review_name):
         fields=["name", "allocated_to"],
     )
     
+    if not assignments:
+        return
+    
+    # Separate assignments for bulk operations
+    current_user_todos = []
+    other_user_todos = []
+    
     for assignment in assignments:
         if assignment.allocated_to == current_user:
-            # Mark the current user's assignment as complete
-            todo = frappe.get_doc("ToDo", assignment.name)
-            todo.status = "Closed"
-            todo.save(ignore_permissions=True)
+            current_user_todos.append(assignment.name)
         else:
-            # Clear other users' assignments
-            frappe.delete_doc("ToDo", assignment.name, ignore_permissions=True)
+            other_user_todos.append(assignment.name)
+    
+    # Bulk update current user's assignments to Closed
+    if current_user_todos:
+        frappe.db.set_value("ToDo", {"name": ["in", current_user_todos]}, "status", "Closed")
+    
+    # Bulk delete other users' assignments
+    if other_user_todos:
+        for todo_name in other_user_todos:
+            frappe.delete_doc("ToDo", todo_name, ignore_permissions=True)
 
 
 @frappe.whitelist()
