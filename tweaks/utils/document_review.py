@@ -458,7 +458,10 @@ def get_document_reviews_for_timeline(doctype, docname):
         # Build content with submit button for draft reviews
         content = frappe.utils.markdown(review.message) if review.message else ""
 
-        if review.docstatus == 0:
+        if review.docstatus == 0 and frappe.has_permission(
+            "Document Review", doc=review.name, ptype="submit"
+        ):
+
             # Add submit button for pending reviews
             content += f"""
                 <div style="margin-top: 10px;">
