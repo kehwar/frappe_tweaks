@@ -5,6 +5,10 @@ function showPendingReviewsBanner(frm) {
         return;
     }
 
+    if (frm.doc.__islocal){
+        return;
+    }
+
     // Get doctypes with rules from bootinfo
     const doctypesWithRules = frappe.boot.additional_bootinfo?.doctypes_with_document_review_rules || [];
 
@@ -20,6 +24,7 @@ function showPendingReviewsBanner(frm) {
     );
     
     if (pendingReviews.length > 0) {
+        frm.set_intro();
         frm.set_intro(
             __("This document has {0} pending review(s). Please review before proceeding.", [pendingReviews.length]),
             "orange"
