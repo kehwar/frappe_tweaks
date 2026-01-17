@@ -424,12 +424,12 @@ def _handle_assignments_on_submit(review_name):
     
     # Bulk update current user's assignments to Closed
     if current_user_todos:
-        frappe.db.set_value("ToDo", {"name": ["in", current_user_todos]}, "status", "Closed")
+        for todo_name in current_user_todos:
+            frappe.db.set_value("ToDo", todo_name, "status", "Closed")
     
     # Bulk delete other users' assignments
     if other_user_todos:
-        for todo_name in other_user_todos:
-            frappe.delete_doc("ToDo", todo_name, ignore_permissions=True)
+        frappe.db.delete("ToDo", {"name": ["in", other_user_todos]})
 
 
 @frappe.whitelist()
