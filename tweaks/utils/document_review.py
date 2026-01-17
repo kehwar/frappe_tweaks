@@ -64,6 +64,7 @@ import json
 
 import frappe
 from frappe import _
+from frappe.desk.form.assign_to import add as add_assignment
 from frappe.utils.safe_exec import safe_exec
 
 
@@ -334,8 +335,6 @@ def _assign_users_to_review(review_name, rule):
             users_to_assign.append(user)
 
     # Assign to each user
-    from frappe.desk.form.assign_to import add as add_assignment
-
     for user in users_to_assign:
         try:
             # Only add if not already assigned
