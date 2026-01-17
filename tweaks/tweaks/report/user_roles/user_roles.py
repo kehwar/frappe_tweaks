@@ -1,6 +1,8 @@
 # Copyright (c) 2026, Frappe Technologies and contributors
 # For license information, please see license.txt
 
+import re
+
 import frappe
 from frappe import _
 
@@ -9,6 +11,18 @@ def execute(filters=None):
     """Generate User Roles report showing users and their assigned roles"""
     columns, data = get_columns_and_data()
     return columns, data
+
+
+def sanitize_fieldname(role_name):
+    """Convert role name to valid fieldname by removing special characters"""
+    # Replace spaces and special chars with underscores, convert to lowercase
+    sanitized = re.sub(r'[^a-zA-Z0-9_]', '_', role_name).lower()
+    # Remove leading/trailing underscores and collapse multiple underscores
+    sanitized = re.sub(r'_+', '_', sanitized).strip('_')
+    # Ensure it doesn't start with a number
+    if sanitized and sanitized[0].isdigit():
+        sanitized = 'role_' + sanitized
+    return sanitized or 'role_unnamed'
 
 
 def get_columns_and_data():
@@ -94,7 +108,7 @@ def get_columns_and_data():
     for role in sorted_role_names:
         columns.append(
             {
-                "fieldname": f"role_{role}",
+                "fieldname": f"role_{sanitize_fieldname(role)}",
                 "label": _(role),
                 "fieldtype": "Check",
                 "width": 100,
@@ -113,7 +127,7 @@ def get_columns_and_data():
         # Add role assignments
         user_role_set = user_roles.get(user.name, set())
         for role in sorted_role_names:
-            row[f"role_{role}"] = 1 if role in user_role_set else 0
+            row[f"role_{sanitize_fieldname(role)}"] = 1 if role in user_role_set else 0
         
         data.append(row)
     
