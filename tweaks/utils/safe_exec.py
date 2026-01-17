@@ -29,6 +29,7 @@ from tweaks.tweaks.doctype.peru_api_com.peru_api_com import (
     get_rut,
     get_tc,
 )
+from tweaks.utils.document_review import get_rules_for_doctype, submit_document_review
 
 
 def admin_sql(query, *args, **kwargs):
@@ -135,6 +136,10 @@ def safe_exec_globals(out):
             "open_observe": NamespaceDict(
                 send_logs=send_logs,
                 search_logs=search_logs,
+            ),
+            "document_review": NamespaceDict(
+                get_rules_for_doctype=get_rules_for_doctype,
+                submit_document_review=submit_document_review,
             ),
         }
     )
