@@ -53,6 +53,11 @@ Ask these questions:
    - **Reference DocType**: The DocType to monitor (e.g., "Sales Order")
    - **Mandatory**: Check if submission should be blocked
    - **Disabled**: Leave unchecked (check to temporarily disable)
+4. Configure auto-assignment (optional):
+   - In **Auto-Assignment** section, add users to **Users to Assign** table
+   - Set **Ignore Permissions** based on your needs:
+     - Unchecked: Only users with submit permission will be assigned
+     - Checked: All listed users will be assigned regardless of permissions
 
 ### Via Code
 
@@ -63,6 +68,11 @@ rule = frappe.get_doc({
     "reference_doctype": "Sales Order",
     "mandatory": 1,
     "disabled": 0,
+    "users": [
+        {"user": "approver1@example.com"},
+        {"user": "approver2@example.com"}
+    ],
+    "ignore_permissions": 0,  # Only assign to users with submit permission
     "script": """
 # Script goes here
 """

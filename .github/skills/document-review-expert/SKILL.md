@@ -36,6 +36,8 @@ A rule that defines when a document needs review via a Python script. The script
 - `script`: Python code to evaluate (see [Script Writing Guide](references/script-examples.md))
 - `mandatory`: If checked, blocks submission until review is approved
 - `disabled`: Temporarily disable the rule
+- `users`: Child table listing users to auto-assign to created reviews
+- `ignore_permissions`: If checked, assigns to all listed users regardless of permissions
 
 ### Document Review
 
@@ -73,6 +75,8 @@ Rules are evaluated automatically via hooks:
    - **Reference DocType**: Target DocType (e.g., "Sales Order")
    - **Script**: Python code that returns `None` or review dict
    - **Mandatory**: Check if submission should be blocked
+   - **Users to Assign** (optional): List users who should be auto-assigned to reviews
+   - **Ignore Permissions**: Check to assign all listed users regardless of permissions
 
 Example script:
 ```python
@@ -88,6 +92,28 @@ if doc.grand_total > 100000:
 ```
 
 3. Save the rule - it takes effect immediately
+
+### Auto-Assignment of Reviewers
+
+You can configure a Document Review Rule to automatically assign specific users when a review is created:
+
+1. In the **Auto-Assignment** section, add users to the **Users to Assign** table
+2. Set **Ignore Permissions**:
+   - **Unchecked** (default): Only users with submit permission on Document Review will be assigned
+   - **Checked**: All listed users will be assigned, regardless of permissions
+
+**Why use this instead of Assignment Rules?**
+
+1. **Permission-aware**: Can filter users based on submit permission (Assignment Rules always ignore permissions)
+2. **Multiple assignments**: Can assign to multiple users per document (Assignment Rules assign only one user)
+3. **Context-specific**: Assignments are tied to specific review rules and their evaluation context
+
+**How it works:**
+
+- When a Document Review is created or updated, the system checks if the rule has users configured
+- If `ignore_permissions` is unchecked, it filters the user list to only include users with submit permission
+- Each eligible user is assigned to the Document Review using Frappe's assignment system
+- Users will see the assignment in their ToDo list and receive notifications according to their preferences
 
 ### Reviewing a Document
 
