@@ -304,6 +304,44 @@ def submit_document_review(review_name, review=None, action="approve"):
     return doc
 
 
+@frappe.whitelist()
+def submit_all_document_reviews(doctype, docname, review=None, action="approve"):
+    """
+    Submit all Document Reviews for a document.
+
+    Args:
+        doctype: Reference document type
+        docname: Reference document name
+        review: Optional review comments (applied to all reviews)
+        action: Either 'approve' or 'reject'
+
+    Returns:
+        dict: Summary of results
+    """
+    # Get all draft document reviews for this document
+    reviews = frappe.get_list(
+        "Document Review",
+        filters={
+            "reference_doctype": doctype,
+            "reference_name": docname,
+            "docstatus": 0,
+        },
+        pluck="name",
+    )
+
+    results = {"total": len(reviews), "successful": 0, "failed": 0, "errors": []}
+
+    for review_name in reviews:
+        try:
+            submit_document_review(review_name, review, action)
+            results["successful"] += 1
+        except Exception as e:
+            results["failed"] += 1
+            results["errors"].append({"review": review_name, "error": str(e)})
+
+    return results
+
+
 def add_document_review_bootinfo(bootinfo):
     """
     Add Document Review related data to bootinfo.
