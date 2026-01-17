@@ -42,3 +42,7 @@ skills:
     url: https://github.com/kehwar/frappe/tree/custom/.github/skills/workflow-expert
     enabled: true
     description: Expert guidance for Frappe workflows and workflow actions
+  - name: frappe-hooks-expert
+    url: https://github.com/kehwar/frappe/tree/custom/.github/skills/frappe-hooks-expert
+    enabled: true
+    description: Expert guidance for Frappe hooks and extension points
