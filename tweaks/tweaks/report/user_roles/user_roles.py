@@ -52,18 +52,16 @@ def get_columns_and_data():
     
     # Use parameterized query with IN clause
     placeholders = ", ".join(["%s"] * len(user_names))
-    role_assignments = frappe.db.sql(
-        f"""
+    query = """
         SELECT 
             hr.parent as user,
             hr.role
         FROM `tabHas Role` hr
         WHERE hr.parenttype = 'User'
-        AND hr.parent IN ({placeholders})
-        """,
-        tuple(user_names),
-        as_dict=True,
-    )
+        AND hr.parent IN ({})
+        """.format(placeholders)
+    
+    role_assignments = frappe.db.sql(query, tuple(user_names), as_dict=True)
     
     # Step 3: Build user-role mapping
     user_roles = {}
