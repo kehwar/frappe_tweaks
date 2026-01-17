@@ -309,6 +309,11 @@ print(bootinfo.get("doctypes_with_document_review_rules"))
 - Document submission succeeds
 - No error shown
 
+**Important:** Since version with auto-approval feature, the `check_mandatory_reviews` function now attempts to auto-approve all pending reviews before blocking submission. This means:
+- Non-mandatory reviews are auto-approved during submission
+- Mandatory reviews that can't be auto-approved will still block
+- This ensures smoother workflow while maintaining approval requirements
+
 **Common Causes:**
 
 **1. before_submit hook not configured**
@@ -331,21 +336,21 @@ print(f"Mandatory: {review.mandatory}")
 
 **Solution:** Ensure rule has mandatory=1 checked.
 
-**3. Review is cancelled**
+**3. Review is cancelled or already submitted**
 ```python
 # Check docstatus
 print(f"Docstatus: {review.docstatus}")
-# 0 = Draft, 1 = Submitted, 2 = Cancelled
+# 0 = Draft (pending), 1 = Submitted (approved), 2 = Cancelled (rejected)
 ```
 
-**Solution:** Cancelled reviews (docstatus=2) don't block submission.
+**Solution:** Only draft reviews (docstatus=0) block submission.
 
 **4. Submission bypassing hooks**
 ```python
 # Bad - bypasses hooks
 doc.db_set("docstatus", 1)
 
-# Good - triggers hooks
+# Good - triggers hooks (including auto-approval)
 doc.submit()
 ```
 

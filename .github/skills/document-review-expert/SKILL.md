@@ -14,8 +14,10 @@ The Document Review system provides a rule-based approach to document validation
 - **Document Review Rules** define validation checks via Python scripts
 - **Document Reviews** track approval state as submittable records
 - Rules are evaluated automatically on document changes
-- Mandatory reviews block document submission
+- **Automatic banner** displays pending reviews at the top of forms
+- Mandatory reviews block document submission (with auto-approval before submit)
 - Reviews integrate with workflows and timeline
+- **Permission-aware** - users only see reviews for documents they can access
 
 This system enables dynamic approval requirements based on document content, bypassing the need for complex workflow configurations.
 
@@ -56,8 +58,10 @@ A submittable record representing a required review. Created automatically when 
 Rules are evaluated automatically via hooks:
 
 1. **on_change**: Evaluates all rules for the doctype when document changes
-2. **before_submit**: Checks for pending mandatory reviews, blocks if found
-3. **Timeline integration**: Displays reviews in document timeline with action buttons
+2. **refresh**: Automatic banner displays pending review count with "See Pending Reviews" button
+3. **before_submit**: Auto-approves all pending reviews, then blocks if mandatory reviews remain
+4. **Timeline integration**: Displays reviews in document timeline with action buttons (permission-aware)
+5. **bootinfo**: Tracks doctypes with rules for efficient banner display
 
 ## Quick Start
 
@@ -89,10 +93,14 @@ if doc.grand_total > 100000:
 
 When a Document Review is created:
 
-1. Document owner sees review in timeline with "Review" button
-2. Reviewer clicks "Review" button
-3. Review dialog opens with approval/rejection options
-4. Submit review to approve, Cancel to reject
+1. **Automatic banner** appears at top of form showing pending review count
+2. Click "See Pending Reviews" button to scroll to reviews in timeline
+3. Reviews displayed in timeline with "Review" button (if user has submit permission)
+4. Click "Review" button to open dialog with approval/rejection options
+5. Add optional comments and choose Approve or Reject
+6. Review is submitted/cancelled, form reloads to update status
+
+**Note:** If reviews remain pending at submission, they are auto-approved first. Only mandatory reviews that fail to approve will block submission.
 
 ## Common Use Cases
 
@@ -122,10 +130,17 @@ Different rules for different approval thresholds.
 
 ### With Workflows
 
-Use reviews as workflow transition conditions:
+Use reviews as workflow transition conditions. A helper function is available in workflow conditions:
 
 ```python
-# In Workflow Transition condition
+# In Workflow Transition condition (preferred method)
+# Returns: "Approved", "Pending Review", "Can Approve", or "Can Submit"
+status = document_review.get_document_review_status(doc.doctype, doc.name)
+return status == "Approved"
+```
+
+**Alternative - Direct query:**
+```python
 frappe.db.count("Document Review", {
     "reference_doctype": doc.doctype,
     "reference_name": doc.name,
@@ -137,9 +152,17 @@ See [references/integration-patterns.md](references/integration-patterns.md) for
 
 ### With Form Banners
 
-Display pending review count using Client Scripts:
+**Automatic banner** is provided out-of-the-box for all doctypes with Document Review Rules. No custom code needed!
 
+The banner:
+- Displays at the top of the form when reviews are pending
+- Shows review count with orange styling
+- Includes "See Pending Reviews" button to scroll to timeline
+- Only appears when document is saved and has active rules
+
+**Custom banner (if needed):**
 ```javascript
+// Only use if you need custom banner behavior
 frappe.call({
     method: "frappe.client.get_count",
     args: {
@@ -225,21 +248,38 @@ Rules run automatically on document save via `on_change` hook. No manual trigger
 - Auto-deleted when rule no longer applies (returns `None`)
 - Prevents duplicate reviews for same data
 - Reuses submitted reviews if data hasn't changed
+- **Auto-approval on submit**: Pending reviews are automatically approved during submission
+
+### Automatic Banner System
+
+- **Zero-configuration**: Works automatically for all doctypes with rules
+- Displays pending review count at top of form
+- "See Pending Reviews" button scrolls to timeline
+- Only shown when document has active rules and saved
+- Tracked via bootinfo for efficient display
 
 ### Timeline Integration
 
 Reviews appear in document timeline with:
 - Status indicators (Pending/Approved/Rejected)
 - Review messages with formatted data
-- Action buttons for pending reviews
-- Full audit trail
+- **Permission-aware action buttons**: Only shown to users with submit permission
+- Review dialog with Approve/Reject options
+- Full audit trail with comments
 
 ### Permission Control
 
 Reviews respect standard Frappe permissions:
+- **Permission query conditions**: Users only see reviews for documents they can access
 - Only users with submit permission can approve reviews
 - System Managers have full access by default
 - Custom roles can be configured
+
+### Workflow Integration
+
+- **Helper function** available in workflow conditions: `document_review.get_document_review_status()`
+- Returns status: "Approved", "Pending Review", "Can Approve", or "Can Submit"
+- Use in transition conditions, action conditions, or state messages
 
 ## Troubleshooting
 
@@ -271,10 +311,31 @@ Get all active rules for a doctype (cached).
 Evaluate all rules for a document (called by `on_change` hook).
 
 **`check_mandatory_reviews(doc, method=None)`**
-Block submission if mandatory reviews pending (called by `before_submit` hook).
+Auto-approve all pending reviews, then block submission if mandatory reviews remain (called by `before_submit` hook).
 
 **`submit_document_review(review_name, review=None, action="approve")`**
-Whitelist function to submit/cancel a review.
+Whitelist function to submit/cancel a single review.
+- `review_name`: Document Review name
+- `review`: Optional comments
+- `action`: "approve" or "reject"
+
+**`submit_all_document_reviews(doctype, docname, review=None, action="approve")`**
+Whitelist function to submit/cancel all pending reviews for a document.
+- Returns: Dict with `total`, `successful`, `failed`, and `errors`
+
+**`get_document_review_status(doctype, docname)`**
+Whitelist function to get review status for a document.
+- Returns: "Approved", "Pending Review", "Can Approve", or "Can Submit"
+- Available in workflow conditions via `document_review.get_document_review_status()`
+
+**`add_document_review_bootinfo(bootinfo)`**
+Add doctypes with rules to bootinfo (for banner display).
+
+**`get_document_reviews_for_timeline(doctype, docname)`**
+Get reviews for timeline display with action buttons.
+
+**`get_document_review_permission_query_conditions(user=None, doctype=None)`**
+Permission query conditions - filters reviews to only show those for accessible documents.
 
 ### Hooks Configuration
 
@@ -293,6 +354,16 @@ additional_timeline_content = {
 get_additional_bootinfo = [
     "tweaks.utils.document_review.add_document_review_bootinfo"
 ]
+
+permission_query_conditions = {
+    "Document Review": "tweaks.utils.document_review.get_document_review_permission_query_conditions"
+}
+
+workflow_safe_eval_globals = [
+    "tweaks.utils.safe_exec.workflow_safe_eval_globals"
+]
+
+ignore_links_on_delete = ["Document Review"]
 ```
 
 ## Performance Considerations

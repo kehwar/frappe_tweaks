@@ -15,10 +15,21 @@ Block workflow transitions until reviews are cleared.
 1. Create Document Review Rules for your DocType
 2. Add workflow transition condition:
 
+**Recommended approach (uses helper function):**
 ```python
 # Workflow Transition Condition Script
 # Returns True to allow transition, False to block
 
+# get_document_review_status is available via workflow_safe_eval_globals hook
+status = document_review.get_document_review_status(doc.doctype, doc.name)
+
+# Returns one of: "Approved", "Pending Review", "Can Approve", "Can Submit"
+return status == "Approved"
+```
+
+**Alternative approach (direct query):**
+```python
+# Direct database query
 pending_reviews = frappe.db.count("Document Review", {
     "reference_doctype": doc.doctype,
     "reference_name": doc.name,
@@ -78,9 +89,21 @@ if pending_count > 0:
 
 ## Form Integration
 
-### Dashboard Indicator
+### Automatic Banner (Built-in)
 
-Show pending reviews count in form dashboard.
+**No code needed!** The Document Review system automatically displays a banner at the top of forms when:
+- DocType has Document Review Rules configured
+- Document is saved (not new/local)
+- Pending reviews exist for the document
+
+The banner:
+- Shows pending review count with orange styling
+- Includes "See Pending Reviews" button to scroll to timeline
+- Tracks via bootinfo for efficient display
+
+### Dashboard Indicator (Custom)
+
+For custom indicators beyond the automatic banner:
 
 **Client Script (Form):**
 
@@ -344,8 +367,24 @@ review.insert(ignore_permissions=True)
 
 ### Bulk Review Approval
 
+**Using built-in function (recommended):**
 ```python
-# Server Script - Approve multiple reviews
+# Server Script - Approve all reviews for a document
+results = frappe.call(
+    "tweaks.utils.document_review.submit_all_document_reviews",
+    doctype="Sales Order",
+    docname="SO-00001",
+    review="Bulk approved",
+    action="approve"  # or "reject"
+)
+
+# Returns: {"total": 5, "successful": 5, "failed": 0, "errors": []}
+frappe.msgprint(f"Approved {results['successful']} of {results['total']} reviews")
+```
+
+**Manual implementation:**
+```python
+# Server Script - Approve multiple reviews manually
 def bulk_approve_reviews(doctype, docname, review_notes="Bulk approved"):
     reviews = frappe.get_all("Document Review", {
         "reference_doctype": doctype,
@@ -446,9 +485,23 @@ def execute(filters=None):
 
 ## Permission Integration
 
+### Automatic Permission Filtering
+
+The Document Review system automatically filters reviews based on document access:
+
+```python
+# Implemented via permission_query_conditions hook
+# Users only see Document Reviews for documents they have read access to
+```
+
+This is handled automatically by `get_document_review_permission_query_conditions()`:
+- Administrator sees all reviews
+- Other users only see reviews for documents they can access
+- Queries dynamically filter based on user's document permissions
+
 ### Custom Permission Checks
 
-Add permission checks to review approval.
+Add additional permission checks to review approval:
 
 ```python
 # Document Review - has_permission

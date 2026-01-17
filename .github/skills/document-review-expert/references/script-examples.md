@@ -603,3 +603,43 @@ else:
 # Verify result
 print(result)
 ```
+
+
+## Available Functions in Scripts
+
+Document Review Rule scripts have access to additional functions via safe_exec globals:
+
+### Document Review Functions
+
+Available in rule scripts for advanced use cases:
+
+```python
+# Get all rules for a doctype (cached)
+rules = document_review.get_rules_for_doctype("Sales Order")
+
+# Get review status for a document
+status = document_review.get_document_review_status("Sales Order", "SO-00001")
+# Returns: "Approved", "Pending Review", "Can Approve", or "Can Submit"
+
+# Submit all pending reviews for a document
+result = document_review.submit_all_document_reviews(
+    "Sales Order", 
+    "SO-00001",
+    review="Auto-approved",
+    action="approve"
+)
+# Returns: {"total": 5, "successful": 5, "failed": 0, "errors": []}
+
+# Submit a specific review
+review_doc = document_review.submit_document_review(
+    "REV-00001",
+    review="Approved",
+    action="approve"
+)
+```
+
+**Note:** These are also available in:
+- Workflow transition conditions (via `workflow_safe_eval_globals` hook) - only `get_document_review_status`
+- Server Scripts and Business Logic (via `safe_exec_globals`)
+- Custom Scripts (via standard Frappe API)
+
