@@ -304,6 +304,20 @@ def _assign_users_to_review(review_name, rule):
     if not rule_doc.users:
         return
 
+    # Get the review document for permission checks
+    review_doc = frappe.get_doc("Document Review", review_name)
+
+    # Fetch all existing assignments for this review once to avoid N+1 queries
+    existing_assignments = frappe.get_all(
+        "ToDo",
+        filters={
+            "reference_type": "Document Review",
+            "reference_name": review_name,
+            "status": "Open",
+        },
+        pluck="allocated_to",
+    )
+
     # Get list of users to assign
     users_to_assign = []
     for user_row in rule_doc.users:
@@ -312,7 +326,7 @@ def _assign_users_to_review(review_name, rule):
         if not rule_doc.ignore_permissions:
             # Check if user has submit permission on Document Review
             if frappe.has_permission(
-                "Document Review", ptype="submit", user=user, doc=review_name
+                "Document Review", ptype="submit", user=user, doc=review_doc
             ):
                 users_to_assign.append(user)
         else:
@@ -324,20 +338,8 @@ def _assign_users_to_review(review_name, rule):
 
     for user in users_to_assign:
         try:
-            # Clear any existing assignments first to avoid duplicates
-            existing_assignments = frappe.get_all(
-                "ToDo",
-                filters={
-                    "reference_type": "Document Review",
-                    "reference_name": review_name,
-                    "allocated_to": user,
-                    "status": "Open",
-                },
-                pluck="name",
-            )
-
             # Only add if not already assigned
-            if not existing_assignments:
+            if user not in existing_assignments:
                 add_assignment(
                     {
                         "doctype": "Document Review",
