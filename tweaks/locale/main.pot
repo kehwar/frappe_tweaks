@@ -1,0 +1,1822 @@
+# Translations template for Tweaks.
+# Copyright (C) 2026 Erick W.R.
+# This file is distributed under the same license as the Tweaks project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Tweaks VERSION\n"
+"Report-Msgid-Bugs-To: erickkwr@gmail.com\n"
+"POT-Creation-Date: 2026-01-17 04:30+0000\n"
+"PO-Revision-Date: 2026-01-17 04:30+0000\n"
+"Last-Translator: erickkwr@gmail.com\n"
+"Language-Team: erickkwr@gmail.com\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.13.1\n"
+
+#. Header text in the Tweaks Workspace
+#: tweaks/tweaks/workspace/tweaks/tweaks.json
+msgid "<span class=\"h4\">Tweaks</span>"
+msgstr ""
+
+#. Name of a DocType
+#. Label of a Link in the Tweaks Workspace
+#: tweaks/tweaks/doctype/ac_action/ac_action.json
+#: tweaks/tweaks/workspace/tweaks/tweaks.json
+msgid "AC Action"
+msgstr ""
+
+#. Name of a report
+#: tweaks/tweaks/report/ac_permissions/ac_permissions.json
+msgid "AC Permissions"
+msgstr ""
+
+#. Label of a Link in the Tweaks Workspace
+#: tweaks/tweaks/workspace/tweaks/tweaks.json
+msgid "AC Principal"
+msgstr ""
+
+#. Name of a report
+#: tweaks/tweaks/report/ac_principal_query_filters/ac_principal_query_filters.json
+msgid "AC Principal Query Filters"
+msgstr ""
+
+#. Name of a DocType
+#. Label of a Link in the Tweaks Workspace
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+#: tweaks/tweaks/workspace/tweaks/tweaks.json
+msgid "AC Resource"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/ac_resource_action/ac_resource_action.json
+msgid "AC Resource Action"
+msgstr ""
+
+#. Linked DocType in AC Resource's connections
+#. Name of a DocType
+#. Label of a Link in the Tweaks Workspace
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.json
+#: tweaks/tweaks/workspace/tweaks/tweaks.json
+msgid "AC Rule"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/ac_rule_action/ac_rule_action.json
+msgid "AC Rule Action"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/ac_rule_principal/ac_rule_principal.json
+msgid "AC Rule Principal"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/ac_rule_resource/ac_rule_resource.json
+msgid "AC Rule Resource"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_settings/ac_settings.js:12
+msgid "AC Rule cache cleared successfully"
+msgstr ""
+
+#. Name of a DocType
+#. Label of a Link in the Tweaks Workspace
+#: tweaks/tweaks/doctype/ac_settings/ac_settings.json
+#: tweaks/tweaks/workspace/tweaks/tweaks.json
+msgid "AC Settings"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'PERU API COM'
+#. Option for the 'Trigger Type' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.json
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "API"
+msgstr ""
+
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.py:339
+msgid "API Error"
+msgstr ""
+
+#: tweaks/tweaks/report/server_scripts/server_scripts.py:92
+msgid "API Method"
+msgstr ""
+
+#. Label of a Data field in DocType 'SUNAT Tipo Documento Identidad'
+#: tweaks/tweaks/doctype/sunat_tipo_documento_identidad/sunat_tipo_documento_identidad.json
+msgid "Abbr"
+msgstr ""
+
+#. Label of a Card Break in the Tweaks Workspace
+#: tweaks/tweaks/workspace/tweaks/tweaks.json
+msgid "Acces Control"
+msgstr ""
+
+#. Name of a role
+#: tweaks/tweaks/doctype/sunat_tipo_documento_identidad/sunat_tipo_documento_identidad.json
+msgid "Accounts Manager"
+msgstr ""
+
+#. Name of a role
+#: tweaks/tweaks/doctype/sunat_tipo_documento_identidad/sunat_tipo_documento_identidad.json
+msgid "Accounts User"
+msgstr ""
+
+#. Label of a Data field in DocType 'AC Action'
+#. Label of a Link field in DocType 'AC Resource Action'
+#. Label of a Link field in DocType 'AC Rule Action'
+#. Label of a Link field in DocType 'Business Logic Link'
+#. Label of a Data field in DocType 'Business Logic Link Action'
+#: tweaks/tweaks/doctype/ac_action/ac_action.json
+#: tweaks/tweaks/doctype/ac_resource_action/ac_resource_action.json
+#: tweaks/tweaks/doctype/ac_rule_action/ac_rule_action.json
+#: tweaks/tweaks/doctype/business_logic_link/business_logic_link.json
+#: tweaks/tweaks/doctype/business_logic_link_action/business_logic_link_action.json
+#: tweaks/tweaks/report/ac_permissions/ac_permissions.js:24
+msgid "Action"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_rule/ac_rule_utils.py:557
+msgid "Action is required"
+msgstr ""
+
+#. Label of a Table MultiSelect field in DocType 'AC Resource'
+#. Label of a Table MultiSelect field in DocType 'AC Rule'
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.json
+#: tweaks/tweaks/report/ac_permissions/ac_permissions.py:370
+msgid "Actions"
+msgstr ""
+
+#: tweaks/public/js/tweaks/document_review.js:87
+msgid "Add any comments or notes about this review"
+msgstr ""
+
+#. Option for the 'Managed Actions' (Select) field in DocType 'AC Resource'
+#. Name of a role
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.json
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log.json
+msgid "All"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_action/ac_action_list.js:19
+msgid "All Workflow Action Masters already have corresponding AC Actions"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job_list.js:44
+msgid "All sync job logs have been cleared"
+msgstr ""
+
+#. Label of a Check field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Allow Deletes"
+msgstr ""
+
+#. Label of a Check field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Allow Inserts"
+msgstr ""
+
+#. Label of a Check field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Allow Updates"
+msgstr ""
+
+#. Label of a Check field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Allow Updates without changes"
+msgstr ""
+
+#. Label of a Link field in DocType 'Document Review'
+#: tweaks/tweaks/doctype/document_review/document_review.json
+msgid "Amended From"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_action/ac_action.py:34
+msgid "An action with the scrubbed name '{0}' already exists: {1}"
+msgstr ""
+
+#: tweaks/tweaks/report/customizations/customizations.py:94
+msgid "Applied For"
+msgstr ""
+
+#: tweaks/public/js/tweaks/document_review.js:90
+msgid "Approve"
+msgstr ""
+
+#: tweaks/utils/document_review.py:452
+msgid "Approved"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job_list.js:38
+msgid "Are you sure you want to clear all sync job logs? This action cannot be undone."
+msgstr ""
+
+#. Description of the 'Multiple Target Documents' (JSON) field in DocType 'Sync
+#. Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Array of spawned child jobs when multiple targets"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.py:30
+msgid "At least one Action is required"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_action/ac_action.py:17
+msgid "At least one action must be enabled."
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.py:15
+msgid "At least one principal filter must not be an exception."
+msgstr ""
+
+#. Label of a Data field in DocType 'PERU API COM'
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.json
+msgid "Auth Header"
+msgstr ""
+
+#. Label of a Check field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Auto Queue"
+msgstr ""
+
+#. Label of a Check field in DocType 'PERU API COM'
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.json
+msgid "Auto Update Currency Exchange"
+msgstr ""
+
+#. Label of a Link field in DocType 'Business Logic'
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+msgid "Based on"
+msgstr ""
+
+#. Name of a DocType
+#. Linked DocType in Business Logic's connections
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+msgid "Business Logic"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/business_logic_category/business_logic_category.json
+msgid "Business Logic Category"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/business_logic_link/business_logic_link.json
+msgid "Business Logic Link"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/business_logic_link_action/business_logic_link_action.json
+msgid "Business Logic Link Action"
+msgstr ""
+
+#. Label of a Check field in DocType 'PERU API COM'
+#. Label of a Check field in DocType 'PERU API COM Log'
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.json
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log.json
+msgid "Cache"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'AC Settings'
+#: tweaks/tweaks/doctype/ac_settings/ac_settings.json
+msgid "Cache Settings"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.py:244
+msgid "Can only start jobs with status Pending"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.js:31
+#: tweaks/tweaks/doctype/sync_job/sync_job.js:58
+msgid "Cancel"
+msgstr ""
+
+#. Label of a Long Text field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Cancel Reason"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.js:57
+msgid "Cancel Sync Job"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Canceled"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.py:198
+msgid "Cannot cancel job with status {0}"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.py:54
+msgid "Cannot edit a standard sync job type. Please duplicate and create a new one"
+msgstr ""
+
+#: tweaks/utils/document_review.py:185
+msgid "Cannot submit document with pending mandatory reviews: {0}"
+msgstr ""
+
+#. Label of a Link field in DocType 'Business Logic'
+#. Label of a Data field in DocType 'Business Logic Category'
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+#: tweaks/tweaks/doctype/business_logic_category/business_logic_category.json
+msgid "Category"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.js:10
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.js:195
+msgid "Choose Actions"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_settings/ac_settings.js:6
+msgid "Clear AC Rule Cache"
+msgstr ""
+
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log_list.js:40
+msgid "Clear API Logs"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job_list.js:27
+msgid "Clear All Logs"
+msgstr ""
+
+#: tweaks/tweaks/doctype/query_filter/query_filter.js:27
+msgid "Close"
+msgstr ""
+
+#: tweaks/public/js/tweaks/document_review.js:81
+msgid "Complete Review"
+msgstr ""
+
+#: tweaks/tweaks/doctype/open_observe_api/open_observe_api.js:21
+msgid "Connection test failed"
+msgstr ""
+
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.js:26
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log_list.js:24
+msgid "Console"
+msgstr ""
+
+#. Label of a JSON field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Context"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_action/ac_action_list.js:48
+msgid "Create AC Actions from Workflow Action Master"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_action/ac_action_list.js:50
+msgid "Create Selected"
+msgstr ""
+
+#: tweaks/custom/doctype/customer.js:118
+msgid "Create customer {0} ?"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_action/ac_action_list.js:8
+msgid "Create from Workflow Action Master"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_action/ac_action_list.js:76
+msgid "Created {0} AC Action(s):"
+msgstr ""
+
+#: tweaks/custom/doctype/customer.js:135
+msgid "Creating customer..."
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Open Observe API'
+#: tweaks/tweaks/doctype/open_observe_api/open_observe_api.json
+msgid "Credentials"
+msgstr ""
+
+#. Label of a JSON field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Current Data"
+msgstr ""
+
+#: tweaks/tweaks/report/role_permissions/role_permissions.py:60
+msgid "Current Permissions"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.js:174
+msgid "Custom"
+msgstr ""
+
+#: tweaks/tweaks/report/customizations/customizations.py:87
+msgid "Custom Field Name"
+msgstr ""
+
+#: tweaks/tweaks/report/customizations/customizations.js:22
+#: tweaks/tweaks/report/customizations/customizations.py:68
+msgid "Customization Type"
+msgstr ""
+
+#. Name of a report
+#: tweaks/tweaks/report/customizations/customizations.json
+msgid "Customizations"
+msgstr ""
+
+#. Option for the 'Search' (Select) field in DocType 'PERU API COM Console'
+#. Label of a Data field in DocType 'PERU API COM Console'
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.json
+msgid "DNI"
+msgstr ""
+
+#. Label of a Data field in DocType 'PERU API COM'
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.json
+msgid "DNI URL"
+msgstr ""
+
+#. Label of a JSON field in DocType 'PERU API COM Console'
+#. Label of a JSON field in DocType 'PERU API COM Log'
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.json
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log.json
+msgid "Data"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Data Snapshots"
+msgstr ""
+
+#. Label of a Data field in DocType 'Open Observe API'
+#: tweaks/tweaks/doctype/open_observe_api/open_observe_api.json
+msgid "Default Organization"
+msgstr ""
+
+#: tweaks/tweaks/report/role_permissions/role_permissions.py:54
+msgid "Default Permissions"
+msgstr ""
+
+#. Description of the 'Retry Delay' (Int) field in DocType 'Sync Job'
+#. Description of the 'Retry Delay' (Int) field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Delay between retries in minutes"
+msgstr ""
+
+#. Option for the 'Operation' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Delete"
+msgstr ""
+
+#. Label of a Text Editor field in DocType 'Business Logic'
+#. Label of a Data field in DocType 'SUNAT Tipo Documento Identidad'
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+#: tweaks/tweaks/doctype/sunat_tipo_documento_identidad/sunat_tipo_documento_identidad.json
+msgid "Description"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Document Review'
+#: tweaks/tweaks/doctype/document_review/document_review.json
+msgid "Details"
+msgstr ""
+
+#. Label of a JSON field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Diff Summary"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Differences"
+msgstr ""
+
+#. Label of a Check field in DocType 'AC Action'
+#. Label of a Check field in DocType 'AC Resource'
+#. Label of a Check field in DocType 'AC Rule'
+#. Label of a Check field in DocType 'Document Review Rule'
+#. Label of a Check field in DocType 'Query Filter'
+#. Label of a Check field in DocType 'SUNAT Tipo Documento Identidad'
+#. Label of a Check field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/ac_action/ac_action.json
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.json
+#: tweaks/tweaks/doctype/document_review_rule/document_review_rule.json
+#: tweaks/tweaks/doctype/query_filter/query_filter.json
+#: tweaks/tweaks/doctype/sunat_tipo_documento_identidad/sunat_tipo_documento_identidad.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Disabled"
+msgstr ""
+
+#: tweaks/tweaks/report/ac_permissions/ac_permissions.py:364
+msgid "Distinct Resource Query Filters"
+msgstr ""
+
+#. Option for the 'Type' (Select) field in DocType 'AC Resource'
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+#: tweaks/tweaks/report/customizations/customizations.js:10
+#: tweaks/tweaks/report/customizations/customizations.py:55
+#: tweaks/tweaks/report/role_permissions/role_permissions.js:10
+#: tweaks/tweaks/report/role_permissions/role_permissions.py:22
+msgid "DocType"
+msgstr ""
+
+#: tweaks/tweaks/report/server_scripts/server_scripts.js:25
+#: tweaks/tweaks/report/server_scripts/server_scripts.py:80
+msgid "DocType Event"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/doctype_group/doctype_group.json
+msgid "DocType Group"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/doctype_group_member/doctype_group_member.json
+msgid "DocType Group Member"
+msgstr ""
+
+#. Label of a Table MultiSelect field in DocType 'DocType Group'
+#: tweaks/tweaks/doctype/doctype_group/doctype_group.json
+msgid "DocType Group Members"
+msgstr ""
+
+#: tweaks/tweaks/report/role_permissions/role_permissions.js:31
+msgid "DocType Type"
+msgstr ""
+
+#. Option for the 'Trigger Type' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Document Hook"
+msgstr ""
+
+#. Name of a DocType
+#. Linked DocType in Document Review Rule's connections
+#: tweaks/tweaks/doctype/document_review/document_review.json
+#: tweaks/tweaks/doctype/document_review_rule/document_review_rule.json
+msgid "Document Review"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/document_review_rule/document_review_rule.json
+msgid "Document Review Rule"
+msgstr ""
+
+#. Label of a Link field in DocType 'AC Resource'
+#. Label of a Link field in DocType 'DocType Group Member'
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+#: tweaks/tweaks/doctype/doctype_group_member/doctype_group_member.json
+msgid "Document Type"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.py:26
+msgid "Document Type is required"
+msgstr ""
+
+#. Label of a Check field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Dry Run"
+msgstr ""
+
+#: tweaks/utils/query_report.py:61
+msgid "Either 'data' or 'filters' must be provided"
+msgstr ""
+
+#. Label of a Datetime field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Ended At"
+msgstr ""
+
+#. Label of a Select field in DocType 'PERU API COM Log'
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log.json
+msgid "Endpoint"
+msgstr ""
+
+#. Label of a Code field in DocType 'PERU API COM Console'
+#. Label of a Code field in DocType 'PERU API COM Log'
+#. Option for the 'Status' (Select) field in DocType 'PERU API COM Log'
+#: tweaks/custom/doctype/customer.js:111
+#: tweaks/tweaks/doctype/open_observe_api/open_observe_api.js:19
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.json
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log.json
+msgid "Error"
+msgstr ""
+
+#. Label of a Long Text field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Error Message"
+msgstr ""
+
+#: tweaks/utils/document_review.py:135
+msgid "Error evaluating Document Review Rule '{0}': {1}"
+msgstr ""
+
+#: tweaks/www/html-file/index.py:77
+msgid "Error reading HTML file '{0}'"
+msgstr ""
+
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.py:334
+msgid "Error searching {0}: {1}"
+msgstr ""
+
+#: tweaks/custom/doctype/customer.js:97 tweaks/custom/doctype/customer.js:136
+msgid "Error while searching RUC/DNI on SUNAT"
+msgstr ""
+
+#: tweaks/tweaks/report/server_scripts/server_scripts.py:86
+msgid "Event Frequency"
+msgstr ""
+
+#. Label of a Check field in DocType 'AC Rule Principal'
+#. Label of a Check field in DocType 'AC Rule Resource'
+#: tweaks/tweaks/doctype/ac_rule_principal/ac_rule_principal.json
+#: tweaks/tweaks/doctype/ac_rule_resource/ac_rule_resource.json
+msgid "Exception"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Execution Tracking"
+msgstr ""
+
+#. Description of the 'Context' (JSON) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Extra context payload for sync job (JSON)"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Failed"
+msgstr ""
+
+#. Label of a Date field in DocType 'PERU API COM Console'
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.json
+msgid "Fecha"
+msgstr ""
+
+#: tweaks/tweaks/report/customizations/customizations.py:62
+msgid "Field Name / Key"
+msgstr ""
+
+#. Label of a Data field in DocType 'AC Resource'
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+msgid "Fieldname"
+msgstr ""
+
+#: tweaks/www/html-file/index.py:64
+msgid "File '{0}' is not an HTML file"
+msgstr ""
+
+#. Label of a Link field in DocType 'AC Rule Principal'
+#. Label of a Link field in DocType 'AC Rule Resource'
+#: tweaks/tweaks/doctype/ac_rule_principal/ac_rule_principal.json
+#: tweaks/tweaks/doctype/ac_rule_resource/ac_rule_resource.json
+#: tweaks/tweaks/report/ac_principal_query_filters/ac_principal_query_filters.py:79
+#: tweaks/tweaks/report/query_filters/query_filters.js:62
+#: tweaks/tweaks/report/query_filters/query_filters.py:99
+msgid "Filter"
+msgstr ""
+
+#: tweaks/tweaks/report/ac_principal_query_filters/ac_principal_query_filters.js:68
+msgid "Filter ({0})"
+msgstr ""
+
+#. Label of a Data field in DocType 'Query Filter'
+#: tweaks/tweaks/doctype/query_filter/query_filter.json
+#: tweaks/tweaks/report/ac_principal_query_filters/ac_principal_query_filters.py:34
+#: tweaks/tweaks/report/query_filters/query_filters.py:69
+msgid "Filter Name"
+msgstr ""
+
+#: tweaks/tweaks/report/ac_principal_query_filters/ac_principal_query_filters.py:73
+msgid "Filter Type"
+msgstr ""
+
+#: tweaks/tweaks/report/ac_permissions/ac_permissions.js:12
+msgid "Filter by Query Filter (User, User Group, or Role). Only shows users matching the selected filter."
+msgstr ""
+
+#: tweaks/tweaks/report/ac_permissions/ac_permissions.js:28
+msgid "Filter by specific action. Shows Y/N instead of listing all actions."
+msgstr ""
+
+#: tweaks/tweaks/report/ac_principal_query_filters/ac_principal_query_filters.js:51
+#: tweaks/tweaks/report/query_filters/query_filters.js:53
+msgid "Filter not found"
+msgstr ""
+
+#: tweaks/tweaks/report/ac_principal_query_filters/ac_principal_query_filters.js:64
+#: tweaks/tweaks/report/query_filters/query_filters.js:58
+msgid "Filter: {0}"
+msgstr ""
+
+#. Label of a Code field in DocType 'Query Filter'
+#: tweaks/tweaks/doctype/query_filter/query_filter.json
+msgid "Filters"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Finished"
+msgstr ""
+
+#: tweaks/custom/doctype/customer.py:97
+msgid "Following fields are mandatory to create address:"
+msgstr ""
+
+#. Option for the 'Type' (Select) field in DocType 'AC Rule'
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.json
+msgid "Forbid"
+msgstr ""
+
+#: tweaks/www/html-file/index.py:59
+msgid "HTML file '{0}' not found"
+msgstr ""
+
+#. Description of the 'Trigger Type' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "How sync was initiated"
+msgstr ""
+
+#: tweaks/tweaks/report/role_permissions/role_permissions.py:42
+msgid "If Owner"
+msgstr ""
+
+#. Description of the 'Allow Deletes' (Check) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "If unchecked, Delete operations will be skipped"
+msgstr ""
+
+#. Description of the 'Allow Updates' (Check) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "If unchecked, Update operations will be skipped"
+msgstr ""
+
+#. Description of the 'Allow Updates without changes' (Check) field in DocType
+#. 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "If unchecked, Update operations without changes will be skipped"
+msgstr ""
+
+#. Description of the 'Allow Inserts' (Check) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "If uncheked, Insert operations will be skipped"
+msgstr ""
+
+#. Label of a Check field in DocType 'PERU API COM Console'
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.json
+msgid "Ignore Cache"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Business Logic'
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+msgid "Implemented"
+msgstr ""
+
+#. Option for the 'Operation' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Insert"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.py:119
+msgid "Invalid context JSON: {0}"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.py:493
+msgid "Invalid operation '{0}'. Must be one of: {1}"
+msgstr ""
+
+#. Label of a Check field in DocType 'AC Action'
+#. Label of a Check field in DocType 'AC Resource'
+#. Label of a Select field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/ac_action/ac_action.json
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Is Standard"
+msgstr ""
+
+#. Option for the 'Type' (Select) field in DocType 'Query Filter'
+#: tweaks/tweaks/doctype/query_filter/query_filter.json
+msgid "JSON"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Sync Job'
+#. Label of a Section Break field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Job Configuration"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Job Details"
+msgstr ""
+
+#. Label of a Data field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Job ID"
+msgstr ""
+
+#. Description of the 'Timeout' (Int) field in DocType 'Sync Job'
+#. Description of the 'Timeout' (Int) field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Job timeout in seconds"
+msgstr ""
+
+#. Label of a Data field in DocType 'PERU API COM Log'
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log.json
+msgid "Key"
+msgstr ""
+
+#: tweaks/tweaks/report/role_permissions/role_permissions.py:36
+msgid "Level"
+msgstr ""
+
+#. Label of a Link field in DocType 'Business Logic Link'
+#: tweaks/tweaks/doctype/business_logic_link/business_logic_link.json
+msgid "Link Document Type"
+msgstr ""
+
+#. Label of a Dynamic Link field in DocType 'Business Logic Link'
+#: tweaks/tweaks/doctype/business_logic_link/business_logic_link.json
+msgid "Link Name"
+msgstr ""
+
+#. Label of a Table field in DocType 'Business Logic'
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+msgid "Links"
+msgstr ""
+
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.js:37
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.js:71
+msgid "Logs"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.js:102
+msgid "Main"
+msgstr ""
+
+#. Label of a Select field in DocType 'AC Resource'
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+msgid "Managed Actions"
+msgstr ""
+
+#. Label of a Check field in DocType 'Document Review'
+#. Label of a Check field in DocType 'Document Review Rule'
+#: tweaks/tweaks/doctype/document_review/document_review.json
+#: tweaks/tweaks/doctype/document_review_rule/document_review_rule.json
+msgid "Mandatory"
+msgstr ""
+
+#. Option for the 'Trigger Type' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Manual"
+msgstr ""
+
+#. Label of a Int field in DocType 'Sync Job'
+#. Label of a Int field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Max Retries"
+msgstr ""
+
+#. Description of the 'Max Retries' (Int) field in DocType 'Sync Job'
+#. Description of the 'Max Retries' (Int) field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Maximum retry attempts"
+msgstr ""
+
+#. Label of a Text Editor field in DocType 'Document Review'
+#: tweaks/tweaks/doctype/document_review/document_review.json
+msgid "Message"
+msgstr ""
+
+#: tweaks/custom/doctype/customer.py:100
+msgid "Missing Values Required"
+msgstr ""
+
+#. Label of a Link field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+#: tweaks/tweaks/report/customizations/customizations.js:16
+#: tweaks/tweaks/report/customizations/customizations.py:80
+#: tweaks/tweaks/report/role_permissions/role_permissions.js:38
+#: tweaks/tweaks/report/role_permissions/role_permissions.py:72
+#: tweaks/tweaks/report/server_scripts/server_scripts.py:98
+msgid "Module"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.py:370
+msgid "Module validation failed: {0}"
+msgstr ""
+
+#. Label of a JSON field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Multiple Target Documents"
+msgstr ""
+
+#: tweaks/utils/safe_exec.py:44
+msgid "Must be Administrator to run this query"
+msgstr ""
+
+#: tweaks/tweaks/report/query_filters/query_filters.py:61
+#: tweaks/tweaks/report/server_scripts/server_scripts.py:53
+msgid "Name"
+msgstr ""
+
+#. Label of a Data field in DocType 'Business Logic'
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+msgid "Naming Series"
+msgstr ""
+
+#. Option for the 'Is Standard' (Select) field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "No"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "No Target"
+msgstr ""
+
+#: tweaks/utils/query_report.py:30
+msgid "No data to export"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.js:74
+msgid "No enabled AC Actions found"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.py:61
+msgid "Only Administrator can save a standard sync job type. Please rename and save."
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Business Logic'
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+msgid "Open"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/open_observe_api/open_observe_api.json
+msgid "Open Observe API"
+msgstr ""
+
+#. Label of a Select field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Operation"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.py:431
+msgid "Operation must be specified when target_document_name is provided"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.js:126
+msgid "Operations"
+msgstr ""
+
+#. Description of the 'Target DocType' (Link) field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Optional. If not set, will be determined from target document during sync."
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.js:150
+msgid "Other"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Business Logic'
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+msgid "Outdated"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.json
+msgid "PERU API COM"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.json
+msgid "PERU API COM Console"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log.json
+msgid "PERU API COM Log"
+msgstr ""
+
+#. Label of a Link field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Parent Sync Job"
+msgstr ""
+
+#. Label of a Password field in DocType 'Open Observe API'
+#: tweaks/tweaks/doctype/open_observe_api/open_observe_api.json
+msgid "Password"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Pending"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Business Logic'
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+#: tweaks/utils/document_review.py:449
+msgid "Pending Review"
+msgstr ""
+
+#. Option for the 'Type' (Select) field in DocType 'AC Rule'
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.json
+msgid "Permit"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_action/ac_action_list.js:61
+msgid "Please select at least one action to create"
+msgstr ""
+
+#: tweaks/tweaks/doctype/query_filter/query_filter.js:11
+msgid "Preview SQL"
+msgstr ""
+
+#: tweaks/tweaks/report/ac_permissions/ac_permissions.js:8
+msgid "Principal Filter"
+msgstr ""
+
+#. Label of a Table field in DocType 'AC Rule'
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.json
+msgid "Principal Filters"
+msgstr ""
+
+#: tweaks/tweaks/report/customizations/customizations.py:74
+msgid "Properties"
+msgstr ""
+
+#. Option for the 'Type' (Select) field in DocType 'Query Filter'
+#: tweaks/tweaks/doctype/query_filter/query_filter.json
+msgid "Python"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/query_filter/query_filter.json
+#: tweaks/tweaks/report/ac_principal_query_filters/ac_principal_query_filters.py:40
+msgid "Query Filter"
+msgstr ""
+
+#. Name of a report
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.js:10
+#: tweaks/tweaks/report/query_filters/query_filters.json
+msgid "Query Filters"
+msgstr ""
+
+#. Label of a Data field in DocType 'Sync Job'
+#. Label of a Data field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Queue"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Queued"
+msgstr ""
+
+#. Description of the 'Job ID' (Data) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "RQ job ID"
+msgstr ""
+
+#. Description of the 'Queue' (Data) field in DocType 'Sync Job'
+#. Description of the 'Queue' (Data) field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "RQ queue name"
+msgstr ""
+
+#. Option for the 'Search' (Select) field in DocType 'PERU API COM Console'
+#. Label of a Data field in DocType 'PERU API COM Console'
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.json
+msgid "RUC"
+msgstr ""
+
+#. Option for the 'Search' (Select) field in DocType 'PERU API COM Console'
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.json
+msgid "RUC (Cabecera)"
+msgstr ""
+
+#. Option for the 'Search' (Select) field in DocType 'PERU API COM Console'
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.json
+msgid "RUC (Sucursales)"
+msgstr ""
+
+#. Label of a Data field in DocType 'PERU API COM'
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.json
+msgid "RUC Sucursales URL"
+msgstr ""
+
+#. Label of a Data field in DocType 'PERU API COM'
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.json
+msgid "RUC URL"
+msgstr ""
+
+#: tweaks/custom/doctype/customer.js:112
+msgid "RUC/DNI '{0}' not found on SUNAT"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.js:36
+msgid "Reason"
+msgstr ""
+
+#: tweaks/tweaks/report/query_filters/query_filters.py:81
+msgid "Reference"
+msgstr ""
+
+#: tweaks/tweaks/report/ac_principal_query_filters/ac_principal_query_filters.py:67
+msgid "Reference DocName"
+msgstr ""
+
+#. Label of a Link field in DocType 'Document Review'
+#. Label of a Link field in DocType 'Document Review Rule'
+#: tweaks/tweaks/doctype/document_review/document_review.json
+#: tweaks/tweaks/doctype/document_review_rule/document_review_rule.json
+#: tweaks/tweaks/report/ac_principal_query_filters/ac_principal_query_filters.py:60
+#: tweaks/tweaks/report/server_scripts/server_scripts.js:18
+#: tweaks/tweaks/report/server_scripts/server_scripts.py:73
+msgid "Reference DocType"
+msgstr ""
+
+#. Label of a Dynamic Link field in DocType 'Query Filter'
+#: tweaks/tweaks/doctype/query_filter/query_filter.json
+#: tweaks/tweaks/report/query_filters/query_filters.py:87
+msgid "Reference Document Name"
+msgstr ""
+
+#. Label of a Link field in DocType 'Query Filter'
+#: tweaks/tweaks/doctype/query_filter/query_filter.json
+msgid "Reference Document Type"
+msgstr ""
+
+#. Label of a Dynamic Link field in DocType 'Document Review'
+#: tweaks/tweaks/doctype/document_review/document_review.json
+msgid "Reference Name"
+msgstr ""
+
+#. Label of a Link field in DocType 'Query Filter'
+#: tweaks/tweaks/doctype/query_filter/query_filter.json
+msgid "Reference Report"
+msgstr ""
+
+#. Label of a Data field in DocType 'Document Review'
+#: tweaks/tweaks/doctype/document_review/document_review.json
+msgid "Reference Title"
+msgstr ""
+
+#: tweaks/tweaks/report/query_filters/query_filters.py:75
+msgid "Reference Type"
+msgstr ""
+
+#: tweaks/tweaks/report/query_filters/query_filters.js:7
+#: tweaks/tweaks/report/server_scripts/server_scripts.js:32
+msgid "Refresh"
+msgstr ""
+
+#: tweaks/public/js/tweaks/document_review.js:95
+msgid "Reject"
+msgstr ""
+
+#: tweaks/utils/document_review.py:455
+msgid "Rejected"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Relayed"
+msgstr ""
+
+#. Option for the 'Type' (Select) field in DocType 'AC Resource'
+#. Label of a Link field in DocType 'AC Resource'
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+msgid "Report"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.py:28
+msgid "Report is required"
+msgstr ""
+
+#. Label of a Link field in DocType 'AC Rule'
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.json
+#: tweaks/tweaks/report/ac_permissions/ac_permissions.py:352
+msgid "Resource"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.py:47
+msgid "Resource Filter '{0}' is not valid for resource '{1}' because the resource's document type is '{2}' but the filter's reference doctype is '{3}'."
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.py:59
+msgid "Resource Filter '{0}' is not valid for resource '{1}' because the resource's report is '{2}' but the filter's reference report is '{3}'."
+msgstr ""
+
+#. Label of a Table field in DocType 'AC Rule'
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.json
+msgid "Resource Filters"
+msgstr ""
+
+#: tweaks/tweaks/report/ac_permissions/ac_permissions.py:331
+msgid "Resource Name"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_rule/ac_rule_utils.py:294
+msgid "Resource or (Type and Document Type/Report) is required"
+msgstr ""
+
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.js:46
+msgid "Restore Defaults"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Results"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.js:66
+msgid "Retry"
+msgstr ""
+
+#. Label of a Datetime field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Retry After"
+msgstr ""
+
+#. Label of a Int field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Retry Count"
+msgstr ""
+
+#. Label of a Int field in DocType 'Sync Job'
+#. Label of a Int field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Retry Delay"
+msgstr ""
+
+#. Label of a Text Editor field in DocType 'Document Review'
+#: tweaks/tweaks/doctype/document_review/document_review.json
+msgid "Review"
+msgstr ""
+
+#: tweaks/public/js/tweaks/document_review.js:86
+msgid "Review Comments"
+msgstr ""
+
+#. Label of a JSON field in DocType 'Document Review'
+#. Label of a Section Break field in DocType 'Document Review'
+#: tweaks/tweaks/doctype/document_review/document_review.json
+msgid "Review Data"
+msgstr ""
+
+#. Label of a Link field in DocType 'Document Review'
+#: tweaks/tweaks/doctype/document_review/document_review.json
+msgid "Review Rule"
+msgstr ""
+
+#: tweaks/public/js/tweaks/document_review.js:62
+msgid "Review approved"
+msgstr ""
+
+#: tweaks/public/js/tweaks/document_review.js:62
+msgid "Review rejected"
+msgstr ""
+
+#: tweaks/tweaks/report/role_permissions/role_permissions.js:17
+#: tweaks/tweaks/report/role_permissions/role_permissions.py:29
+msgid "Role"
+msgstr ""
+
+#. Name of a report
+#: tweaks/tweaks/report/role_permissions/role_permissions.json
+msgid "Role Permissions"
+msgstr ""
+
+#: tweaks/tweaks/report/ac_permissions/ac_permissions.py:358
+msgid "Rule Type"
+msgstr ""
+
+#. Option for the 'Type' (Select) field in DocType 'Query Filter'
+#: tweaks/tweaks/doctype/query_filter/query_filter.json
+#: tweaks/tweaks/report/ac_principal_query_filters/ac_principal_query_filters.py:85
+#: tweaks/tweaks/report/query_filters/query_filters.py:105
+msgid "SQL"
+msgstr ""
+
+#: tweaks/tweaks/doctype/query_filter/query_filter.js:17
+#: tweaks/tweaks/doctype/query_filter/query_filter.js:22
+msgid "SQL Preview"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/sunat_tipo_documento_identidad/sunat_tipo_documento_identidad.json
+msgid "SUNAT Tipo Documento Identidad"
+msgstr ""
+
+#. Name of a role
+#: tweaks/tweaks/doctype/sunat_tipo_documento_identidad/sunat_tipo_documento_identidad.json
+msgid "Sales Manager"
+msgstr ""
+
+#. Name of a role
+#: tweaks/tweaks/doctype/sunat_tipo_documento_identidad/sunat_tipo_documento_identidad.json
+msgid "Sales Master Manager"
+msgstr ""
+
+#. Name of a role
+#: tweaks/tweaks/doctype/sunat_tipo_documento_identidad/sunat_tipo_documento_identidad.json
+msgid "Sales User"
+msgstr ""
+
+#. Option for the 'Trigger Type' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Scheduler"
+msgstr ""
+
+#. Label of a Code field in DocType 'Document Review Rule'
+#: tweaks/tweaks/doctype/document_review_rule/document_review_rule.json
+#: tweaks/tweaks/report/server_scripts/server_scripts.js:78
+#: tweaks/tweaks/report/server_scripts/server_scripts.py:111
+msgid "Script"
+msgstr ""
+
+#: tweaks/tweaks/report/server_scripts/server_scripts.js:11
+#: tweaks/tweaks/report/server_scripts/server_scripts.py:67
+msgid "Script Type"
+msgstr ""
+
+#: tweaks/tweaks/report/server_scripts/server_scripts.js:69
+msgid "Script not found"
+msgstr ""
+
+#: tweaks/tweaks/report/server_scripts/server_scripts.js:74
+msgid "Script: {0}"
+msgstr ""
+
+#. Label of a Select field in DocType 'PERU API COM Console'
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.js:38
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.js:57
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.js:61
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.json
+msgid "Search"
+msgstr ""
+
+#: tweaks/custom/doctype/customer.js:35
+msgid "Search on SUNAT"
+msgstr ""
+
+#: tweaks/custom/doctype/customer.js:105
+msgid "Searching RUC/DNI on SUNAT..."
+msgstr ""
+
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.js:58
+msgid "Searching..."
+msgstr ""
+
+#: tweaks/public/js/tweaks/document_review.js:40
+msgid "See Pending Reviews"
+msgstr ""
+
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.js:41
+msgid "See Website"
+msgstr ""
+
+#. Option for the 'Managed Actions' (Select) field in DocType 'AC Resource'
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+msgid "Select"
+msgstr ""
+
+#. Label of a Data field in DocType 'Business Logic Category'
+#. Label of a Select field in DocType 'Document Review'
+#: tweaks/tweaks/doctype/business_logic_category/business_logic_category.json
+#: tweaks/tweaks/doctype/document_review/document_review.json
+msgid "Series"
+msgstr ""
+
+#. Name of a report
+#: tweaks/tweaks/report/server_scripts/server_scripts.json
+msgid "Server Scripts"
+msgstr ""
+
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.js:76
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log_list.js:35
+msgid "Settings"
+msgstr ""
+
+#: tweaks/tweaks/report/customizations/customizations.js:32
+msgid "Show System Generated"
+msgstr ""
+
+#: tweaks/tweaks/report/customizations/customizations.js:37
+msgid "Show UI Fields"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Skipped"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_action/ac_action_list.js:84
+msgid "Skipped {0} action(s) (already exist or error):"
+msgstr ""
+
+#. Label of a Link field in DocType 'Sync Job'
+#. Label of a Link field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Source DocType"
+msgstr ""
+
+#. Label of a Dynamic Link field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Source Document"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.js:11
+msgid "Start"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Started"
+msgstr ""
+
+#. Label of a Datetime field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Started At"
+msgstr ""
+
+#. Label of a Select field in DocType 'Business Logic'
+#. Label of a Select field in DocType 'PERU API COM Log'
+#. Label of a Select field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log.json
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/report/role_permissions/role_permissions.js:24
+#: tweaks/tweaks/report/role_permissions/role_permissions.py:48
+#: tweaks/tweaks/report/server_scripts/server_scripts.py:105
+msgid "Status"
+msgstr ""
+
+#. Name of a role
+#: tweaks/tweaks/doctype/sunat_tipo_documento_identidad/sunat_tipo_documento_identidad.json
+msgid "Stock Manager"
+msgstr ""
+
+#. Name of a role
+#: tweaks/tweaks/doctype/sunat_tipo_documento_identidad/sunat_tipo_documento_identidad.json
+msgid "Stock User"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'PERU API COM Log'
+#: tweaks/tweaks/doctype/open_observe_api/open_observe_api.js:13
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log.json
+msgid "Success"
+msgstr ""
+
+#. Name of a DocType
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Sync Job"
+msgstr ""
+
+#. Label of a Link field in DocType 'Sync Job'
+#. Name of a DocType
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Sync Job Type"
+msgstr ""
+
+#. Label of a Data field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Sync Job Type Name"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.js:49
+msgid "Sync job canceled"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.js:20
+msgid "Sync job module has not been created yet. Save the document to generate boilerplate files."
+msgstr ""
+
+#: tweaks/utils/sync_job.py:375
+msgid "Sync job module must have either execute() function (bypass mode) or update_target_doc() with get_target_document() or get_multiple_target_documents() (standard mode)"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.js:18
+msgid "Sync job queued"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.js:73
+msgid "Sync job queued for retry"
+msgstr ""
+
+#. Name of a role
+#: tweaks/tweaks/doctype/ac_action/ac_action.json
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.json
+#: tweaks/tweaks/doctype/ac_settings/ac_settings.json
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+#: tweaks/tweaks/doctype/business_logic_category/business_logic_category.json
+#: tweaks/tweaks/doctype/business_logic_link_action/business_logic_link_action.json
+#: tweaks/tweaks/doctype/doctype_group/doctype_group.json
+#: tweaks/tweaks/doctype/document_review/document_review.json
+#: tweaks/tweaks/doctype/document_review_rule/document_review_rule.json
+#: tweaks/tweaks/doctype/open_observe_api/open_observe_api.json
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.json
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.json
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log.json
+#: tweaks/tweaks/doctype/query_filter/query_filter.json
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "System Manager"
+msgstr ""
+
+#. Option for the 'Search' (Select) field in DocType 'PERU API COM Console'
+#: tweaks/tweaks/doctype/peru_api_com_console/peru_api_com_console.json
+msgid "TC"
+msgstr ""
+
+#. Label of a Data field in DocType 'PERU API COM'
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.json
+msgid "TC URL"
+msgstr ""
+
+#. Label of a Link field in DocType 'Sync Job'
+#. Label of a Link field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Target DocType"
+msgstr ""
+
+#. Label of a Dynamic Link field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Target Document"
+msgstr ""
+
+#. Description of the 'Updated Data' (JSON) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Target document state after sync"
+msgstr ""
+
+#. Description of the 'Current Data' (JSON) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Target document state before sync"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.py:482
+msgid "Target info must contain 'operation' key"
+msgstr ""
+
+#: tweaks/tweaks/doctype/open_observe_api/open_observe_api.js:7
+msgid "Test Connection"
+msgstr ""
+
+#: tweaks/utils/query_report.py:161
+msgid "The report you requested has been generated.<br><br>Click here to download:<br><a href='{0}'>{0}</a><br><br>This link will expire in {1} hours."
+msgstr ""
+
+#: tweaks/public/js/tweaks/document_review.js:34
+msgid "This document has {0} pending review(s). Please review before proceeding."
+msgstr ""
+
+#. Label of a Duration field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Time Taken"
+msgstr ""
+
+#. Description of the 'User Rule Match Cache TTL (minutes)' (Int) field in
+#. DocType 'AC Settings'
+#: tweaks/tweaks/doctype/ac_settings/ac_settings.json
+msgid "Time in minutes to cache user-rule matching results. Set to 0 to disable caching."
+msgstr ""
+
+#. Label of a Int field in DocType 'Sync Job'
+#. Label of a Int field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Timeout"
+msgstr ""
+
+#. Label of a Data field in DocType 'AC Resource'
+#. Label of a Data field in DocType 'AC Rule'
+#. Label of a Data field in DocType 'Business Logic'
+#. Label of a Data field in DocType 'Business Logic Link'
+#. Label of a Data field in DocType 'Document Review Rule'
+#. Label of a Data field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.json
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+#: tweaks/tweaks/doctype/business_logic_link/business_logic_link.json
+#: tweaks/tweaks/doctype/document_review_rule/document_review_rule.json
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/report/server_scripts/server_scripts.py:61
+msgid "Title"
+msgstr ""
+
+#. Label of a Password field in DocType 'PERU API COM'
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.json
+msgid "Token"
+msgstr ""
+
+#. Label of a Datetime field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Trigger Document Timestamp"
+msgstr ""
+
+#. Label of a Select field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Trigger Type"
+msgstr ""
+
+#. Label of a Link field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Triggered By DocType"
+msgstr ""
+
+#. Label of a Dynamic Link field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Triggered By Document"
+msgstr ""
+
+#. Name of a Workspace
+#: tweaks/tweaks/workspace/tweaks/tweaks.json
+msgid "Tweaks"
+msgstr ""
+
+#. Label of a Select field in DocType 'AC Resource'
+#. Label of a Select field in DocType 'AC Rule'
+#. Label of a Select field in DocType 'Query Filter'
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.json
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.json
+#: tweaks/tweaks/doctype/query_filter/query_filter.json
+#: tweaks/tweaks/report/query_filters/query_filters.py:93
+#: tweaks/tweaks/report/role_permissions/role_permissions.py:66
+msgid "Type"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.py:24
+msgid "Type is required"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.py:46
+msgid "Type, Document Type, or Report cannot be changed for a standard AC Resource"
+msgstr ""
+
+#. Label of a Data field in DocType 'Open Observe API'
+#: tweaks/tweaks/doctype/open_observe_api/open_observe_api.json
+msgid "URL"
+msgstr ""
+
+#: tweaks/utils/safe_exec.py:45
+msgid "Unsafe SQL query"
+msgstr ""
+
+#. Option for the 'Operation' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Update"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.js:197
+msgid "Update Actions"
+msgstr ""
+
+#. Label of a JSON field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Updated Data"
+msgstr ""
+
+#. Label of a Data field in DocType 'Open Observe API'
+#: tweaks/tweaks/doctype/open_observe_api/open_observe_api.json
+#: tweaks/tweaks/report/ac_permissions/ac_permissions.py:346
+#: tweaks/tweaks/report/ac_principal_query_filters/ac_principal_query_filters.py:47
+msgid "User"
+msgstr ""
+
+#: tweaks/tweaks/report/ac_permissions/ac_permissions.py:338
+#: tweaks/tweaks/report/ac_principal_query_filters/ac_principal_query_filters.py:53
+msgid "User ID"
+msgstr ""
+
+#. Label of a Int field in DocType 'AC Settings'
+#: tweaks/tweaks/doctype/ac_settings/ac_settings.json
+msgid "User Rule Match Cache TTL (minutes)"
+msgstr ""
+
+#. Label of a Date field in DocType 'AC Rule'
+#. Label of a Date field in DocType 'Business Logic'
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.json
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+msgid "Valid From"
+msgstr ""
+
+#. Label of a Date field in DocType 'Business Logic'
+#: tweaks/tweaks/doctype/business_logic/business_logic.json
+msgid "Valid To"
+msgstr ""
+
+#. Label of a Date field in DocType 'AC Rule'
+#: tweaks/tweaks/doctype/ac_rule/ac_rule.json
+msgid "Valid Upto"
+msgstr ""
+
+#. Label of a Check field in DocType 'Sync Job'
+#. Label of a Check field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Verbose Logging"
+msgstr ""
+
+#. Description of the 'Diff Summary' (JSON) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Version-format diff between current and updated data"
+msgstr ""
+
+#. Option for the 'Trigger Type' (Select) field in DocType 'Sync Job'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+msgid "Webhook"
+msgstr ""
+
+#. Label of a Data field in DocType 'PERU API COM'
+#: tweaks/tweaks/doctype/peru_api_com/peru_api_com.json
+msgid "Website URL"
+msgstr ""
+
+#. Description of the 'Verbose Logging' (Check) field in DocType 'Sync Job'
+#. Description of the 'Verbose Logging' (Check) field in DocType 'Sync Job
+#. Type'
+#: tweaks/tweaks/doctype/sync_job/sync_job.json
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "When disabled, current data and updated data fields will be cleared when sync job completes"
+msgstr ""
+
+#. Option for the 'Is Standard' (Select) field in DocType 'Sync Job Type'
+#: tweaks/tweaks/doctype/sync_job_type/sync_job_type.json
+msgid "Yes"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.py:38
+msgid "You are not allowed to create standard AC Resource"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_resource/ac_resource.py:70
+msgid "You are not allowed to delete standard AC Resource"
+msgstr ""
+
+#: tweaks/utils/query_report.py:31
+msgid "You can try changing the filters of your report."
+msgstr ""
+
+#: tweaks/utils/workflow.py:43
+msgid "You do not have permission to perform this workflow action"
+msgstr ""
+
+#: tweaks/utils/query_report.py:160
+msgid "Your exported report: {0}"
+msgstr ""
+
+#. Option for the 'Endpoint' (Select) field in DocType 'PERU API COM Log'
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log.json
+msgid "dni"
+msgstr ""
+
+#: tweaks/tweaks/doctype/ac_rule/ac_rule_utils.py:555
+msgid "docname and doctype are required"
+msgstr ""
+
+#. Option for the 'Endpoint' (Select) field in DocType 'PERU API COM Log'
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log.json
+msgid "ruc"
+msgstr ""
+
+#. Option for the 'Endpoint' (Select) field in DocType 'PERU API COM Log'
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log.json
+msgid "ruc_suc"
+msgstr ""
+
+#: tweaks/utils/sync_job.py:139
+msgid "sync_job_type is required"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.py:513
+msgid "target_document_name is required for {0} operation"
+msgstr ""
+
+#. Option for the 'Endpoint' (Select) field in DocType 'PERU API COM Log'
+#: tweaks/tweaks/doctype/peru_api_com_log/peru_api_com_log.json
+msgid "tc"
+msgstr ""
+
+#: tweaks/custom/doctype/customer.js:153
+msgid "{0} created successfully"
+msgstr ""
+
+#: tweaks/tweaks/doctype/sync_job/sync_job.py:873
+#: tweaks/tweaks/doctype/sync_job/sync_job.py:900
+msgid "{0} {1} not found"
+msgstr ""
+
