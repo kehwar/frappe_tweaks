@@ -30,6 +30,7 @@ from tweaks.tweaks.doctype.peru_api_com.peru_api_com import (
     get_tc,
 )
 from tweaks.utils.document_review import (
+    get_document_review_status,
     get_rules_for_doctype,
     submit_all_document_reviews,
     submit_document_review,
@@ -145,6 +146,7 @@ def safe_exec_globals(out):
                 get_rules_for_doctype=get_rules_for_doctype,
                 submit_document_review=submit_document_review,
                 submit_all_document_reviews=submit_all_document_reviews,
+                get_document_review_status=get_document_review_status,
             ),
         }
     )

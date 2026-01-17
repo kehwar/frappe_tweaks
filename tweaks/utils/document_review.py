@@ -345,6 +345,53 @@ def submit_all_document_reviews(doctype, docname, review=None, action="approve")
     return results
 
 
+@frappe.whitelist()
+def get_document_review_status(doctype, docname):
+    """
+    Get the review status for a document.
+
+    Args:
+        doctype: Reference document type
+        docname: Reference document name
+
+    Returns:
+        str: One of:
+            - "Approved": No pending reviews
+            - "Pending Review": Has pending reviews but user cannot approve any
+            - "Can Approve": User can approve some pending reviews
+            - "Can Submit": User can approve all pending reviews
+    """
+    filters = {
+        "reference_doctype": doctype,
+        "reference_name": docname,
+        "docstatus": 0,
+    }
+
+    # Get all pending reviews
+    all_pending = frappe.get_list(
+        "Document Review",
+        filters=filters,
+        pluck="name",
+    )
+
+    if not all_pending:
+        return "Approved"
+
+    # Check which reviews user can approve
+    can_approve = [
+        review_name
+        for review_name in all_pending
+        if frappe.has_permission("Document Review", doc=review_name, ptype="submit")
+    ]
+
+    if not can_approve:
+        return "Pending Review"
+    elif len(can_approve) == len(all_pending):
+        return "Can Submit"
+    else:
+        return "Can Approve"
+
+
 def add_document_review_bootinfo(bootinfo):
     """
     Add Document Review related data to bootinfo.
