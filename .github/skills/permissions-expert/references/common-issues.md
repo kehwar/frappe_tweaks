@@ -63,7 +63,7 @@ perms = frappe.permissions.get_doc_permissions(doc, user="user@example.com")
 print(f"Document permissions: {perms}")
 
 # Debug: Enable detailed permission logging
-result = frappe.has_permission("Your DocType", "read", doc, 
+result = frappe.has_permission("Your DocType", "read", doc,
                                 user="user@example.com", debug=True)
 # Check logs for details
 
@@ -101,11 +101,11 @@ def get_permission_query_conditions(user):
     # WRONG: returns None
     if some_condition:
         return None
-    
+
     # CORRECT: returns empty string for no restrictions
     if some_condition:
         return ""
-    
+
     return "your_condition"
 ```
 
@@ -123,7 +123,7 @@ def get_permission_query_conditions(user):
 ```python
 # Debug: Check write permission conditions
 from frappe.permissions import check_write_permission_query_conditions
-can_write = check_write_permission_query_conditions(doc, permtype="write")
+can_write = check_write_permission_query_conditions(doc, ptype="write")
 print(f"Can write: {can_write}")
 
 # Enable transaction debugging
@@ -131,6 +131,8 @@ frappe.db.rollback()  # Check if this is called unexpectedly
 
 # Fix: Review write_permission_query_conditions hook
 # Fix: Ensure conditions match the current state of document
+# Note: write_permission_query_conditions is automatically called
+# during has_permission() for write operations
 ```
 
 ## Issue 5: Virtual DocType Permission Issues
@@ -156,9 +158,9 @@ class YourVirtualDocType(Document):
         else:
             # Filter based on custom logic
             pass
-        
+
         return filtered_list
-    
+
     def has_permission(self, ptype="read", user=None):
         # Implement custom permission check
         return True  # or custom logic
@@ -210,7 +212,7 @@ def has_permission(doc, ptype, user):
     # ALWAYS check Administrator first
     if user == "Administrator":
         return True
-    
+
     # Your custom logic
     pass
 
@@ -242,7 +244,7 @@ print(f"Applied conditions: {conditions}")
 def get_permission_query_conditions(user):
     if user == "Administrator":
         return ""
-    
+
     # Add your filtering logic
     user_company = frappe.db.get_value("User", user, "company")
     return f"`tabYour DocType`.`company` = {frappe.db.escape(user_company)}"
@@ -322,7 +324,7 @@ print(f"User can access permlevels: {accessible_permlevels}")
 def get_permission_query_conditions(user):
     # SLOW - functions on indexed columns
     return "DATE(`tabDoc`.`creation`) = CURDATE()"
-    
+
     # FAST - direct indexed column comparison
     return f"`tabDoc`.`company` = {frappe.db.escape(user_company)}"
 

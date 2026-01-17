@@ -79,7 +79,7 @@ Frappe provides seven main hooks for extending permission logic:
 def has_permission(doc, ptype=None, user=None, debug=False):
     """
     Returns:
-        bool or None: 
+        bool or None:
             - True: Explicitly grant permission
             - False: Explicitly deny permission
             - None: No opinion, continue with other checks
@@ -123,8 +123,13 @@ def get_permission_query_conditions(user=None, doctype=None):
 
 **Signature**:
 ```python
-def get_write_permission_query_conditions(user=None, doctype=None, permtype="write"):
+def get_write_permission_query_conditions(user=None, doctype=None, ptype="write"):
     """
+    Return SQL WHERE conditions to validate written documents.
+
+    This is automatically called during has_permission() checks
+    for write/create/submit/cancel/delete operations.
+
     Checked AFTER database write but BEFORE commit.
     If validation fails, transaction is rolled back.
     """
@@ -247,7 +252,7 @@ Permission levels provide field-level access control:
 1. **Optimize SQL Conditions**: Use indexed columns in WHERE clauses
 2. **Cache User Data**: Cache frequently accessed user properties
 3. **Minimize Hook Complexity**: Keep permission logic simple and fast
-4. **Use Appropriate Hooks**: 
+4. **Use Appropriate Hooks**:
    - Use `permission_query_conditions` for list filtering
    - Use `has_permission` for complex document-specific logic
 

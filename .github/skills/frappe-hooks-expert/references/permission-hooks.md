@@ -23,7 +23,7 @@ def has_permission(doc, ptype=None, user=None, debug=False):
         ptype: Permission type ("read", "write", "create", etc.)
         user: User email (defaults to current user)
         debug: Enable debug logging
-    
+
     Returns:
         bool or None:
             True - Explicitly grant permission
@@ -38,17 +38,17 @@ def has_permission(doc, ptype=None, user=None, debug=False):
     # Owner can always access
     if doc.owner == user:
         return True
-    
+
     # Manager can access all
     if "Manager" in frappe.get_roles(user):
         return True
-    
+
     # Department members can read
     if ptype == "read":
         user_dept = frappe.db.get_value("User", user, "department")
         if doc.department == user_dept:
             return True
-    
+
     # No opinion for other cases
     return None
 ```
@@ -78,15 +78,15 @@ def get_permission_query_conditions(user=None, doctype=None):
 def get_permission_query_conditions(user=None, doctype=None):
     if not user:
         user = frappe.session.user
-    
+
     # Administrator sees everything
     if user == "Administrator":
         return ""
-    
+
     # Manager sees all
     if "Manager" in frappe.get_roles(user):
         return ""
-    
+
     # Others see only their department
     user_dept = frappe.db.get_value("User", user, "department")
     return f"`tabDocType Name`.department = {frappe.db.escape(user_dept)}"
@@ -113,16 +113,19 @@ write_permission_query_conditions = {
 
 **Use for:** Validating that saved documents meet certain conditions.
 
+**How it works:** Automatically called during `has_permission()` checks for write/create/submit/cancel/delete operations.
+
 **Example:**
 ```python
-def get_write_permission_query_conditions(user=None, doctype=None, permtype="write"):
+def get_write_permission_query_conditions(user=None, doctype=None, ptype="write"):
     """
+    Automatically checked during has_permission() for write operations.
     Checked AFTER write but BEFORE commit.
     If validation fails, transaction is rolled back.
     """
     if not user:
         user = frappe.session.user
-    
+
     # Can only edit documents in their region
     user_region = frappe.db.get_value("User", user, "region")
     return f"`tabDocType Name`.region = {frappe.db.escape(user_region)}"
@@ -152,20 +155,20 @@ def has_website_permission(doc, ptype=None, user=None, debug=False):
 def has_website_permission(doc, ptype=None, user=None, debug=False):
     if not user:
         user = frappe.session.user
-    
+
     # Guest can see published content
     if user == "Guest":
         return doc.get("published") == 1
-    
+
     # Owner can always see
     if doc.owner == user:
         return True
-    
+
     # Customer can see their orders
     customer = frappe.db.get_value("User", user, "customer")
     if doc.customer == customer:
         return True
-    
+
     return False
 ```
 
@@ -189,7 +192,7 @@ def filter_transitions(doc, transitions, workflow):
         doc: Document instance
         transitions: List of available transition dicts
         workflow: Workflow document
-    
+
     Returns:
         List of filtered transitions or None (no filtering)
     """
@@ -208,7 +211,7 @@ def filter_transitions(doc, transitions, workflow):
                 filtered.append(transition)
         else:
             filtered.append(transition)
-    
+
     return filtered
 ```
 
@@ -230,7 +233,7 @@ def has_action_permission(user, transition, doc):
         user: User email
         transition: Transition dict
         doc: Document instance
-    
+
     Returns:
         bool: True if user should receive action, False otherwise
     """
@@ -245,12 +248,12 @@ def has_action_permission(user, transition, doc):
         doc_owner = doc.owner
         owner_manager = frappe.db.get_value("User", doc_owner, "reports_to")
         return user == owner_manager
-    
+
     # Region-based routing
     if transition.action == "Regional Approval":
         user_region = frappe.db.get_value("User", user, "region")
         return doc.region == user_region
-    
+
     return True
 ```
 
@@ -270,7 +273,7 @@ def get_workflow_globals(current_globals):
     """
     Args:
         current_globals: Dict of currently available globals
-    
+
     Returns:
         dict: Additional globals to make available in workflow conditions
     """
@@ -294,7 +297,7 @@ def get_workflow_globals(current_globals):
     def get_approval_limit(user):
         """Helper to get user's approval limit"""
         return frappe.db.get_value("User", user, "approval_limit") or 0
-    
+
     return {
         "get_approval_limit": get_approval_limit,
     }
@@ -311,11 +314,11 @@ def get_workflow_globals(current_globals):
         from datetime import datetime
         now = datetime.now()
         return 9 <= now.hour < 17 and now.weekday() < 5
-    
+
     def get_regional_manager(region):
         """Get manager for a region"""
         return frappe.db.get_value("Region", region, "manager")
-    
+
     return {
         "is_business_hours": is_business_hours,
         "get_regional_manager": get_regional_manager,
@@ -334,7 +337,7 @@ def get_workflow_globals(current_globals):
     if not config:
         config = frappe.get_single("Workflow Settings").as_dict()
         frappe.cache().set_value("workflow_config", config)
-    
+
     return {
         "workflow_config": config,
     }
@@ -343,7 +346,7 @@ def get_workflow_globals(current_globals):
 # doc.total_amount >= workflow_config.min_amount_for_approval
 ```
 
-**Security Note:** 
+**Security Note:**
 - Functions added via this hook are available in workflow transition conditions
 - Use safe_eval internally; avoid exposing dangerous operations
 - Validate inputs in your functions to prevent misuse
@@ -364,22 +367,22 @@ has_permission = {
 # permissions.py
 def project_query(user=None, doctype=None):
     user = user or frappe.session.user
-    
+
     if "Project Manager" in frappe.get_roles(user):
         return ""  # See all
-    
+
     dept = frappe.db.get_value("User", user, "department")
     return f"`tabProject`.department = {frappe.db.escape(dept)}"
 
 def project_permission(doc, ptype=None, user=None, debug=False):
     user = user or frappe.session.user
-    
+
     # Team members can read
     if ptype == "read":
         team_members = [d.user for d in doc.team]
         if user in team_members:
             return True
-    
+
     return None
 ```
 
@@ -388,11 +391,11 @@ def project_permission(doc, ptype=None, user=None, debug=False):
 ```python
 def has_permission(doc, ptype=None, user=None, debug=False):
     user = user or frappe.session.user
-    
+
     # Owner can access
     if doc.owner == user:
         return True
-    
+
     # Check reporting hierarchy
     current_user = user
     for i in range(5):  # Max 5 levels
@@ -402,7 +405,7 @@ def has_permission(doc, ptype=None, user=None, debug=False):
         if manager == doc.owner:
             return True  # User reports to document owner
         current_user = manager
-    
+
     return None
 ```
 
@@ -411,10 +414,10 @@ def has_permission(doc, ptype=None, user=None, debug=False):
 ```python
 def get_permission_query_conditions(user=None, doctype=None):
     from frappe.utils import now_datetime, add_days
-    
+
     # Show only documents from last 30 days
     cutoff_date = add_days(now_datetime(), -30)
-    
+
     return f"`tabDocType Name`.creation >= '{cutoff_date}'"
 ```
 
@@ -423,13 +426,13 @@ def get_permission_query_conditions(user=None, doctype=None):
 ```python
 def get_write_permission_query_conditions(user=None, doctype=None, permtype="write"):
     user = user or frappe.session.user
-    
+
     # Can only edit draft documents
     conditions = ["`tabDocType Name`.status = 'Draft'"]
-    
+
     # Or own documents
     conditions.append(f"`tabDocType Name`.owner = {frappe.db.escape(user)}")
-    
+
     return " OR ".join(f"({c})" for c in conditions)
 ```
 
@@ -438,22 +441,22 @@ def get_write_permission_query_conditions(user=None, doctype=None, permtype="wri
 ```python
 def has_website_permission(doc, ptype=None, user=None, debug=False):
     user = user or frappe.session.user
-    
+
     if user == "Guest":
         return False
-    
+
     # Get customer linked to user
     customer = frappe.db.get_value("Contact", {"user": user}, "customer")
-    
+
     # Check if document is for this customer
     if doc.get("customer") == customer:
         return True
-    
+
     # Check through related documents
     if doc.get("order_id"):
         order_customer = frappe.db.get_value("Sales Order", doc.order_id, "customer")
         return order_customer == customer
-    
+
     return False
 ```
 
@@ -462,16 +465,16 @@ def has_website_permission(doc, ptype=None, user=None, debug=False):
 ```python
 def get_permission_query_conditions(user=None, doctype=None):
     user = user or frappe.session.user
-    
+
     # Administrator sees all tenants
     if user == "Administrator":
         return ""
-    
+
     # Get user's tenant
     tenant = frappe.db.get_value("User", user, "tenant")
     if not tenant:
         return "1=0"  # No access
-    
+
     return f"`tabDocType Name`.tenant = {frappe.db.escape(tenant)}"
 ```
 
@@ -492,15 +495,15 @@ def get_permission_query_conditions(user=None, doctype=None):
 ```python
 def get_permission_query_conditions(user=None, doctype=None):
     conditions = []
-    
+
     # Condition 1: User's company
     company = frappe.db.get_value("User", user, "company")
     conditions.append(f"company = {frappe.db.escape(company)}")
-    
+
     # Condition 2: User's department
     dept = frappe.db.get_value("User", user, "department")
     conditions.append(f"department = {frappe.db.escape(dept)}")
-    
+
     # Combine with AND
     return " AND ".join(f"({c})" for c in conditions)
 ```
@@ -510,15 +513,15 @@ def get_permission_query_conditions(user=None, doctype=None):
 ```python
 def get_permission_query_conditions(user=None, doctype=None):
     roles = frappe.get_roles(user)
-    
+
     if "CEO" in roles:
         return ""  # See all
-    
+
     if "Manager" in roles:
         # See department documents
         dept = frappe.db.get_value("User", user, "department")
         return f"department = {frappe.db.escape(dept)}"
-    
+
     # Default: own documents only
     return f"owner = {frappe.db.escape(user)}"
 ```

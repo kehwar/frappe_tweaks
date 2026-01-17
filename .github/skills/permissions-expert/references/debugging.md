@@ -223,7 +223,7 @@ perms = get_doc_permissions(doc, user="user@example.com", debug=True)
 print(f"Document permissions: {perms}")
 
 # Check has_permission with debug
-result = frappe.has_permission("Sales Order", "read", doc, 
+result = frappe.has_permission("Sales Order", "read", doc,
                                 user="user@example.com", debug=True)
 print(f"Has permission: {result}")
 
@@ -259,7 +259,7 @@ frappe.reload_doctype("Your DocType")
 from frappe.permissions import check_write_permission_query_conditions
 
 doc = frappe.get_doc("Sales Order", "SO-0001")
-can_write = check_write_permission_query_conditions(doc, permtype="write", 
+can_write = check_write_permission_query_conditions(doc, ptype="write",
                                                      user="user@example.com")
 print(f"Can write: {can_write}")
 
