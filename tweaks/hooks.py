@@ -86,6 +86,7 @@ scheduler_events = {
 ignore_links_on_delete = [
     "Sync Job",
     "Sync Job Type",
+    "Document Review",
 ]
 
 
