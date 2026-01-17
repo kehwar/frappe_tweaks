@@ -55,9 +55,9 @@ Ask these questions:
    - **Disabled**: Leave unchecked (check to temporarily disable)
 4. Configure auto-assignment (optional):
    - In **Auto-Assignment** section, add users to **Assign Users** table
-   - Set **Ignore Permissions** based on your needs:
-     - Unchecked: Only users with submit permission will be assigned
-     - Checked: All listed users will be assigned regardless of permissions
+   - For each user, set **Ignore Permissions** checkbox:
+     - Unchecked: User will only be assigned if they have submit permission
+     - Checked: User will be assigned regardless of permissions
 
 ### Via Code
 
@@ -69,10 +69,9 @@ rule = frappe.get_doc({
     "mandatory": 1,
     "disabled": 0,
     "users": [
-        {"user": "approver1@example.com"},
-        {"user": "approver2@example.com"}
+        {"user": "approver1@example.com", "ignore_permissions": 0},  # Check permissions
+        {"user": "approver2@example.com", "ignore_permissions": 1}   # Ignore permissions
     ],
-    "ignore_permissions": 0,  # Only assign to users with submit permission
     "script": """
 # Script goes here
 """

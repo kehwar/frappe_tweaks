@@ -93,7 +93,7 @@ def get_rules_for_doctype(doctype):
     rules = frappe.get_all(
         "Document Review Rule",
         filters={"reference_doctype": doctype, "disabled": 0},
-        fields=["name", "title", "script", "mandatory", "ignore_permissions"],
+        fields=["name", "title", "script", "mandatory"],
     )
 
     frappe.cache.set_value(cache_key, rules)
@@ -296,7 +296,7 @@ def _assign_users_to_review(review_name, rule):
 
     Args:
         review_name: Name of the Document Review document
-        rule: Document Review Rule dict with 'name' and 'ignore_permissions' keys
+        rule: Document Review Rule dict with 'name' key
     """
     # Get the full rule document to access the users child table
     rule_doc = frappe.get_doc("Document Review Rule", rule["name"])
@@ -323,15 +323,15 @@ def _assign_users_to_review(review_name, rule):
     users_to_assign = []
     for user_row in rule_doc.users:
         user = user_row.user
-        # Check if we should filter by permissions
-        if not rule_doc.ignore_permissions:
+        # Check if we should filter by permissions (per-user setting)
+        if not user_row.ignore_permissions:
             # Check if user has submit permission on Document Review
             if frappe.has_permission(
                 "Document Review", ptype="submit", user=user, doc=review_doc
             ):
                 users_to_assign.append(user)
         else:
-            # Ignore permissions, assign to all listed users
+            # Ignore permissions for this user, assign directly
             users_to_assign.append(user)
 
     # Assign to each user

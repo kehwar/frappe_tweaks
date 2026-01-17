@@ -49,10 +49,9 @@ class TestDocumentReviewRule(FrappeTestCase):
                 "script": 'result = {"message": "Test review needed"}',
                 "mandatory": 0,
                 "users": [
-                    {"user": self.test_user_1},
-                    {"user": self.test_user_2},
+                    {"user": self.test_user_1, "ignore_permissions": 1},
+                    {"user": self.test_user_2, "ignore_permissions": 1},
                 ],
-                "ignore_permissions": 1,
             }
         )
         rule.insert(ignore_permissions=True)
@@ -114,8 +113,8 @@ class TestDocumentReviewRule(FrappeTestCase):
         frappe.delete_doc("Document Review Rule", rule.name, force=1)
 
     def test_ignore_permissions_flag(self):
-        """Test that ignore_permissions flag controls permission checking"""
-        # Create a rule with ignore_permissions = 0
+        """Test that ignore_permissions flag controls permission checking per user"""
+        # Create a rule with per-user ignore_permissions settings
         rule = frappe.get_doc(
             {
                 "doctype": "Document Review Rule",
@@ -124,9 +123,8 @@ class TestDocumentReviewRule(FrappeTestCase):
                 "script": 'result = {"message": "Test review needed"}',
                 "mandatory": 0,
                 "users": [
-                    {"user": self.test_user_1},
+                    {"user": self.test_user_1, "ignore_permissions": 0},  # Should check permissions
                 ],
-                "ignore_permissions": 0,  # Should check permissions
             }
         )
         rule.insert(ignore_permissions=True)

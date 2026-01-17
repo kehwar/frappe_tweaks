@@ -14,7 +14,6 @@
   "section_break_assignment",
   "assignment_note",
   "users",
-  "ignore_permissions",
   "section_break_script",
   "script",
   "script_help"
@@ -77,20 +76,13 @@
   {
    "fieldname": "assignment_note",
    "fieldtype": "HTML",
-   "options": "<div class=\"form-message blue\">\n<strong>Why use this instead of Assignment Rules?</strong>\n<ol>\n<li><strong>Permission-aware:</strong> Can filter users based on submit permission (Assignment Rules always ignore permissions)</li>\n<li><strong>Multiple assignments:</strong> Can assign to multiple users per document (Assignment Rules assign only one user)</li>\n<li><strong>Context-specific:</strong> Assignments are tied to specific review rules and their evaluation context</li>\n</ol>\n</div>"
+   "options": "<div class=\"form-message blue\">\n<strong>Why use this instead of Assignment Rules?</strong>\n<ol>\n<li><strong>Permission-aware:</strong> Each user can have individual permission filtering (Assignment Rules always ignore permissions)</li>\n<li><strong>Multiple assignments:</strong> Can assign to multiple users per document (Assignment Rules assign only one user)</li>\n<li><strong>Context-specific:</strong> Assignments are tied to specific review rules and their evaluation context</li>\n</ol>\n<p><strong>Note:</strong> Each user in the table has an \"Ignore Permissions\" checkbox. When unchecked, the user will only be assigned if they have submit permission on Document Review.</p>\n</div>"
   },
   {
    "fieldname": "users",
    "fieldtype": "Table",
    "label": "Assign Users",
    "options": "Document Review User"
-  },
-  {
-   "default": "0",
-   "fieldname": "ignore_permissions",
-   "fieldtype": "Check",
-   "label": "Ignore Permissions",
-   "description": "If unchecked, only users with submit permission on Document Review will be assigned"
   }
  ],
  "index_web_pages_for_search": 1,

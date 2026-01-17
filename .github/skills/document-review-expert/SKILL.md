@@ -36,8 +36,7 @@ A rule that defines when a document needs review via a Python script. The script
 - `script`: Python code to evaluate (see [Script Writing Guide](references/script-examples.md))
 - `mandatory`: If checked, blocks submission until review is approved
 - `disabled`: Temporarily disable the rule
-- `users`: Child table listing users to auto-assign to created reviews
-- `ignore_permissions`: If checked, assigns to all listed users regardless of permissions
+- `users`: Child table listing users to auto-assign to created reviews (each user has an `ignore_permissions` checkbox)
 
 ### Document Review
 
@@ -76,7 +75,7 @@ Rules are evaluated automatically via hooks:
    - **Script**: Python code that returns `None` or review dict
    - **Mandatory**: Check if submission should be blocked
    - **Assign Users** (optional): List users who should be auto-assigned to reviews
-   - **Ignore Permissions**: Check to assign all listed users regardless of permissions
+     - Each user row has an **Ignore Permissions** checkbox for per-user control
 
 Example script:
 ```python
@@ -98,20 +97,20 @@ if doc.grand_total > 100000:
 You can configure a Document Review Rule to automatically assign specific users when a review is created:
 
 1. In the **Auto-Assignment** section, add users to the **Assign Users** table
-2. Set **Ignore Permissions**:
-   - **Unchecked** (default): Only users with submit permission on Document Review will be assigned
-   - **Checked**: All listed users will be assigned, regardless of permissions
+2. For each user, set **Ignore Permissions** checkbox:
+   - **Unchecked** (default): User will only be assigned if they have submit permission on Document Review
+   - **Checked**: User will be assigned regardless of permissions
 
 **Why use this instead of Assignment Rules?**
 
-1. **Permission-aware**: Can filter users based on submit permission (Assignment Rules always ignore permissions)
+1. **Permission-aware**: Can filter users based on submit permission on a per-user basis (Assignment Rules always ignore permissions)
 2. **Multiple assignments**: Can assign to multiple users per document (Assignment Rules assign only one user)
 3. **Context-specific**: Assignments are tied to specific review rules and their evaluation context
 
 **How it works:**
 
 - When a Document Review is created or updated, the system checks if the rule has users configured
-- If `ignore_permissions` is unchecked, it filters the user list to only include users with submit permission
+- For each user, if their `ignore_permissions` checkbox is unchecked, the system checks if they have submit permission
 - Each eligible user is assigned to the Document Review using Frappe's assignment system
 - Users will see the assignment in their ToDo list and receive notifications according to their preferences
 

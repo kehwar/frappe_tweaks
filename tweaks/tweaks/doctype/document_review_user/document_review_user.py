@@ -14,6 +14,7 @@ class DocumentReviewUser(Document):
     if TYPE_CHECKING:
         from frappe.types import DF
 
+        ignore_permissions: DF.Check
         user: DF.Link
     # end: auto-generated types
 
