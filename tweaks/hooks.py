@@ -76,6 +76,8 @@ has_workflow_action_permission = [
     "tweaks.utils.workflow.has_workflow_action_permission_via_ac_rules"
 ]
 
+workflow_safe_eval_globals = ["tweaks.utils.safe_exec.workflow_safe_eval_globals"]
+
 # Scheduled Tasks
 scheduler_events = {
     "cron": {

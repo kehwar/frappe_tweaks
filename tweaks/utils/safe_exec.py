@@ -155,3 +155,14 @@ def safe_exec_globals(out):
 def safe_eval_globals(out):
 
     return safe_exec.get_safe_globals()
+
+
+def workflow_safe_eval_globals(out):
+    """
+    Extend workflow safe globals with document review functions.
+    This allows using document review functions in workflow transition conditions.
+    """
+    out["document_review"] = NamespaceDict(
+        get_document_review_status=get_document_review_status,
+    )
+    return out
