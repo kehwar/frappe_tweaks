@@ -130,7 +130,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-16 17:09:56.000992",
+ "modified": "2026-01-17 00:07:48.740086",
  "modified_by": "sistemas2@soldamundoperu.com",
  "module": "Tweaks",
  "name": "Document Review",
@@ -148,6 +148,19 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
    "share": 1,
    "submit": 1,
    "write": 1
