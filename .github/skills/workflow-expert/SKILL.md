@@ -130,7 +130,7 @@ Before showing available transitions:
 
 ## Extension Hooks
 
-Frappe provides four main hooks for extending workflow behavior:
+Frappe provides five main hooks for extending workflow behavior:
 
 ### 1. `before_transition` - Controller Method
 
@@ -228,6 +228,31 @@ def has_workflow_action_permission(user, transition, doc):
 - Amount-based approval limits
 - Department/region-based routing
 
+### 5. `workflow_safe_eval_globals` - Hook
+
+**Purpose**: Extend available globals in workflow transition conditions
+
+**Location**: Registered in `hooks.py`
+
+**Signature**:
+```python
+def get_workflow_globals(current_globals):
+    """
+    Add custom functions or data for workflow conditions.
+    
+    Args:
+        current_globals: Dict of currently available globals
+        
+    Returns:
+        dict: Additional globals to make available
+    """
+```
+
+**Use Cases**:
+- Add helper functions for approval limits
+- Provide business logic functions for conditions
+- Expose configuration data to transition conditions
+
 **When to read:** See [references/workflow-hooks.md](references/workflow-hooks.md) for detailed examples of all workflow hooks.
 
 ## Workflow States and Transitions
@@ -272,6 +297,8 @@ doc.creation > frappe.utils.add_to_date(
 - `frappe.utils.get_datetime`
 - `frappe.utils.add_to_date`
 - `frappe.utils.now`
+
+**Extending available globals:** Apps can use the `workflow_safe_eval_globals` hook to add custom functions or data to workflow transition conditions. See [Frappe Hooks documentation](https://frappeframework.com/docs/user/en/basics/hooks) for details.
 
 **When to read:** See [references/workflow-states-transitions.md](references/workflow-states-transitions.md) for detailed state and transition configuration.
 

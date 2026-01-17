@@ -4,12 +4,13 @@ This document details all workflow extension hooks with comprehensive examples.
 
 ## Overview
 
-Frappe provides four main hooks for extending workflow behavior:
+Frappe provides five main hooks for extending workflow behavior:
 
 1. **before_transition**: Controller method called before state change
 2. **after_transition**: Controller method called after state change
 3. **filter_workflow_transitions**: Hook to customize available transitions
 4. **has_workflow_action_permission**: Hook to control who gets workflow actions
+5. **workflow_safe_eval_globals**: Hook to extend available globals in transition conditions
 
 ## 1. before_transition Hook
 
@@ -717,6 +718,293 @@ def has_workflow_action_permission(user, transition, doc):
     
     return not on_leave
 ```
+
+## 5. workflow_safe_eval_globals Hook
+
+### Purpose
+
+Extend the available globals (functions and data) in workflow transition conditions. By default, workflow conditions have limited access to functions for security. This hook allows apps to add custom functions or data that can be used in transition condition expressions.
+
+### Location
+
+Registered in `hooks.py`.
+
+### Signature
+
+```python
+def get_workflow_globals(current_globals):
+    """
+    Extend available globals for workflow transition conditions.
+    
+    Args:
+        current_globals (dict): Currently available globals including:
+            - frappe.db.get_value
+            - frappe.db.get_list
+            - frappe.session
+            - frappe.utils.now_datetime
+            - frappe.utils.add_to_date
+            - frappe.utils.get_datetime
+            - frappe.utils.now
+    
+    Returns:
+        dict: Additional globals to make available in workflow conditions
+    """
+```
+
+### Registration
+
+```python
+# In hooks.py
+workflow_safe_eval_globals = [
+    "my_app.workflow.get_workflow_globals",
+]
+```
+
+### Default Available Globals
+
+Without any hooks, workflow transition conditions have access to:
+- `doc` - The document as a dict
+- `frappe.db.get_value` - Fetch single value from database
+- `frappe.db.get_list` - Fetch list of records
+- `frappe.session` - Current session object (user, roles, etc.)
+- `frappe.utils.now_datetime` - Current datetime
+- `frappe.utils.add_to_date` - Add/subtract date intervals
+- `frappe.utils.get_datetime` - Parse datetime string
+- `frappe.utils.now` - Current timestamp
+
+### Examples
+
+#### Example 1: Add Helper Function for Approval Limits
+
+```python
+# my_app/workflow.py
+def get_workflow_globals(current_globals):
+    """Add approval limit checker."""
+    
+    def get_approval_limit(user):
+        """Get user's approval limit from their role or user settings."""
+        # Check user-specific limit first
+        limit = frappe.db.get_value("User", user, "approval_limit")
+        if limit:
+            return limit
+        
+        # Otherwise get from highest role
+        roles = frappe.get_roles(user)
+        limits = frappe.db.get_all(
+            "Role",
+            filters={"name": ["in", roles]},
+            fields=["approval_limit"],
+            order_by="approval_limit desc",
+            limit=1
+        )
+        
+        return limits[0].approval_limit if limits else 0
+    
+    return {
+        "get_approval_limit": get_approval_limit,
+    }
+
+# In Workflow Transition condition field:
+# doc.grand_total <= get_approval_limit(frappe.session.user)
+```
+
+#### Example 2: Add Business Logic Functions
+
+```python
+# my_app/workflow.py
+def get_workflow_globals(current_globals):
+    """Add business-specific helper functions."""
+    
+    def is_business_hours():
+        """Check if current time is during business hours (9 AM - 5 PM, Mon-Fri)."""
+        from datetime import datetime
+        now = datetime.now()
+        return 9 <= now.hour < 17 and now.weekday() < 5
+    
+    def get_regional_manager(region):
+        """Get the manager assigned to a specific region."""
+        return frappe.db.get_value("Region", region, "manager")
+    
+    def has_sufficient_stock(item_code, qty):
+        """Check if item has sufficient stock across all warehouses."""
+        total_stock = frappe.db.get_value(
+            "Bin",
+            {"item_code": item_code},
+            "sum(actual_qty)"
+        ) or 0
+        return total_stock >= qty
+    
+    return {
+        "is_business_hours": is_business_hours,
+        "get_regional_manager": get_regional_manager,
+        "has_sufficient_stock": has_sufficient_stock,
+    }
+
+# In Workflow Transition conditions:
+# Urgent approvals only during business hours:
+# doc.priority == "Urgent" and is_business_hours()
+
+# Route to regional manager:
+# doc.assigned_to == get_regional_manager(doc.region)
+
+# Approve only if stock available:
+# has_sufficient_stock(doc.item_code, doc.qty)
+```
+
+#### Example 3: Add Configuration Data
+
+```python
+# my_app/workflow.py
+def get_workflow_globals(current_globals):
+    """Add cached configuration data."""
+    
+    # Load workflow configuration (cached for performance)
+    config = frappe.cache().get_value("workflow_config")
+    if not config:
+        workflow_settings = frappe.get_single("Workflow Settings")
+        config = {
+            "min_amount_for_approval": workflow_settings.min_amount_for_approval,
+            "max_auto_approve_amount": workflow_settings.max_auto_approve_amount,
+            "require_dual_approval_above": workflow_settings.require_dual_approval_above,
+            "approval_timeout_hours": workflow_settings.approval_timeout_hours,
+        }
+        frappe.cache().set_value("workflow_config", config, expires_in_sec=3600)
+    
+    return {
+        "workflow_config": config,
+    }
+
+# In Workflow Transition conditions:
+# doc.grand_total >= workflow_config["min_amount_for_approval"]
+# doc.grand_total <= workflow_config["max_auto_approve_amount"]
+```
+
+#### Example 4: Department and Hierarchy Checks
+
+```python
+# my_app/workflow.py
+def get_workflow_globals(current_globals):
+    """Add organization hierarchy helpers."""
+    
+    def is_users_department(dept):
+        """Check if department belongs to current user."""
+        user_dept = frappe.db.get_value("User", frappe.session.user, "department")
+        return dept == user_dept
+    
+    def is_subordinate_department(dept):
+        """Check if department reports to user's department."""
+        user_dept = frappe.db.get_value("User", frappe.session.user, "department")
+        parent_dept = frappe.db.get_value("Department", dept, "parent_department")
+        return parent_dept == user_dept
+    
+    def get_employee_level(employee):
+        """Get employee's level in organization hierarchy."""
+        return frappe.db.get_value("Employee", employee, "grade_level") or 0
+    
+    return {
+        "is_users_department": is_users_department,
+        "is_subordinate_department": is_subordinate_department,
+        "get_employee_level": get_employee_level,
+    }
+
+# In Workflow Transition conditions:
+# Show transition only for user's department:
+# is_users_department(doc.department)
+
+# Require higher approval for senior employees:
+# get_employee_level(doc.employee) >= 5
+```
+
+#### Example 5: Date and Time Calculations
+
+```python
+# my_app/workflow.py
+def get_workflow_globals(current_globals):
+    """Add date/time helper functions."""
+    
+    def is_weekend():
+        """Check if today is weekend."""
+        from datetime import datetime
+        return datetime.now().weekday() >= 5
+    
+    def days_since_creation(doc):
+        """Calculate days since document creation."""
+        from frappe.utils import date_diff, nowdate
+        return date_diff(nowdate(), doc.get("creation"))
+    
+    def is_month_end():
+        """Check if today is last 3 days of month."""
+        from datetime import datetime
+        import calendar
+        now = datetime.now()
+        last_day = calendar.monthrange(now.year, now.month)[1]
+        return now.day >= (last_day - 2)
+    
+    return {
+        "is_weekend": is_weekend,
+        "days_since_creation": days_since_creation,
+        "is_month_end": is_month_end,
+    }
+
+# In Workflow Transition conditions:
+# Escalate if pending for too long:
+# days_since_creation(doc) > 7
+
+# Different routing for month-end:
+# is_month_end() and doc.affects_closing == 1
+```
+
+### Security Considerations
+
+1. **Safe Evaluation**: All functions run in a safe evaluation context (safe_eval)
+2. **Input Validation**: Validate inputs in your functions to prevent misuse
+3. **No Destructive Operations**: Don't allow functions that modify data
+4. **Limited Scope**: Only add what's needed for conditions, not general-purpose functions
+5. **Performance**: Keep functions fast; they run during transition evaluation
+6. **Error Handling**: Handle errors gracefully to avoid breaking workflows
+
+### Best Practices
+
+1. **Keep Functions Pure**: Functions should return consistent results for same inputs
+2. **Cache Expensive Operations**: Use frappe.cache() for data that doesn't change often
+3. **Document Your Functions**: Add clear docstrings explaining what each function does
+4. **Test Thoroughly**: Test functions with various inputs and edge cases
+5. **Avoid Side Effects**: Functions shouldn't modify documents or database
+6. **Use Descriptive Names**: Make function names clear about what they check or return
+
+### Testing
+
+```python
+# test_workflow.py
+def test_workflow_globals():
+    """Test custom workflow globals."""
+    from my_app.workflow import get_workflow_globals
+    
+    # Get the globals
+    current_globals = {}
+    custom_globals = get_workflow_globals(current_globals)
+    
+    # Test approval limit function
+    assert "get_approval_limit" in custom_globals
+    limit = custom_globals["get_approval_limit"]("test@example.com")
+    assert isinstance(limit, (int, float))
+    
+    # Test business hours function
+    assert "is_business_hours" in custom_globals
+    result = custom_globals["is_business_hours"]()
+    assert isinstance(result, bool)
+```
+
+### Common Use Cases
+
+1. **Amount-Based Routing**: Different approvers based on amounts
+2. **Hierarchical Approvals**: Route based on org structure
+3. **Time-Based Logic**: Different behavior for urgent/time-sensitive requests
+4. **Stock/Inventory Checks**: Validate availability before approval
+5. **Configuration-Driven**: Use settings to control transition logic
+6. **Department/Region Routing**: Route to appropriate approvers
+7. **Holiday/Calendar Checks**: Special handling for holidays
+8. **Compliance Checks**: Ensure regulatory requirements are met
 
 ## Best Practices
 
