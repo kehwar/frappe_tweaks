@@ -327,12 +327,12 @@ def _assign_users_to_review(review_name, rule):
         # Check if we should filter by permissions (per-user setting)
         if not user_row.ignore_permissions:
             try:
-                # Check if user has submit permission on Document Review AND write permission on referenced doc
+                # Check if user has submit permission on Document Review AND read permission on referenced doc
                 has_review_permission = frappe.has_permission(
                     "Document Review", ptype="submit", user=user, doc=review_doc
                 )
                 has_ref_permission = frappe.has_permission(
-                    review_doc.reference_doctype, ptype="write", user=user, doc=ref_doc
+                    review_doc.reference_doctype, ptype="read", user=user, doc=ref_doc
                 )
                 if has_review_permission and has_ref_permission:
                     users_to_assign.append(user)
