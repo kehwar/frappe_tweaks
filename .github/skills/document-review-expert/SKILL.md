@@ -36,6 +36,7 @@ A rule that defines when a document needs review via a Python script. The script
 - `script`: Python code to evaluate (see [Script Writing Guide](references/script-examples.md))
 - `mandatory`: If checked, blocks submission until review is approved
 - `disabled`: Temporarily disable the rule
+- `users`: Child table listing users to auto-assign to created reviews (each user has an `ignore_permissions` checkbox)
 
 ### Document Review
 
@@ -73,6 +74,8 @@ Rules are evaluated automatically via hooks:
    - **Reference DocType**: Target DocType (e.g., "Sales Order")
    - **Script**: Python code that returns `None` or review dict
    - **Mandatory**: Check if submission should be blocked
+   - **Assign Users** (optional): List users who should be auto-assigned to reviews
+     - Each user row has an **Ignore Permissions** checkbox for per-user control
 
 Example script:
 ```python
@@ -88,6 +91,36 @@ if doc.grand_total > 100000:
 ```
 
 3. Save the rule - it takes effect immediately
+
+### Auto-Assignment of Reviewers
+
+You can configure a Document Review Rule to automatically assign specific users when a review is created:
+
+1. In the **Assign Users** table, add users who should be assigned
+2. For each user, set **Ignore Permissions** checkbox:
+   - **Unchecked** (default): User will only be assigned if they have:
+     - Submit permission on Document Review doctype
+     - Read permission on the referenced document
+   - **Checked**: User will be assigned regardless of permissions
+
+**Why use this instead of Assignment Rules?**
+
+1. **Permission-aware**: Can filter users based on dual permission checks on a per-user basis (Assignment Rules always ignore permissions)
+2. **Multiple assignments**: Can assign to multiple users per document (Assignment Rules assign only one user)
+3. **Context-specific**: Assignments are tied to specific review rules and their evaluation context
+4. **No notification spam**: Differential assignment logic only notifies new users, never re-notifies existing assignees
+5. **Personalized descriptions**: Each assignment uses the review message as the todo description
+
+**How it works:**
+
+- Assignments are created on the **referenced document** (e.g., Sales Order), not the Document Review
+- When multiple reviews exist for the same document, the system calculates the **union of users** from all pending reviews
+- **Differential logic** compares desired users with current assignments:
+  - **New users**: Assigned with personalized description from review message (notification sent)
+  - **Existing users**: No action taken (no notification)
+  - **Removed users**: Closed for submitter, cancelled for others
+- Users see the assignment in their ToDo list with the review message as description (e.g., "Price exceeds approval threshold")
+- On review submission, assignments are automatically recalculated based on remaining pending reviews
 
 ### Reviewing a Document
 

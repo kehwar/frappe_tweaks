@@ -11,6 +11,9 @@
   "column_break_xkcd",
   "mandatory",
   "disabled",
+  "section_break_assignment",
+  "assignment_note",
+  "users",
   "section_break_script",
   "script",
   "script_help"
@@ -64,6 +67,22 @@
   {
    "fieldname": "script_help",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "section_break_assignment",
+   "fieldtype": "Section Break",
+   "label": "Auto-Assignment"
+  },
+  {
+   "fieldname": "assignment_note",
+   "fieldtype": "HTML",
+   "options": "<div class=\"form-message blue\">\n<strong>Why use this instead of Assignment Rules?</strong>\n<ol>\n<li><strong>Permission-aware:</strong> Each user can have individual permission filtering (Assignment Rules always ignore permissions)</li>\n<li><strong>Multiple assignments:</strong> Can assign to multiple users per document (Assignment Rules assign only one user)</li>\n<li><strong>Context-specific:</strong> Assignments are tied to specific review rules and their evaluation context</li>\n</ol>\n<p><strong>Note:</strong> Each user in the table has an \"Ignore Permissions\" checkbox. When unchecked, the user will only be assigned if they have submit permission on Document Review.</p>\n</div>"
+  },
+  {
+   "fieldname": "users",
+   "fieldtype": "Table",
+   "label": "Assign Users",
+   "options": "Document Review User"
   }
  ],
  "index_web_pages_for_search": 1,

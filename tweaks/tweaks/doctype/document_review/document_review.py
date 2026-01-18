@@ -45,3 +45,20 @@ class DocumentReview(Document):
 
         reference_doc = frappe.get_doc(self.reference_doctype, self.reference_name)
         reference_doc.notify_update()
+
+    def on_submit(self):
+        """Apply auto-assignments on the referenced document when the review is submitted."""
+        from tweaks.utils.document_review import apply_auto_assignments
+        
+        # Get current user, or None if no valid session
+        current_user = None
+        if frappe.session and frappe.session.user:
+            current_user = frappe.session.user
+        
+        # Apply auto-assignments with the current user as last_submit_by
+        apply_auto_assignments(
+            self.reference_doctype,
+            self.reference_name,
+            last_submit_by=current_user
+        )
+

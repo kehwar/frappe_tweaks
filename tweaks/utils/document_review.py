@@ -283,6 +283,169 @@ def _create_or_update_review(doc, rule, result):
             }
         )
         review_doc.insert(ignore_permissions=True)
+    
+    # Apply auto-assignments to the referenced document (considers all pending reviews)
+    apply_auto_assignments(review_doc.reference_doctype, review_doc.reference_name)
+
+
+def apply_auto_assignments(ref_doctype, ref_name, last_submit_by=None):
+    """
+    Apply auto-assignments to a referenced document based on ALL pending document reviews.
+    
+    This function implements differential assignment logic to prevent notification spam:
+    - Queries all pending (draft) document reviews for the referenced document
+    - Calculates the union of users from all review rules with per-user permission filtering
+    - Compares desired users with current assignments to determine changes
+    - Only creates assignments for NEW users (sends notifications)
+    - Leaves EXISTING users unchanged (no notifications)
+    - Updates REMOVED users: closes if last_submit_by, cancels otherwise
+    - Uses review message as personalized todo description for new assignments
+    
+    Args:
+        ref_doctype: The doctype of the referenced document (e.g., "Sales Order")
+        ref_name: The name of the referenced document
+        last_submit_by: Optional user who just submitted a review (their assignment will be closed)
+    
+    Permission Filtering (per-user):
+        - When ignore_permissions=False: User must have submit permission on Document Review 
+          AND read permission on the referenced document
+        - When ignore_permissions=True: User is assigned regardless of permissions
+    
+    Example:
+        # Called automatically when a Document Review is created/updated
+        apply_auto_assignments("Sales Order", "SO-001")
+        
+        # Called on submit with the submitter's user
+        apply_auto_assignments("Sales Order", "SO-001", last_submit_by="user@example.com")
+    """
+    from frappe.desk.form.assign_to import add as add_assignment, set_status
+    
+    # Get the referenced document for permission checks
+    try:
+        ref_doc = frappe.get_doc(ref_doctype, ref_name)
+    except frappe.DoesNotExistError:
+        # Referenced document doesn't exist, cannot assign
+        return
+    
+    # Get all pending (draft) document reviews for this reference document
+    pending_reviews = frappe.get_all(
+        "Document Review",
+        filters={
+            "reference_doctype": ref_doctype,
+            "reference_name": ref_name,
+            "docstatus": 0,  # Draft only
+        },
+        fields=["name", "review_rule", "message"],
+    )
+    
+    # Collect users from all pending reviews and track their review messages
+    desired_users = set()
+    user_messages = {}  # Maps user to review message (one per user)
+    
+    if pending_reviews:
+        for review in pending_reviews:
+            # Get the review rule to access user configuration
+            rule = frappe.get_doc("Document Review Rule", review.review_rule)
+            
+            if not rule.users:
+                continue
+            
+            # Get the review document for permission checks
+            review_doc = frappe.get_doc("Document Review", review.name)
+            
+            # Filter users by permissions (per-user setting)
+            for user_row in rule.users:
+                user = user_row.user
+                
+                # Check if we should filter by permissions (per-user setting)
+                if not user_row.ignore_permissions:
+                    try:
+                        # Check if user has submit permission on Document Review AND read permission on referenced doc
+                        has_review_permission = frappe.has_permission(
+                            "Document Review", ptype="submit", user=user, doc=review_doc
+                        )
+                        has_ref_permission = frappe.has_permission(
+                            ref_doctype, ptype="read", user=user, doc=ref_doc
+                        )
+                        if has_review_permission and has_ref_permission:
+                            desired_users.add(user)
+                            # Store the message for this user (only if not already set)
+                            if user not in user_messages and review.message:
+                                user_messages[user] = review.message
+                    except Exception:
+                        # Permission check failed, skip this user
+                        continue
+                else:
+                    # Ignore permissions for this user, assign directly
+                    desired_users.add(user)
+                    # Store the message for this user (only if not already set)
+                    if user not in user_messages and review.message:
+                        user_messages[user] = review.message
+    
+    # Get current assignments for the referenced document
+    current_assignments = frappe.get_all(
+        "ToDo",
+        filters={
+            "reference_type": ref_doctype,
+            "reference_name": ref_name,
+            "status": ("not in", ("Cancelled", "Closed")),
+        },
+        fields=["name", "allocated_to"],
+    )
+    
+    # Build a set of currently assigned users
+    current_users = {a["allocated_to"] for a in current_assignments}
+    
+    # Build a dict mapping users to their assignment names
+    user_to_assignment = {a["allocated_to"]: a["name"] for a in current_assignments}
+    
+    # Calculate differences
+    new_users = desired_users - current_users  # Users to add
+    removed_users = current_users - desired_users  # Users to remove
+    # existing_users = desired_users & current_users  # Users that remain (no action needed)
+    
+    # Handle removed users
+    for user in removed_users:
+        assignment_name = user_to_assignment[user]
+        # If user is the one who just submitted, close; otherwise cancel
+        status = "Closed" if user == last_submit_by else "Cancelled"
+        
+        try:
+            set_status(
+                ref_doctype,
+                ref_name,
+                todo=assignment_name,
+                assign_to=user,
+                status=status,
+                ignore_permissions=True,
+            )
+        except Exception as e:
+            frappe.log_error(
+                title=f"Failed to update assignment status for {user}",
+                message=str(e),
+            )
+    
+    # Handle new users - create assignments with personalized descriptions
+    if new_users:
+        for user in new_users:
+            # Get the message for this user, fallback to generic message
+            description = user_messages.get(user, "Document Review")
+            
+            try:
+                add_assignment(
+                    {
+                        "doctype": ref_doctype,
+                        "name": ref_name,
+                        "assign_to": [user],  # Assign one user at a time to use custom description
+                        "description": description,
+                    }
+                )
+            except Exception as e:
+                # Log assignment failure but don't break the review creation
+                frappe.log_error(
+                    title=f"Failed to assign user {user} for {ref_doctype} {ref_name}",
+                    message=str(e),
+                )
 
 
 @frappe.whitelist()

@@ -14,12 +14,14 @@ class DocumentReviewRule(Document):
 
     if TYPE_CHECKING:
         from frappe.types import DF
+        from tweaks.tweaks.doctype.document_review_user.document_review_user import DocumentReviewUser
 
         disabled: DF.Check
         mandatory: DF.Check
         reference_doctype: DF.Link
         script: DF.Code
         title: DF.Data
+        users: DF.Table[DocumentReviewUser]
     # end: auto-generated types
 
     def on_update(self):

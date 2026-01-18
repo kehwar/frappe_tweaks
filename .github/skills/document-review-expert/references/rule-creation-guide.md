@@ -53,6 +53,13 @@ Ask these questions:
    - **Reference DocType**: The DocType to monitor (e.g., "Sales Order")
    - **Mandatory**: Check if submission should be blocked
    - **Disabled**: Leave unchecked (check to temporarily disable)
+4. Configure auto-assignment (optional):
+   - In **Assign Users** table, add users who should be auto-assigned to reviews
+   - For each user, set **Ignore Permissions** checkbox:
+     - Unchecked: User will only be assigned if they have submit permission on Document Review AND read permission on referenced document
+     - Checked: User will be assigned regardless of permissions
+   - Assignments are created on the referenced document with the review message as the todo description
+   - Multiple reviews for the same document use union logic - users are only notified once
 
 ### Via Code
 
@@ -63,6 +70,10 @@ rule = frappe.get_doc({
     "reference_doctype": "Sales Order",
     "mandatory": 1,
     "disabled": 0,
+    "users": [
+        {"user": "approver1@example.com", "ignore_permissions": 0},  # Check permissions
+        {"user": "approver2@example.com", "ignore_permissions": 1}   # Ignore permissions
+    ],
     "script": """
 # Script goes here
 """
