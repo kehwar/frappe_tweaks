@@ -64,6 +64,7 @@ import json
 
 import frappe
 from frappe import _
+from frappe.desk.form.assign_to import add as add_assignment
 from frappe.utils.safe_exec import safe_exec
 
 
@@ -283,6 +284,65 @@ def _create_or_update_review(doc, rule, result):
             }
         )
         review_doc.insert(ignore_permissions=True)
+    
+    # Assign users to the review (applies to both new and updated reviews)
+    _assign_users_to_review(review_doc.name, rule)
+
+
+def _assign_users_to_review(review_name, rule):
+    """
+    Assign users to a Document Review based on the rule's user list.
+    Follows the Assignment Rules pattern:
+    1. List users
+    2. If no users, return
+    3. Filter by permissions (per-user setting)
+    4. Clear existing assignments
+    5. Assign users (using array)
+
+    Args:
+        review_name: Name of the Document Review document
+        rule: Document Review Rule dict with 'name' key
+    """
+    # Get the full rule document to access the users child table
+    rule_doc = frappe.get_doc("Document Review Rule", rule["name"])
+
+    # Step 1 & 2: List users, if no users configured, return
+    if not rule_doc.users:
+        return
+
+    # Get the review document for permission checks
+    review_doc = frappe.get_doc("Document Review", review_name)
+
+    # Step 3: Filter users by permissions (per-user setting)
+    users_to_assign = []
+    for user_row in rule_doc.users:
+        user = user_row.user
+        # Check if we should filter by permissions (per-user setting)
+        if not user_row.ignore_permissions:
+            # Check if user has submit permission on Document Review
+            if frappe.has_permission(
+                "Document Review", ptype="submit", user=user, doc=review_doc
+            ):
+                users_to_assign.append(user)
+        else:
+            # Ignore permissions for this user, assign directly
+            users_to_assign.append(user)
+
+    # Step 4: Clear existing assignments on the document
+    from frappe.desk.form.assign_to import clear as clear_assignments
+    
+    clear_assignments("Document Review", review_name)
+
+    # Step 5: Assign users (the utility accepts an array)
+    if users_to_assign:
+        add_assignment(
+            {
+                "doctype": "Document Review",
+                "name": review_name,
+                "assign_to": users_to_assign,  # Pass array of users
+                "description": rule_doc.title,
+            }
+        )
 
 
 @frappe.whitelist()
