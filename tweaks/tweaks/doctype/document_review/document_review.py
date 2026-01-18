@@ -47,12 +47,12 @@ class DocumentReview(Document):
         reference_doc.notify_update()
 
     def on_submit(self):
-        """Clear assignments when the review is submitted."""
+        """Clear assignments on the referenced document when the review is submitted."""
         self.clear_assignments()
 
     def clear_assignments(self):
         """
-        Clear assignments when a Document Review is submitted.
+        Clear assignments on the referenced document when a Document Review is submitted.
         Uses set_status to close the current user's assignment and cancel others.
         """
         from frappe.desk.form.assign_to import set_status
@@ -62,12 +62,12 @@ class DocumentReview(Document):
         if frappe.session and frappe.session.user:
             current_user = frappe.session.user
 
-        # Get all assignments for this review
+        # Get all assignments for the referenced document (not the review itself)
         assignments = frappe.get_all(
             "ToDo",
             filters={
-                "reference_type": self.doctype,
-                "reference_name": self.name,
+                "reference_type": self.reference_doctype,
+                "reference_name": self.reference_name,
                 "status": ("not in", ("Cancelled", "Closed")),
             },
             fields=["name", "allocated_to"],
@@ -82,8 +82,8 @@ class DocumentReview(Document):
             status = "Closed" if assignment.allocated_to == current_user else "Cancelled"
             
             set_status(
-                self.doctype,
-                self.name,
+                self.reference_doctype,
+                self.reference_name,
                 todo=assignment.name,
                 assign_to=assignment.allocated_to,
                 status=status,

@@ -291,7 +291,7 @@ def _create_or_update_review(doc, rule, result):
 
 def _assign_users_to_review(review_name, rule):
     """
-    Assign users to a Document Review based on the rule's user list.
+    Assign users to the referenced document based on the rule's user list.
     Follows the Assignment Rules pattern:
     1. List users
     2. If no users, return
@@ -310,8 +310,11 @@ def _assign_users_to_review(review_name, rule):
     if not rule_doc.users:
         return
 
-    # Get the review document for permission checks
+    # Get the review document to access reference doctype/name
     review_doc = frappe.get_doc("Document Review", review_name)
+    
+    # Get the referenced document for permission checks
+    ref_doc = frappe.get_doc(review_doc.reference_doctype, review_doc.reference_name)
 
     # Step 3: Filter users by permissions (per-user setting)
     users_to_assign = []
@@ -319,26 +322,30 @@ def _assign_users_to_review(review_name, rule):
         user = user_row.user
         # Check if we should filter by permissions (per-user setting)
         if not user_row.ignore_permissions:
-            # Check if user has submit permission on Document Review
-            if frappe.has_permission(
+            # Check if user has submit permission on Document Review AND write permission on referenced doc
+            has_review_permission = frappe.has_permission(
                 "Document Review", ptype="submit", user=user, doc=review_doc
-            ):
+            )
+            has_ref_permission = frappe.has_permission(
+                review_doc.reference_doctype, ptype="write", user=user, doc=ref_doc
+            )
+            if has_review_permission and has_ref_permission:
                 users_to_assign.append(user)
         else:
             # Ignore permissions for this user, assign directly
             users_to_assign.append(user)
 
-    # Step 4: Clear existing assignments on the document
+    # Step 4: Clear existing assignments on the referenced document
     from frappe.desk.form.assign_to import clear as clear_assignments
     
-    clear_assignments("Document Review", review_name)
+    clear_assignments(review_doc.reference_doctype, review_doc.reference_name)
 
-    # Step 5: Assign users (the utility accepts an array)
+    # Step 5: Assign users to the referenced document (the utility accepts an array)
     if users_to_assign:
         add_assignment(
             {
-                "doctype": "Document Review",
-                "name": review_name,
+                "doctype": review_doc.reference_doctype,
+                "name": review_doc.reference_name,
                 "assign_to": users_to_assign,  # Pass array of users
                 "description": rule_doc.title,
             }
