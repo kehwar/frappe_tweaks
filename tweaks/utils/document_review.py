@@ -314,7 +314,11 @@ def _assign_users_to_review(review_name, rule):
     review_doc = frappe.get_doc("Document Review", review_name)
     
     # Get the referenced document for permission checks
-    ref_doc = frappe.get_doc(review_doc.reference_doctype, review_doc.reference_name)
+    try:
+        ref_doc = frappe.get_doc(review_doc.reference_doctype, review_doc.reference_name)
+    except frappe.DoesNotExistError:
+        # Referenced document doesn't exist, cannot assign
+        return
 
     # Step 3: Filter users by permissions (per-user setting)
     users_to_assign = []
@@ -322,15 +326,19 @@ def _assign_users_to_review(review_name, rule):
         user = user_row.user
         # Check if we should filter by permissions (per-user setting)
         if not user_row.ignore_permissions:
-            # Check if user has submit permission on Document Review AND write permission on referenced doc
-            has_review_permission = frappe.has_permission(
-                "Document Review", ptype="submit", user=user, doc=review_doc
-            )
-            has_ref_permission = frappe.has_permission(
-                review_doc.reference_doctype, ptype="write", user=user, doc=ref_doc
-            )
-            if has_review_permission and has_ref_permission:
-                users_to_assign.append(user)
+            try:
+                # Check if user has submit permission on Document Review AND write permission on referenced doc
+                has_review_permission = frappe.has_permission(
+                    "Document Review", ptype="submit", user=user, doc=review_doc
+                )
+                has_ref_permission = frappe.has_permission(
+                    review_doc.reference_doctype, ptype="write", user=user, doc=ref_doc
+                )
+                if has_review_permission and has_ref_permission:
+                    users_to_assign.append(user)
+            except Exception:
+                # Permission check failed, skip this user
+                continue
         else:
             # Ignore permissions for this user, assign directly
             users_to_assign.append(user)
@@ -338,18 +346,29 @@ def _assign_users_to_review(review_name, rule):
     # Step 4: Clear existing assignments on the referenced document
     from frappe.desk.form.assign_to import clear as clear_assignments
     
-    clear_assignments(review_doc.reference_doctype, review_doc.reference_name)
+    try:
+        clear_assignments(review_doc.reference_doctype, review_doc.reference_name)
+    except Exception:
+        # Clear may fail if referenced document doesn't exist, continue anyway
+        pass
 
     # Step 5: Assign users to the referenced document (the utility accepts an array)
     if users_to_assign:
-        add_assignment(
-            {
-                "doctype": review_doc.reference_doctype,
-                "name": review_doc.reference_name,
-                "assign_to": users_to_assign,  # Pass array of users
-                "description": rule_doc.title,
-            }
-        )
+        try:
+            add_assignment(
+                {
+                    "doctype": review_doc.reference_doctype,
+                    "name": review_doc.reference_name,
+                    "assign_to": users_to_assign,  # Pass array of users
+                    "description": rule_doc.title,
+                }
+            )
+        except Exception as e:
+            # Log assignment failure but don't break the review creation
+            frappe.log_error(
+                title=f"Failed to assign users for Document Review {review_name}",
+                message=str(e),
+            )
 
 
 @frappe.whitelist()
