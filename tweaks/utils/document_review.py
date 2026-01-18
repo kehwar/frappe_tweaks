@@ -64,7 +64,6 @@ import json
 
 import frappe
 from frappe import _
-from frappe.desk.form.assign_to import add as add_assignment
 from frappe.utils.safe_exec import safe_exec
 
 
@@ -300,7 +299,7 @@ def apply_auto_assignments(ref_doctype, ref_name, last_submit_by=None):
         ref_name: The name of the referenced document
         last_submit_by: Optional user who just submitted a review (to close their assignment)
     """
-    from frappe.desk.form.assign_to import set_status
+    from frappe.desk.form.assign_to import add as add_assignment, set_status
     
     # Get the referenced document for permission checks
     try:
@@ -417,27 +416,6 @@ def apply_auto_assignments(ref_doctype, ref_name, last_submit_by=None):
                 title=f"Failed to assign users for {ref_doctype} {ref_name}",
                 message=str(e),
             )
-
-
-def clear_assignments(review_doc):
-    """
-    Clear assignments on the referenced document when a Document Review is submitted.
-    Calls apply_auto_assignments with last_submit_by parameter to handle assignment updates.
-    
-    Args:
-        review_doc: Document Review document instance
-    """
-    # Get current user, or None if no valid session
-    current_user = None
-    if frappe.session and frappe.session.user:
-        current_user = frappe.session.user
-    
-    # Apply auto-assignments with the current user as last_submit_by
-    apply_auto_assignments(
-        review_doc.reference_doctype,
-        review_doc.reference_name,
-        last_submit_by=current_user
-    )
 
 
 @frappe.whitelist()
