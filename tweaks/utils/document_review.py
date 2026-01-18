@@ -331,36 +331,24 @@ def _assign_users_to_review(review_name, rule):
     # Step 4: Clear existing assignments on the document
     from frappe.desk.form.assign_to import clear as clear_assignments
     
-    try:
-        clear_assignments("Document Review", review_name)
-    except Exception:
-        # If no assignments exist, clear will raise an exception - handle gracefully
-        pass
+    clear_assignments("Document Review", review_name)
 
     # Step 5: Assign users (the utility accepts an array)
     if users_to_assign:
-        try:
-            add_assignment(
-                {
-                    "doctype": "Document Review",
-                    "name": review_name,
-                    "assign_to": users_to_assign,  # Pass array of users
-                    "description": rule_doc.title,
-                }
-            )
-        except Exception as e:
-            # Log but don't fail if assignment fails
-            frappe.log_error(
-                title=f"Failed to assign Document Review {review_name}",
-                message=str(e),
-            )
+        add_assignment(
+            {
+                "doctype": "Document Review",
+                "name": review_name,
+                "assign_to": users_to_assign,  # Pass array of users
+                "description": rule_doc.title,
+            }
+        )
 
 
 @frappe.whitelist()
 def submit_document_review(review_name, review=None, action="approve"):
     """
     Submit a Document Review.
-    When submitted, marks the current user's assignment as complete and clears other assignments.
 
     Args:
         review_name: Name of the Document Review to submit
@@ -372,10 +360,6 @@ def submit_document_review(review_name, review=None, action="approve"):
     """
     doc = frappe.get_doc("Document Review", review_name)
     doc.review = review
-    
-    # Handle assignments: mark current user's task as complete, clear others
-    _handle_assignments_on_submit(review_name)
-    
     doc.submit()
     if action == "reject":
         doc.cancel()
@@ -383,15 +367,17 @@ def submit_document_review(review_name, review=None, action="approve"):
     return doc
 
 
-def _handle_assignments_on_submit(review_name):
+def clear_assignments(doctype, docname):
     """
-    Handle assignments when a Document Review is submitted:
-    - Mark the current user's assignment as complete
-    - Clear all other assignments
+    Clear assignments when a Document Review is submitted.
+    Uses set_status to close the current user's assignment and cancel others.
     
     Args:
-        review_name: Name of the Document Review document
+        doctype: DocType name (should be "Document Review")
+        docname: Name of the Document Review document
     """
+    from frappe.desk.form.assign_to import set_status
+    
     # Ensure we have a valid user session
     if not frappe.session or not frappe.session.user:
         return
@@ -402,9 +388,9 @@ def _handle_assignments_on_submit(review_name):
     assignments = frappe.get_all(
         "ToDo",
         filters={
-            "reference_type": "Document Review",
-            "reference_name": review_name,
-            "status": "Open",
+            "reference_type": doctype,
+            "reference_name": docname,
+            "status": ("not in", ("Cancelled", "Closed")),
         },
         fields=["name", "allocated_to"],
     )
@@ -412,24 +398,28 @@ def _handle_assignments_on_submit(review_name):
     if not assignments:
         return
     
-    # Separate assignments for bulk operations
-    current_user_todos = []
-    other_user_todos = []
-    
+    # Handle each assignment
     for assignment in assignments:
         if assignment.allocated_to == current_user:
-            current_user_todos.append(assignment.name)
+            # Close the current user's assignment
+            set_status(
+                doctype,
+                docname,
+                todo=assignment.name,
+                assign_to=assignment.allocated_to,
+                status="Closed",
+                ignore_permissions=True,
+            )
         else:
-            other_user_todos.append(assignment.name)
-    
-    # Bulk update current user's assignments to Closed
-    if current_user_todos:
-        for todo_name in current_user_todos:
-            frappe.db.set_value("ToDo", todo_name, "status", "Closed")
-    
-    # Bulk delete other users' assignments
-    if other_user_todos:
-        frappe.db.delete("ToDo", {"name": ["in", other_user_todos]})
+            # Cancel other users' assignments
+            set_status(
+                doctype,
+                docname,
+                todo=assignment.name,
+                assign_to=assignment.allocated_to,
+                status="Cancelled",
+                ignore_permissions=True,
+            )
 
 
 @frappe.whitelist()

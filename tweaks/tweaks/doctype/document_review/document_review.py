@@ -45,3 +45,9 @@ class DocumentReview(Document):
 
         reference_doc = frappe.get_doc(self.reference_doctype, self.reference_name)
         reference_doc.notify_update()
+
+    def on_submit(self):
+        """Clear assignments when the review is submitted."""
+        from tweaks.utils.document_review import clear_assignments
+
+        clear_assignments(self.doctype, self.name)
