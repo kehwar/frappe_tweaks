@@ -291,13 +291,32 @@ def _create_or_update_review(doc, rule, result):
 def apply_auto_assignments(ref_doctype, ref_name, last_submit_by=None):
     """
     Apply auto-assignments to a referenced document based on ALL pending document reviews.
-    Calculates the union of users from all pending reviews and compares with existing assignments.
-    Only creates new assignments or updates existing ones, avoiding repeated notifications.
+    
+    This function implements differential assignment logic to prevent notification spam:
+    - Queries all pending (draft) document reviews for the referenced document
+    - Calculates the union of users from all review rules with per-user permission filtering
+    - Compares desired users with current assignments to determine changes
+    - Only creates assignments for NEW users (sends notifications)
+    - Leaves EXISTING users unchanged (no notifications)
+    - Updates REMOVED users: closes if last_submit_by, cancels otherwise
+    - Uses review message as personalized todo description for new assignments
     
     Args:
-        ref_doctype: The doctype of the referenced document
+        ref_doctype: The doctype of the referenced document (e.g., "Sales Order")
         ref_name: The name of the referenced document
-        last_submit_by: Optional user who just submitted a review (to close their assignment)
+        last_submit_by: Optional user who just submitted a review (their assignment will be closed)
+    
+    Permission Filtering (per-user):
+        - When ignore_permissions=False: User must have submit permission on Document Review 
+          AND read permission on the referenced document
+        - When ignore_permissions=True: User is assigned regardless of permissions
+    
+    Example:
+        # Called automatically when a Document Review is created/updated
+        apply_auto_assignments("Sales Order", "SO-001")
+        
+        # Called on submit with the submitter's user
+        apply_auto_assignments("Sales Order", "SO-001", last_submit_by="user@example.com")
     """
     from frappe.desk.form.assign_to import add as add_assignment, set_status
     

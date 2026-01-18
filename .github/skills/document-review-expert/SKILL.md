@@ -96,23 +96,31 @@ if doc.grand_total > 100000:
 
 You can configure a Document Review Rule to automatically assign specific users when a review is created:
 
-1. In the **Auto-Assignment** section, add users to the **Assign Users** table
+1. In the **Assign Users** table, add users who should be assigned
 2. For each user, set **Ignore Permissions** checkbox:
-   - **Unchecked** (default): User will only be assigned if they have submit permission on Document Review
+   - **Unchecked** (default): User will only be assigned if they have:
+     - Submit permission on Document Review doctype
+     - Read permission on the referenced document
    - **Checked**: User will be assigned regardless of permissions
 
 **Why use this instead of Assignment Rules?**
 
-1. **Permission-aware**: Can filter users based on submit permission on a per-user basis (Assignment Rules always ignore permissions)
+1. **Permission-aware**: Can filter users based on dual permission checks on a per-user basis (Assignment Rules always ignore permissions)
 2. **Multiple assignments**: Can assign to multiple users per document (Assignment Rules assign only one user)
 3. **Context-specific**: Assignments are tied to specific review rules and their evaluation context
+4. **No notification spam**: Differential assignment logic only notifies new users, never re-notifies existing assignees
+5. **Personalized descriptions**: Each assignment uses the review message as the todo description
 
 **How it works:**
 
-- When a Document Review is created or updated, the system checks if the rule has users configured
-- For each user, if their `ignore_permissions` checkbox is unchecked, the system checks if they have submit permission
-- Each eligible user is assigned to the Document Review using Frappe's assignment system
-- Users will see the assignment in their ToDo list and receive notifications according to their preferences
+- Assignments are created on the **referenced document** (e.g., Sales Order), not the Document Review
+- When multiple reviews exist for the same document, the system calculates the **union of users** from all pending reviews
+- **Differential logic** compares desired users with current assignments:
+  - **New users**: Assigned with personalized description from review message (notification sent)
+  - **Existing users**: No action taken (no notification)
+  - **Removed users**: Closed for submitter, cancelled for others
+- Users see the assignment in their ToDo list with the review message as description (e.g., "Price exceeds approval threshold")
+- On review submission, assignments are automatically recalculated based on remaining pending reviews
 
 ### Reviewing a Document
 
