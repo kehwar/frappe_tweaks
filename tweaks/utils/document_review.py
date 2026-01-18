@@ -65,6 +65,7 @@ import json
 import frappe
 from frappe import _
 from frappe.desk.form.assign_to import add as add_assignment
+from frappe.desk.form.assign_to import clear as clear_assignments_api
 from frappe.utils.safe_exec import safe_exec
 
 
@@ -318,7 +319,6 @@ def assign_users_for_document(ref_doctype, ref_name):
     
     if not pending_reviews:
         # No pending reviews, clear all assignments
-        from frappe.desk.form.assign_to import clear as clear_assignments_api
         try:
             clear_assignments_api(ref_doctype, ref_name)
         except Exception:
@@ -362,8 +362,6 @@ def assign_users_for_document(ref_doctype, ref_name):
                 all_users.add(user)
     
     # Clear existing assignments on the referenced document
-    from frappe.desk.form.assign_to import clear as clear_assignments_api
-    
     try:
         clear_assignments_api(ref_doctype, ref_name)
     except Exception:
