@@ -316,11 +316,12 @@ def apply_auto_assignments(ref_doctype, ref_name, last_submit_by=None):
             "reference_name": ref_name,
             "docstatus": 0,  # Draft only
         },
-        fields=["name", "review_rule"],
+        fields=["name", "review_rule", "message"],
     )
     
-    # Collect users from all pending reviews
+    # Collect users from all pending reviews and track their review messages
     desired_users = set()
+    user_messages = {}  # Maps user to review message (one per user)
     
     if pending_reviews:
         for review in pending_reviews:
@@ -349,12 +350,18 @@ def apply_auto_assignments(ref_doctype, ref_name, last_submit_by=None):
                         )
                         if has_review_permission and has_ref_permission:
                             desired_users.add(user)
+                            # Store the message for this user (only if not already set)
+                            if user not in user_messages and review.message:
+                                user_messages[user] = review.message
                     except Exception:
                         # Permission check failed, skip this user
                         continue
                 else:
                     # Ignore permissions for this user, assign directly
                     desired_users.add(user)
+                    # Store the message for this user (only if not already set)
+                    if user not in user_messages and review.message:
+                        user_messages[user] = review.message
     
     # Get current assignments for the referenced document
     current_assignments = frappe.get_all(
@@ -399,23 +406,27 @@ def apply_auto_assignments(ref_doctype, ref_name, last_submit_by=None):
                 message=str(e),
             )
     
-    # Handle new users - create assignments
+    # Handle new users - create assignments with personalized descriptions
     if new_users:
-        try:
-            add_assignment(
-                {
-                    "doctype": ref_doctype,
-                    "name": ref_name,
-                    "assign_to": list(new_users),  # Pass array of new users only
-                    "description": "Document Review",
-                }
-            )
-        except Exception as e:
-            # Log assignment failure but don't break the review creation
-            frappe.log_error(
-                title=f"Failed to assign users for {ref_doctype} {ref_name}",
-                message=str(e),
-            )
+        for user in new_users:
+            # Get the message for this user, fallback to generic message
+            description = user_messages.get(user, "Document Review")
+            
+            try:
+                add_assignment(
+                    {
+                        "doctype": ref_doctype,
+                        "name": ref_name,
+                        "assign_to": [user],  # Assign one user at a time to use custom description
+                        "description": description,
+                    }
+                )
+            except Exception as e:
+                # Log assignment failure but don't break the review creation
+                frappe.log_error(
+                    title=f"Failed to assign user {user} for {ref_doctype} {ref_name}",
+                    message=str(e),
+                )
 
 
 @frappe.whitelist()
