@@ -367,61 +367,6 @@ def submit_document_review(review_name, review=None, action="approve"):
     return doc
 
 
-def clear_assignments(doctype, docname):
-    """
-    Clear assignments when a Document Review is submitted.
-    Uses set_status to close the current user's assignment and cancel others.
-    
-    Args:
-        doctype: DocType name (should be "Document Review")
-        docname: Name of the Document Review document
-    """
-    from frappe.desk.form.assign_to import set_status
-    
-    # Ensure we have a valid user session
-    if not frappe.session or not frappe.session.user:
-        return
-    
-    current_user = frappe.session.user
-    
-    # Get all assignments for this review
-    assignments = frappe.get_all(
-        "ToDo",
-        filters={
-            "reference_type": doctype,
-            "reference_name": docname,
-            "status": ("not in", ("Cancelled", "Closed")),
-        },
-        fields=["name", "allocated_to"],
-    )
-    
-    if not assignments:
-        return
-    
-    # Handle each assignment
-    for assignment in assignments:
-        if assignment.allocated_to == current_user:
-            # Close the current user's assignment
-            set_status(
-                doctype,
-                docname,
-                todo=assignment.name,
-                assign_to=assignment.allocated_to,
-                status="Closed",
-                ignore_permissions=True,
-            )
-        else:
-            # Cancel other users' assignments
-            set_status(
-                doctype,
-                docname,
-                todo=assignment.name,
-                assign_to=assignment.allocated_to,
-                status="Cancelled",
-                ignore_permissions=True,
-            )
-
-
 @frappe.whitelist()
 def submit_all_document_reviews(doctype, docname, review=None, action="approve"):
     """
