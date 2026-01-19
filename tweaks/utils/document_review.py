@@ -74,6 +74,7 @@ import frappe
 from frappe import _
 from frappe.utils.jinja import render_template
 from frappe.utils.safe_exec import safe_exec
+from jinja2 import TemplateError
 
 
 def get_rules_for_doctype(doctype):
@@ -251,9 +252,18 @@ def _create_or_update_review(doc, rule, result):
     if rule.get("message_template") and data is not None:
         try:
             message = render_template(rule["message_template"], {"data": data})
-        except Exception as e:
+        except TemplateError as e:
+            # Jinja2 template rendering error
             frappe.log_error(
                 title=f"Error rendering message template for rule {rule['title']}",
+                message=f"Template error: {str(e)}"
+            )
+            # Fall back to original message if template rendering fails
+            message = result.get("message", "")
+        except Exception as e:
+            # Catch any other unexpected errors
+            frappe.log_error(
+                title=f"Unexpected error rendering message template for rule {rule['title']}",
                 message=str(e)
             )
             # Fall back to original message if template rendering fails
