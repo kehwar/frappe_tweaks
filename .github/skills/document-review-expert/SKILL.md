@@ -232,12 +232,9 @@ The rule script has access to:
 
 ### Return Format
 
-**No review needed:**
-```python
-result = None
-```
+Document Review Rule scripts support two ways to indicate that a review is needed:
 
-**Review required:**
+**Option 1: Using `result` variable (traditional approach)**
 ```python
 result = {
     "message": "Explanation of why review is needed",
@@ -248,6 +245,24 @@ result = {
     }
 }
 ```
+
+**Option 2: Using direct `message` and `data` variables (new approach)**
+```python
+message = "Explanation of why review is needed"
+data = {
+    # Optional structured data for reviewers
+    "field1": value1,
+    "field2": value2
+}
+```
+
+**No review needed:**
+```python
+result = None
+# or simply don't set message or result
+```
+
+**Note:** The `result` variable takes precedence if both approaches are used. If neither `result` nor `message` is set, no review will be created.
 
 ### Best Practices
 
