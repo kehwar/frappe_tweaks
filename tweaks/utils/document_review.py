@@ -72,6 +72,7 @@ import json
 
 import frappe
 from frappe import _
+from frappe.utils.jinja import render_template
 from frappe.utils.safe_exec import safe_exec
 
 
@@ -249,7 +250,6 @@ def _create_or_update_review(doc, rule, result):
     # If message_template is set, render it with the data
     if rule.get("message_template") and data:
         try:
-            from frappe.utils.jinja import render_template
             message = render_template(rule["message_template"], {"data": data})
         except Exception as e:
             frappe.log_error(

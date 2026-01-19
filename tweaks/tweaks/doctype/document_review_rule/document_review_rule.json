@@ -97,7 +97,7 @@
    "fieldtype": "Code",
    "label": "Message Template",
    "description": "Optional Jinja template to generate the message. The 'data' variable from the script will be passed to this template.",
-   "options": "HTML"
+   "options": "Text"
   },
   {
    "fieldname": "message_template_help",
