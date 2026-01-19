@@ -28,7 +28,8 @@ Usage Examples:
        }, "min_price")
 
        if min_price and item.rate < min_price:
-           return {
+           # Option 1: Set result variable (traditional approach)
+           result = {
                "message": f"Item {item.item_code} is below minimum price",
                "data": {
                    "item_code": item.item_code,
@@ -36,7 +37,14 @@ Usage Examples:
                    "min_price": min_price
                }
            }
-   return None
+           # Option 2: Set message and data variables directly (new approach)
+           # message = f"Item {item.item_code} is below minimum price"
+           # data = {
+           #     "item_code": item.item_code,
+           #     "rate": item.rate,
+           #     "min_price": min_price
+           # }
+           break
 
 3. Form Banner Custom Script:
    frappe.call({
@@ -119,9 +127,21 @@ def evaluate_document_reviews(doc, method=None):
     for rule in rules:
         try:
             # Execute rule script
-            exec_context = {"doc": doc, "result": None}
+            exec_context = {"doc": doc, "result": None, "message": None, "data": None}
             safe_exec(rule["script"], None, exec_context)
             result = exec_context.get("result")
+            
+            # Support direct message and data variables as an alternative to result dict
+            if result is None:
+                message = exec_context.get("message")
+                data = exec_context.get("data")
+                
+                # If message is set directly, construct result dict
+                if message is not None:
+                    result = {
+                        "message": message,
+                        "data": data
+                    }
 
             if result is None:
                 # No review needed - delete any draft reviews for this rule

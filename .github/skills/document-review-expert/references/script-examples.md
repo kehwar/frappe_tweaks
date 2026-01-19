@@ -2,6 +2,26 @@
 
 Working examples of Document Review Rule scripts for common scenarios.
 
+## Script Return Formats
+
+Document Review Rule scripts support two ways to indicate that a review is needed:
+
+### Option 1: Using `result` variable (traditional approach)
+```python
+result = {
+    "message": "Review message here",
+    "data": {"key": "value"}
+}
+```
+
+### Option 2: Using direct `message` and `data` variables (new approach)
+```python
+message = "Review message here"
+data = {"key": "value"}  # Optional
+```
+
+**Note:** The `result` variable takes precedence if both are set. If neither `result` nor `message` is set, no review will be created.
+
 ## Example 1: Simple Threshold Check
 
 **Scenario:** Orders above $100,000 require manager approval.
@@ -27,6 +47,20 @@ else:
 - Title: "High Value Order Approval"
 - Reference DocType: "Sales Order"
 - Mandatory: Yes
+
+### Alternative using direct variables:
+```python
+# High Value Order Approval (using direct variables)
+threshold = 100000
+
+if doc.grand_total and doc.grand_total > threshold:
+    message = f"Order value ${doc.grand_total:,.2f} exceeds approval threshold of ${threshold:,.2f}"
+    data = {
+        "grand_total": doc.grand_total,
+        "threshold": threshold,
+        "excess_amount": doc.grand_total - threshold
+    }
+```
 
 ## Example 2: Credit Limit Check
 
