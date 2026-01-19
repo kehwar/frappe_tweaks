@@ -16,7 +16,10 @@
   "users",
   "section_break_script",
   "script",
-  "script_help"
+  "script_help",
+  "section_break_message",
+  "message_template",
+  "message_template_help"
  ],
  "fields": [
   {
@@ -83,6 +86,23 @@
    "fieldtype": "Table",
    "label": "Assign Users",
    "options": "Document Review User"
+  },
+  {
+   "fieldname": "section_break_message",
+   "fieldtype": "Section Break",
+   "label": "Message Template"
+  },
+  {
+   "fieldname": "message_template",
+   "fieldtype": "Code",
+   "label": "Message Template",
+   "description": "Optional Jinja template to generate the message. The 'data' variable from the script will be passed to this template.",
+   "options": "HTML"
+  },
+  {
+   "fieldname": "message_template_help",
+   "fieldtype": "HTML",
+   "options": "<div class=\"form-message blue\">\n<strong>Message Template (Optional)</strong>\n<p>If set, this Jinja template will be used to generate the review message instead of the 'message' returned by the script.</p>\n<p>The <code>data</code> variable from your script will be passed to this template.</p>\n<p><strong>Example:</strong></p>\n<pre>Item {{ data.item_code }} has rate {{ data.rate }}, which is below minimum price of {{ data.min_price }}.</pre>\n</div>"
   }
  ],
  "index_web_pages_for_search": 1,

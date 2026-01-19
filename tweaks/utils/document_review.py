@@ -100,7 +100,7 @@ def get_rules_for_doctype(doctype):
     rules = frappe.get_all(
         "Document Review Rule",
         filters={"reference_doctype": doctype, "disabled": 0},
-        fields=["name", "title", "script", "mandatory"],
+        fields=["name", "title", "script", "mandatory", "message_template"],
     )
 
     frappe.cache.set_value(cache_key, rules)
@@ -242,9 +242,26 @@ def _create_or_update_review(doc, rule, result):
             rule: Document Review Rule dict
             result: Script result dict with 'message' and 'data' keys
     """
+    # Determine the message to use
+    message = result.get("message", "")
+    data = result.get("data")
+    
+    # If message_template is set, render it with the data
+    if rule.get("message_template") and data:
+        try:
+            from frappe.utils.jinja import render_template
+            message = render_template(rule["message_template"], {"data": data})
+        except Exception as e:
+            frappe.log_error(
+                title=f"Error rendering message template for rule {rule['title']}",
+                message=str(e)
+            )
+            # Fall back to original message if template rendering fails
+            message = result.get("message", "")
+    
     # Serialize data for comparison
     review_data_json = (
-        frappe.as_json(result.get("data"), indent=0) if result.get("data") else ""
+        frappe.as_json(data, indent=0) if data else ""
     )
 
     # Check if a submitted review exists with the same data
@@ -285,8 +302,8 @@ def _create_or_update_review(doc, rule, result):
     if existing_draft:
         # Update existing draft
         review_doc = frappe.get_doc("Document Review", existing_draft)
-        review_doc.message = result.get("message", "")
-        review_doc.review_data = result.get("data")
+        review_doc.message = message
+        review_doc.review_data = data
         review_doc.mandatory = rule["mandatory"]
         review_doc.save(ignore_permissions=True)
     else:
@@ -297,8 +314,8 @@ def _create_or_update_review(doc, rule, result):
                 "reference_doctype": doc.doctype,
                 "reference_name": doc.name,
                 "review_rule": rule["name"],
-                "message": result.get("message", ""),
-                "review_data": result.get("data"),
+                "message": message,
+                "review_data": data,
                 "mandatory": rule["mandatory"],
             }
         )

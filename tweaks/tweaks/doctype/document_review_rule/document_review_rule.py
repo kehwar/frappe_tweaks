@@ -18,6 +18,7 @@ class DocumentReviewRule(Document):
 
         disabled: DF.Check
         mandatory: DF.Check
+        message_template: DF.Code | None
         reference_doctype: DF.Link
         script: DF.Code
         title: DF.Data
