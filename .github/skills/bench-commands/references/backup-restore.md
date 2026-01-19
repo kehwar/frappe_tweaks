@@ -47,10 +47,7 @@ gzip -l backups/20251224_151238-gruposoldamundo_frappe_cloud-database.sql.gz
 mariadb -h mariadb -u root -p123 -e "SHOW VARIABLES LIKE 'max_allowed_packet';"
 
 # Set increased memory limits (required for databases > 100MB)
-mariadb -h mariadb -u root -p123 <<EOF
-SET GLOBAL max_allowed_packet=536870912;
-SHOW VARIABLES LIKE 'max_allowed_packet';
-EOF
+mariadb -h mariadb -u root -p123 -e "SET GLOBAL max_allowed_packet=536870912; SHOW VARIABLES LIKE 'max_allowed_packet';"
 ```
 
 **Memory guidelines:**
@@ -87,9 +84,7 @@ bench --site development.localhost set-admin-password admin
 For experienced users, combined command:
 ```bash
 # Configure MariaDB
-mariadb -h mariadb -u root -p123 <<EOF
-SET GLOBAL max_allowed_packet=536870912;
-EOF
+mariadb -h mariadb -u root -p123 -e "SET GLOBAL max_allowed_packet=536870912;"
 
 # Restore, migrate, and set password
 cd /workspace/development/frappe-bench && \
