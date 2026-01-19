@@ -46,7 +46,30 @@ Usage Examples:
            # }
            break
 
-3. Form Banner Custom Script:
+3. Script with Message Template (Document Review Rule):
+   # Script returns data only
+   for item in doc.items:
+       min_price = frappe.db.get_value("Item Price", {
+           "item_code": item.item_code,
+           "price_list": doc.selling_price_list
+       }, "min_price")
+
+       if min_price and item.rate < min_price:
+           message = "Price below minimum"  # Fallback message
+           data = {
+               "item_code": item.item_code,
+               "rate": item.rate,
+               "min_price": min_price
+           }
+           break
+   
+   # Message Template field (optional Jinja template):
+   # Item {{ data.item_code }} has rate {{ data.rate }}, 
+   # which is below minimum price of {{ data.min_price }}.
+   
+   # Result: "Item ITEM-001 has rate 100, which is below minimum price of 150."
+
+4. Form Banner Custom Script:
    frappe.call({
        method: "frappe.client.get_count",
        args: {
