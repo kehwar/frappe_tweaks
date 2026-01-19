@@ -248,7 +248,7 @@ def _create_or_update_review(doc, rule, result):
     data = result.get("data")
     
     # If message_template is set, render it with the data
-    if rule.get("message_template") and data:
+    if rule.get("message_template") and data is not None:
         try:
             message = render_template(rule["message_template"], {"data": data})
         except Exception as e:

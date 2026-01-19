@@ -561,3 +561,61 @@ data = {"item_code": "ITEM-001", "rate": 100, "min_price": 150}"""
         frappe.delete_doc("ToDo", test_doc.name, force=1)
         frappe.delete_doc("Document Review Rule", rule.name, force=1)
 
+    def test_message_template_with_empty_dict(self):
+        """Test that message_template renders even with empty dict"""
+        # Create a test Document Review Rule with message_template and empty dict
+        script_content = """message = "Fallback message"
+data = {}"""
+        message_template = "Empty data dict provided"
+        
+        rule = frappe.get_doc(
+            {
+                "doctype": "Document Review Rule",
+                "title": "Test Template With Empty Dict",
+                "reference_doctype": "ToDo",
+                "script": script_content,
+                "message_template": message_template,
+                "mandatory": 0,
+            }
+        )
+        rule.insert(ignore_permissions=True)
+
+        # Create a test document
+        test_doc = frappe.get_doc(
+            {
+                "doctype": "ToDo",
+                "description": "Test document for template with empty dict",
+            }
+        )
+        test_doc.insert(ignore_permissions=True)
+
+        # Trigger document review evaluation
+        from tweaks.utils.document_review import evaluate_document_reviews
+
+        evaluate_document_reviews(test_doc)
+
+        # Check if a Document Review was created with rendered template
+        review = frappe.get_all(
+            "Document Review",
+            filters={
+                "reference_doctype": test_doc.doctype,
+                "reference_name": test_doc.name,
+                "review_rule": rule.name,
+            },
+            fields=["name", "message"],
+            limit=1,
+        )
+
+        self.assertTrue(len(review) > 0, "Document Review should be created")
+        self.assertEqual(
+            review[0].message,
+            "Empty data dict provided",
+            "Message should render template even with empty dict",
+        )
+
+        # Clean up
+        frappe.delete_doc("Document Review", review[0].name, force=1)
+        frappe.delete_doc("ToDo", test_doc.name, force=1)
+        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+
+
