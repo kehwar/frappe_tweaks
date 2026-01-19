@@ -447,3 +447,117 @@ result = {
         frappe.delete_doc("ToDo", test_doc.name, force=1)
         frappe.delete_doc("Document Review Rule", rule.name, force=1)
 
+    def test_message_template_rendering(self):
+        """Test that message_template is rendered with data variable"""
+        # Create a test Document Review Rule with message_template
+        script_content = """message = "This should be overridden by template"
+data = {"item_code": "ITEM-001", "rate": 100, "min_price": 150}"""
+        
+        message_template = "Item {{ data.item_code }} has rate {{ data.rate }}, which is below minimum price of {{ data.min_price }}."
+        
+        rule = frappe.get_doc(
+            {
+                "doctype": "Document Review Rule",
+                "title": "Test Message Template",
+                "reference_doctype": "ToDo",
+                "script": script_content,
+                "message_template": message_template,
+                "mandatory": 0,
+            }
+        )
+        rule.insert(ignore_permissions=True)
+
+        # Create a test document
+        test_doc = frappe.get_doc(
+            {
+                "doctype": "ToDo",
+                "description": "Test document for message template",
+            }
+        )
+        test_doc.insert(ignore_permissions=True)
+
+        # Trigger document review evaluation
+        from tweaks.utils.document_review import evaluate_document_reviews
+
+        evaluate_document_reviews(test_doc)
+
+        # Check if a Document Review was created with rendered template
+        review = frappe.get_all(
+            "Document Review",
+            filters={
+                "reference_doctype": test_doc.doctype,
+                "reference_name": test_doc.name,
+                "review_rule": rule.name,
+            },
+            fields=["name", "message"],
+            limit=1,
+        )
+
+        self.assertTrue(len(review) > 0, "Document Review should be created")
+        self.assertEqual(
+            review[0].message,
+            "Item ITEM-001 has rate 100, which is below minimum price of 150.",
+            "Message should be rendered from template with data",
+        )
+
+        # Clean up
+        frappe.delete_doc("Document Review", review[0].name, force=1)
+        frappe.delete_doc("ToDo", test_doc.name, force=1)
+        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+
+    def test_message_template_without_data(self):
+        """Test that message_template without data falls back to original message"""
+        # Create a test Document Review Rule with message_template but no data
+        script_content = 'message = "Fallback message"'
+        message_template = "This template needs data: {{ data.value }}"
+        
+        rule = frappe.get_doc(
+            {
+                "doctype": "Document Review Rule",
+                "title": "Test Template Without Data",
+                "reference_doctype": "ToDo",
+                "script": script_content,
+                "message_template": message_template,
+                "mandatory": 0,
+            }
+        )
+        rule.insert(ignore_permissions=True)
+
+        # Create a test document
+        test_doc = frappe.get_doc(
+            {
+                "doctype": "ToDo",
+                "description": "Test document for template without data",
+            }
+        )
+        test_doc.insert(ignore_permissions=True)
+
+        # Trigger document review evaluation
+        from tweaks.utils.document_review import evaluate_document_reviews
+
+        evaluate_document_reviews(test_doc)
+
+        # Check if a Document Review was created with fallback message
+        review = frappe.get_all(
+            "Document Review",
+            filters={
+                "reference_doctype": test_doc.doctype,
+                "reference_name": test_doc.name,
+                "review_rule": rule.name,
+            },
+            fields=["name", "message"],
+            limit=1,
+        )
+
+        self.assertTrue(len(review) > 0, "Document Review should be created")
+        self.assertEqual(
+            review[0].message,
+            "Fallback message",
+            "Message should fall back to original message when template has no data",
+        )
+
+        # Clean up
+        frappe.delete_doc("Document Review", review[0].name, force=1)
+        frappe.delete_doc("ToDo", test_doc.name, force=1)
+        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+
