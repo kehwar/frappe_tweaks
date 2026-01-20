@@ -242,10 +242,12 @@ def _create_or_update_review(doc, rule, result):
             rule: Document Review Rule dict
             result: Script result dict with 'message' and 'data' keys
     """
-    # Serialize data for comparison
+    # Serialize data for storage and comparison
+    review_data = result.get("data")
     review_data_json = (
-        frappe.as_json(result.get("data"), indent=0) if result.get("data") else ""
+        frappe.as_json(review_data, indent=0) if review_data else ""
     )
+    review_data_for_storage = review_data_json if review_data else None
 
     # Check if a submitted review exists with the same data
     submitted_reviews = frappe.get_all(
@@ -286,7 +288,7 @@ def _create_or_update_review(doc, rule, result):
         # Update existing draft
         review_doc = frappe.get_doc("Document Review", existing_draft)
         review_doc.message = result.get("message", "")
-        review_doc.review_data = result.get("data")
+        review_doc.review_data = review_data_for_storage
         review_doc.mandatory = rule["mandatory"]
         review_doc.save(ignore_permissions=True)
     else:
@@ -298,7 +300,7 @@ def _create_or_update_review(doc, rule, result):
                 "reference_name": doc.name,
                 "review_rule": rule["name"],
                 "message": result.get("message", ""),
-                "review_data": result.get("data"),
+                "review_data": review_data_for_storage,
                 "mandatory": rule["mandatory"],
             }
         )
