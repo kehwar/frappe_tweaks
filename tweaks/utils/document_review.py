@@ -158,9 +158,6 @@ def evaluate_document_reviews(doc, method=None):
     rules = get_rules_for_doctype(doc.doctype)
     if not rules:
         return
-
-    # Track if we need to check conditions after evaluation
-    should_check_conditions = False
     
     # Evaluate each rule
     for rule in rules:
@@ -188,7 +185,6 @@ def evaluate_document_reviews(doc, method=None):
             else:
                 # Review needed - create or update draft review
                 _create_or_update_review(doc, rule, result)
-                should_check_conditions = True
 
         except Exception as e:
             frappe.throw(
@@ -198,8 +194,8 @@ def evaluate_document_reviews(doc, method=None):
             )
     
     # After all rules are evaluated, check conditions for actions
-    if should_check_conditions:
-        _evaluate_rule_conditions(doc, rules)
+    # Always check conditions, not just when reviews are created
+    _evaluate_rule_conditions(doc, rules)
 
 
 def check_mandatory_reviews(doc, method=None):
