@@ -72,7 +72,7 @@ import json
 
 import frappe
 from frappe import _
-from frappe.utils.safe_exec import safe_exec
+from frappe.utils.safe_exec import safe_eval, safe_exec
 
 
 def get_rules_for_doctype(doctype):
@@ -134,9 +134,7 @@ def evaluate_condition(condition_script, doc):
         return False
     
     try:
-        exec_context = {"doc": doc, "result": None}
-        safe_exec(condition_script, None, exec_context)
-        result = exec_context.get("result")
+        result = safe_eval(condition_script, eval_globals=None, eval_locals={"doc": doc})
         return bool(result)
     except Exception as e:
         frappe.log_error(
@@ -339,13 +337,7 @@ def _evaluate_rule_conditions(doc, rules):
             should_validate = True
     
     # Execute actions based on evaluated conditions
-    # Order matters: unassign before assign, submit before validate
-    
-    if should_unassign:
-        _clear_all_assignments(doc.doctype, doc.name)
-    
-    if should_assign:
-        apply_auto_assignments(doc.doctype, doc.name)
+    # Order: submit and validate first, then autoassignments OR clear (not both)
     
     if should_submit:
         # Auto-submit all pending reviews that the current user can submit
@@ -354,6 +346,12 @@ def _evaluate_rule_conditions(doc, rules):
     if should_validate:
         # Check for mandatory pending reviews and throw error if found
         _validate_no_pending_mandatory_reviews(doc)
+    
+    # Handle assignments: if both assign and unassign are true, only do assign
+    if should_assign:
+        apply_auto_assignments(doc.doctype, doc.name)
+    elif should_unassign:
+        _clear_all_assignments(doc.doctype, doc.name)
 
 
 def _clear_all_assignments(ref_doctype, ref_name):
@@ -377,7 +375,7 @@ def _clear_all_assignments(ref_doctype, ref_name):
         fields=["name", "allocated_to"],
     )
     
-    # Close all open assignments
+    # Cancel all open assignments
     for assignment in current_assignments:
         try:
             set_status(
@@ -385,7 +383,7 @@ def _clear_all_assignments(ref_doctype, ref_name):
                 ref_name,
                 todo=assignment["name"],
                 assign_to=assignment["allocated_to"],
-                status="Closed",
+                status="Cancelled",
                 ignore_permissions=True,
             )
         except Exception as e:
@@ -546,9 +544,13 @@ def apply_auto_assignments(ref_doctype, ref_name):
     removed_users = current_users - desired_users  # Users to remove
     # existing_users = desired_users & current_users  # Users that remain (no action needed)
     
-    # Handle removed users - close existing assignments
+    # Handle removed users - close for session user, cancel for others
     for user in removed_users:
         assignment_name = user_to_assignment[user]
+        
+        # If user is the session user, close; otherwise cancel
+        current_user = frappe.session.user if frappe.session else None
+        status = "Closed" if user == current_user else "Cancelled"
         
         try:
             set_status(
@@ -556,7 +558,7 @@ def apply_auto_assignments(ref_doctype, ref_name):
                 ref_name,
                 todo=assignment_name,
                 assign_to=user,
-                status="Closed",
+                status=status,
                 ignore_permissions=True,
             )
         except Exception as e:

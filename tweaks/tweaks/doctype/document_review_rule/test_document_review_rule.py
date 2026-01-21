@@ -457,7 +457,7 @@ result = {
                 "reference_doctype": "ToDo",
                 "script": 'result = {"message": "Review needed"}',
                 "mandatory": 0,
-                "assign_condition": "result = doc.priority == 'High'",
+                "assign_condition": "doc.priority == 'High'",
                 "users": [
                     {"user": self.test_user_1, "ignore_permissions": 1},
                 ],
@@ -532,8 +532,8 @@ result = {
                 "reference_doctype": "ToDo",
                 "script": 'result = {"message": "Review needed"}',
                 "mandatory": 0,
-                "assign_condition": "result = doc.priority == 'High'",
-                "unassign_condition": "result = doc.status == 'Closed'",
+                "assign_condition": "doc.priority == 'High'",
+                "unassign_condition": "doc.status == 'Closed'",
                 "users": [
                     {"user": self.test_user_1, "ignore_permissions": 1},
                 ],
@@ -606,7 +606,7 @@ result = {
                 "reference_doctype": "ToDo",
                 "script": 'result = {"message": "Review needed"}',
                 "mandatory": 0,
-                "submit_condition": "result = doc.status == 'Closed'",
+                "submit_condition": "doc.status == 'Closed'",
             }
         )
         rule.insert(ignore_permissions=True)
@@ -667,7 +667,7 @@ result = {
                 "reference_doctype": "ToDo",
                 "script": 'result = {"message": "Review needed"}',
                 "mandatory": 1,
-                "validate_condition": "result = doc.status == 'Closed'",
+                "validate_condition": "doc.status == 'Closed'",
             }
         )
         rule.insert(ignore_permissions=True)
