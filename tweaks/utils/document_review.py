@@ -375,15 +375,19 @@ def _clear_all_assignments(ref_doctype, ref_name):
         fields=["name", "allocated_to"],
     )
     
-    # Cancel all open assignments
+    # Clear all open assignments - close for current user, cancel for others
     for assignment in current_assignments:
+        # If user is the session user, close; otherwise cancel
+        current_user = frappe.session.user if frappe.session else None
+        status = "Closed" if assignment["allocated_to"] == current_user else "Cancelled"
+        
         try:
             set_status(
                 ref_doctype,
                 ref_name,
                 todo=assignment["name"],
                 assign_to=assignment["allocated_to"],
-                status="Cancelled",
+                status=status,
                 ignore_permissions=True,
             )
         except Exception as e:
