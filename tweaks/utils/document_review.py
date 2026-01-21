@@ -100,11 +100,47 @@ def get_rules_for_doctype(doctype):
     rules = frappe.get_all(
         "Document Review Rule",
         filters={"reference_doctype": doctype, "disabled": 0},
-        fields=["name", "title", "script", "mandatory"],
+        fields=[
+            "name",
+            "title",
+            "script",
+            "mandatory",
+            "assign_condition",
+            "unassign_condition",
+            "submit_condition",
+            "validate_condition",
+        ],
     )
 
     frappe.cache.set_value(cache_key, rules)
     return rules
+
+
+def evaluate_condition(condition_script, doc):
+    """
+    Evaluate a condition script with the document context.
+    
+    Args:
+        condition_script: Python code to evaluate
+        doc: Document instance
+        
+    Returns:
+        bool: True if condition is met, False otherwise
+    """
+    if not condition_script:
+        return False
+    
+    try:
+        exec_context = {"doc": doc, "result": None}
+        safe_exec(condition_script, None, exec_context)
+        result = exec_context.get("result")
+        return bool(result)
+    except Exception as e:
+        frappe.log_error(
+            title=f"Error evaluating condition for {doc.doctype} {doc.name}",
+            message=f"Condition script: {condition_script}\nError: {str(e)}"
+        )
+        return False
 
 
 def evaluate_document_reviews(doc, method=None):
@@ -123,6 +159,9 @@ def evaluate_document_reviews(doc, method=None):
     if not rules:
         return
 
+    # Track if we need to check conditions after evaluation
+    should_check_conditions = False
+    
     # Evaluate each rule
     for rule in rules:
         try:
@@ -149,6 +188,7 @@ def evaluate_document_reviews(doc, method=None):
             else:
                 # Review needed - create or update draft review
                 _create_or_update_review(doc, rule, result)
+                should_check_conditions = True
 
         except Exception as e:
             frappe.throw(
@@ -156,57 +196,27 @@ def evaluate_document_reviews(doc, method=None):
                     rule["title"], str(e)
                 )
             )
+    
+    # After all rules are evaluated, check conditions for actions
+    if should_check_conditions:
+        _evaluate_rule_conditions(doc, rules)
 
 
 def check_mandatory_reviews(doc, method=None):
     """
-    Check if document has any mandatory pending reviews and block submission if so.
-
-    Called automatically on before_submit event.
+    DEPRECATED: This function is kept for backward compatibility but is now a no-op.
+    
+    The document review system now uses condition-based evaluation instead of hooks.
+    Use validate_condition in Document Review Rule to control when validation occurs.
+    
+    Called automatically on before_submit event (legacy hook).
 
     Args:
             doc: Document instance
             method: Hook method name (unused)
-
-    Raises:
-            frappe.ValidationError: If mandatory pending reviews exist
     """
-
-    # Early exit if no rules for this doctype
-    rules = get_rules_for_doctype(doc.doctype)
-    if not rules:
-        return
-
-    # Approve all pending reviews before submission
-    submit_all_document_reviews(doc.doctype, doc.name)
-
-    # Check for mandatory pending reviews
-    pending_mandatory = frappe.get_all(
-        "Document Review",
-        filters={
-            "reference_doctype": doc.doctype,
-            "reference_name": doc.name,
-            "docstatus": 0,
-            "mandatory": 1,
-        },
-        fields=["review_rule"],
-        pluck="review_rule",
-    )
-
-    if pending_mandatory:
-        # Get rule titles for error message
-        rule_titles = frappe.get_all(
-            "Document Review Rule",
-            filters={"name": ["in", pending_mandatory]},
-            pluck="title",
-        )
-
-        frappe.throw(
-            _("Cannot submit document with pending mandatory reviews: {0}").format(
-                ", ".join(rule_titles)
-            ),
-            frappe.ValidationError,
-        )
+    # No-op: Validation is now handled by validate_condition in rules
+    pass
 
 
 def _delete_draft_reviews(reference_doctype, reference_name, review_rule):
@@ -306,11 +316,134 @@ def _create_or_update_review(doc, rule, result):
         )
         review_doc.insert(ignore_permissions=True)
     
-    # Apply auto-assignments to the referenced document (considers all pending reviews)
-    apply_auto_assignments(review_doc.reference_doctype, review_doc.reference_name)
+    # NOTE: Auto-assignments are now handled by condition evaluation, not here
 
 
-def apply_auto_assignments(ref_doctype, ref_name, last_submit_by=None):
+def _evaluate_rule_conditions(doc, rules):
+    """
+    Evaluate condition scripts for all rules and execute appropriate actions.
+    
+    Args:
+        doc: Reference document instance
+        rules: List of Document Review Rule dicts
+    """
+    # Track which conditions are true across all rules
+    should_assign = False
+    should_unassign = False
+    should_submit = False
+    should_validate = False
+    
+    # Evaluate each rule's conditions
+    for rule in rules:
+        if evaluate_condition(rule.get("assign_condition"), doc):
+            should_assign = True
+        
+        if evaluate_condition(rule.get("unassign_condition"), doc):
+            should_unassign = True
+        
+        if evaluate_condition(rule.get("submit_condition"), doc):
+            should_submit = True
+        
+        if evaluate_condition(rule.get("validate_condition"), doc):
+            should_validate = True
+    
+    # Execute actions based on evaluated conditions
+    # Order matters: unassign before assign, submit before validate
+    
+    if should_unassign:
+        _clear_all_assignments(doc.doctype, doc.name)
+    
+    if should_assign:
+        apply_auto_assignments(doc.doctype, doc.name)
+    
+    if should_submit:
+        # Auto-submit all pending reviews that the current user can submit
+        submit_all_document_reviews(doc.doctype, doc.name)
+    
+    if should_validate:
+        # Check for mandatory pending reviews and throw error if found
+        _validate_no_pending_mandatory_reviews(doc)
+
+
+def _clear_all_assignments(ref_doctype, ref_name):
+    """
+    Clear all open assignments for a referenced document.
+    
+    Args:
+        ref_doctype: The doctype of the referenced document
+        ref_name: The name of the referenced document
+    """
+    from frappe.desk.form.assign_to import set_status
+    
+    # Get all open/pending assignments for the referenced document
+    current_assignments = frappe.get_all(
+        "ToDo",
+        filters={
+            "reference_type": ref_doctype,
+            "reference_name": ref_name,
+            "status": ("not in", ("Cancelled", "Closed")),
+        },
+        fields=["name", "allocated_to"],
+    )
+    
+    # Cancel all open assignments
+    for assignment in current_assignments:
+        try:
+            set_status(
+                ref_doctype,
+                ref_name,
+                todo=assignment["name"],
+                assign_to=assignment["allocated_to"],
+                status="Cancelled",
+                ignore_permissions=True,
+            )
+        except Exception as e:
+            frappe.log_error(
+                title=f"Failed to clear assignment for {assignment['allocated_to']}",
+                message=str(e),
+            )
+
+
+def _validate_no_pending_mandatory_reviews(doc):
+    """
+    Check if document has any mandatory pending reviews and throw error if so.
+    
+    Args:
+        doc: Document instance
+        
+    Raises:
+        frappe.ValidationError: If mandatory pending reviews exist
+    """
+    # Check for mandatory pending reviews
+    pending_mandatory = frappe.get_all(
+        "Document Review",
+        filters={
+            "reference_doctype": doc.doctype,
+            "reference_name": doc.name,
+            "docstatus": 0,
+            "mandatory": 1,
+        },
+        fields=["review_rule"],
+        pluck="review_rule",
+    )
+
+    if pending_mandatory:
+        # Get rule titles for error message
+        rule_titles = frappe.get_all(
+            "Document Review Rule",
+            filters={"name": ["in", pending_mandatory]},
+            pluck="title",
+        )
+
+        frappe.throw(
+            _("Cannot proceed with pending mandatory reviews: {0}").format(
+                ", ".join(rule_titles)
+            ),
+            frappe.ValidationError,
+        )
+
+
+def apply_auto_assignments(ref_doctype, ref_name):
     """
     Apply auto-assignments to a referenced document based on ALL pending document reviews.
     
@@ -320,13 +453,12 @@ def apply_auto_assignments(ref_doctype, ref_name, last_submit_by=None):
     - Compares desired users with current assignments to determine changes
     - Only creates assignments for NEW users (sends notifications)
     - Leaves EXISTING users unchanged (no notifications)
-    - Updates REMOVED users: closes if last_submit_by, cancels otherwise
+    - Cancels assignments for REMOVED users
     - Uses review message as personalized todo description for new assignments
     
     Args:
         ref_doctype: The doctype of the referenced document (e.g., "Sales Order")
         ref_name: The name of the referenced document
-        last_submit_by: Optional user who just submitted a review (their assignment will be closed)
     
     Permission Filtering (per-user):
         - When ignore_permissions=False: User must have submit permission on Document Review 
@@ -334,11 +466,8 @@ def apply_auto_assignments(ref_doctype, ref_name, last_submit_by=None):
         - When ignore_permissions=True: User is assigned regardless of permissions
     
     Example:
-        # Called automatically when a Document Review is created/updated
+        # Called automatically when conditions are met
         apply_auto_assignments("Sales Order", "SO-001")
-        
-        # Called on submit with the submitter's user
-        apply_auto_assignments("Sales Order", "SO-001", last_submit_by="user@example.com")
     """
     from frappe.desk.form.assign_to import add as add_assignment, set_status
     
@@ -426,11 +555,9 @@ def apply_auto_assignments(ref_doctype, ref_name, last_submit_by=None):
     removed_users = current_users - desired_users  # Users to remove
     # existing_users = desired_users & current_users  # Users that remain (no action needed)
     
-    # Handle removed users
+    # Handle removed users - cancel all assignments
     for user in removed_users:
         assignment_name = user_to_assignment[user]
-        # If user is the one who just submitted, close; otherwise cancel
-        status = "Closed" if user == last_submit_by else "Cancelled"
         
         try:
             set_status(
@@ -438,7 +565,7 @@ def apply_auto_assignments(ref_doctype, ref_name, last_submit_by=None):
                 ref_name,
                 todo=assignment_name,
                 assign_to=user,
-                status=status,
+                status="Cancelled",
                 ignore_permissions=True,
             )
         except Exception as e:
