@@ -16,12 +16,16 @@ class DocumentReviewRule(Document):
         from frappe.types import DF
         from tweaks.tweaks.doctype.document_review_user.document_review_user import DocumentReviewUser
 
+        assign_condition: DF.Code | None
         disabled: DF.Check
         mandatory: DF.Check
         reference_doctype: DF.Link
         script: DF.Code
+        submit_condition: DF.Code | None
         title: DF.Data
+        unassign_condition: DF.Code | None
         users: DF.Table[DocumentReviewUser]
+        validate_condition: DF.Code | None
     # end: auto-generated types
 
     def on_update(self):

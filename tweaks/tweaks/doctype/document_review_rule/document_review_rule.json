@@ -16,7 +16,14 @@
   "users",
   "section_break_script",
   "script",
-  "script_help"
+  "script_help",
+  "section_break_conditions",
+  "conditions_help",
+  "assign_condition",
+  "unassign_condition",
+  "column_break_conditions",
+  "submit_condition",
+  "validate_condition"
  ],
  "fields": [
   {
@@ -83,6 +90,44 @@
    "fieldtype": "Table",
    "label": "Assign Users",
    "options": "Document Review User"
+  },
+  {
+   "fieldname": "section_break_conditions",
+   "fieldtype": "Section Break",
+   "label": "Conditions"
+  },
+  {
+   "fieldname": "conditions_help",
+   "fieldtype": "HTML",
+   "options": "<div class=\"form-message blue\">\n<p><strong>Condition Scripts</strong> are evaluated when the referenced document changes. Use these to control when actions occur:</p>\n<ul>\n<li><strong>Assign Condition:</strong> When true, assign users from the table above to the referenced document</li>\n<li><strong>Unassign Condition:</strong> When true, clear all open assignments from the referenced document</li>\n<li><strong>Submit Condition:</strong> When true, auto-submit all reviews this user can submit (e.g., <code>doc.docstatus == 1</code>)</li>\n<li><strong>Validate Condition:</strong> When true, run validation and error if draft reviews exist (e.g., <code>doc.docstatus == 1</code>)</li>\n</ul>\n<p>Leave blank to disable the action. Scripts have access to <code>doc</code> (the referenced document) and should return <code>True</code> or <code>False</code>.</p>\n</div>"
+  },
+  {
+   "fieldname": "assign_condition",
+   "fieldtype": "Code",
+   "label": "Assign Condition",
+   "options": "Python"
+  },
+  {
+   "fieldname": "unassign_condition",
+   "fieldtype": "Code",
+   "label": "Unassign Condition",
+   "options": "Python"
+  },
+  {
+   "fieldname": "column_break_conditions",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "submit_condition",
+   "fieldtype": "Code",
+   "label": "Submit Condition",
+   "options": "Python"
+  },
+  {
+   "fieldname": "validate_condition",
+   "fieldtype": "Code",
+   "label": "Validate Condition",
+   "options": "Python"
   }
  ],
  "index_web_pages_for_search": 1,

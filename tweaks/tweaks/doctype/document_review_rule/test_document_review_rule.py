@@ -447,3 +447,321 @@ result = {
         frappe.delete_doc("ToDo", test_doc.name, force=1)
         frappe.delete_doc("Document Review Rule", rule.name, force=1)
 
+    def test_assign_condition(self):
+        """Test that assign_condition controls when users are assigned"""
+        # Create a rule with assign_condition that checks a field value
+        rule = frappe.get_doc(
+            {
+                "doctype": "Document Review Rule",
+                "title": "Test Assign Condition",
+                "reference_doctype": "ToDo",
+                "script": 'result = {"message": "Review needed"}',
+                "mandatory": 0,
+                "assign_condition": "doc.priority == 'High'",
+                "users": [
+                    {"user": self.test_user_1, "ignore_permissions": 1},
+                ],
+            }
+        )
+        rule.insert(ignore_permissions=True)
+
+        # Create a test document with Low priority (should NOT assign)
+        test_doc = frappe.get_doc(
+            {
+                "doctype": "ToDo",
+                "description": "Test document for assign condition",
+                "priority": "Low",
+            }
+        )
+        test_doc.insert(ignore_permissions=True)
+
+        # Trigger document review evaluation
+        from tweaks.utils.document_review import evaluate_document_reviews
+
+        evaluate_document_reviews(test_doc)
+
+        # Check that user was NOT assigned
+        assignments = frappe.get_all(
+            "ToDo",
+            filters={
+                "reference_type": test_doc.doctype,
+                "reference_name": test_doc.name,
+                "status": "Open",
+            },
+        )
+        self.assertEqual(len(assignments), 0, "User should NOT be assigned when condition is false")
+
+        # Update document to High priority (should assign)
+        test_doc.priority = "High"
+        test_doc.save(ignore_permissions=True)
+        evaluate_document_reviews(test_doc)
+
+        # Check that user was assigned
+        assignments = frappe.get_all(
+            "ToDo",
+            filters={
+                "reference_type": test_doc.doctype,
+                "reference_name": test_doc.name,
+                "status": "Open",
+            },
+            fields=["allocated_to"],
+        )
+        self.assertTrue(len(assignments) > 0, "User should be assigned when condition is true")
+        self.assertEqual(assignments[0].allocated_to, self.test_user_1)
+
+        # Clean up
+        review = frappe.get_all(
+            "Document Review",
+            filters={
+                "reference_doctype": test_doc.doctype,
+                "reference_name": test_doc.name,
+            },
+        )
+        for r in review:
+            frappe.delete_doc("Document Review", r.name, force=1)
+        frappe.delete_doc("ToDo", test_doc.name, force=1)
+        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+
+    def test_unassign_condition(self):
+        """Test that unassign_condition clears all assignments"""
+        # Create a rule with both assign and unassign conditions
+        rule = frappe.get_doc(
+            {
+                "doctype": "Document Review Rule",
+                "title": "Test Unassign Condition",
+                "reference_doctype": "ToDo",
+                "script": 'result = {"message": "Review needed"}',
+                "mandatory": 0,
+                "assign_condition": "doc.priority == 'High'",
+                "unassign_condition": "doc.status == 'Closed'",
+                "users": [
+                    {"user": self.test_user_1, "ignore_permissions": 1},
+                ],
+            }
+        )
+        rule.insert(ignore_permissions=True)
+
+        # Create a test document with High priority (should assign)
+        test_doc = frappe.get_doc(
+            {
+                "doctype": "ToDo",
+                "description": "Test document for unassign condition",
+                "priority": "High",
+                "status": "Open",
+            }
+        )
+        test_doc.insert(ignore_permissions=True)
+        
+        from tweaks.utils.document_review import evaluate_document_reviews
+        evaluate_document_reviews(test_doc)
+
+        # Check that user was assigned
+        assignments = frappe.get_all(
+            "ToDo",
+            filters={
+                "reference_type": test_doc.doctype,
+                "reference_name": test_doc.name,
+                "status": "Open",
+            },
+        )
+        self.assertTrue(len(assignments) > 0, "User should be assigned")
+
+        # Close the document (should unassign)
+        test_doc.status = "Closed"
+        test_doc.save(ignore_permissions=True)
+        evaluate_document_reviews(test_doc)
+
+        # Check that assignments were cleared
+        assignments = frappe.get_all(
+            "ToDo",
+            filters={
+                "reference_type": test_doc.doctype,
+                "reference_name": test_doc.name,
+                "status": ("not in", ("Cancelled", "Closed")),
+            },
+        )
+        self.assertEqual(len(assignments), 0, "Assignments should be cleared when unassign condition is true")
+
+        # Clean up
+        review = frappe.get_all(
+            "Document Review",
+            filters={
+                "reference_doctype": test_doc.doctype,
+                "reference_name": test_doc.name,
+            },
+        )
+        for r in review:
+            frappe.delete_doc("Document Review", r.name, force=1)
+        frappe.delete_doc("ToDo", test_doc.name, force=1)
+        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+
+    def test_submit_condition_with_docstatus(self):
+        """Test that submit_condition auto-submits reviews when condition is met"""
+        # Create a submittable test doctype scenario
+        # Note: We'll use ToDo for simplicity, but in real usage this would be a submittable doctype
+        rule = frappe.get_doc(
+            {
+                "doctype": "Document Review Rule",
+                "title": "Test Submit Condition",
+                "reference_doctype": "ToDo",
+                "script": 'result = {"message": "Review needed"}',
+                "mandatory": 0,
+                "submit_condition": "doc.status == 'Closed'",
+            }
+        )
+        rule.insert(ignore_permissions=True)
+
+        # Create a test document
+        test_doc = frappe.get_doc(
+            {
+                "doctype": "ToDo",
+                "description": "Test document for submit condition",
+                "status": "Open",
+            }
+        )
+        test_doc.insert(ignore_permissions=True)
+        
+        from tweaks.utils.document_review import evaluate_document_reviews
+        evaluate_document_reviews(test_doc)
+
+        # Check that review was created
+        reviews = frappe.get_all(
+            "Document Review",
+            filters={
+                "reference_doctype": test_doc.doctype,
+                "reference_name": test_doc.name,
+                "docstatus": 0,
+            },
+        )
+        self.assertTrue(len(reviews) > 0, "Draft review should be created")
+
+        # Close the document (should trigger submit condition)
+        test_doc.status = "Closed"
+        test_doc.save(ignore_permissions=True)
+        evaluate_document_reviews(test_doc)
+
+        # Check that review was submitted
+        submitted_reviews = frappe.get_all(
+            "Document Review",
+            filters={
+                "reference_doctype": test_doc.doctype,
+                "reference_name": test_doc.name,
+                "docstatus": 1,
+            },
+        )
+        self.assertTrue(len(submitted_reviews) > 0, "Review should be auto-submitted when condition is true")
+
+        # Clean up
+        for r in frappe.get_all("Document Review", filters={"reference_doctype": test_doc.doctype, "reference_name": test_doc.name}):
+            frappe.delete_doc("Document Review", r.name, force=1)
+        frappe.delete_doc("ToDo", test_doc.name, force=1)
+        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+
+    def test_validate_condition_blocks_when_reviews_pending(self):
+        """Test that validate_condition throws error when draft reviews exist"""
+        # Create a rule with validate condition
+        rule = frappe.get_doc(
+            {
+                "doctype": "Document Review Rule",
+                "title": "Test Validate Condition",
+                "reference_doctype": "ToDo",
+                "script": 'result = {"message": "Review needed"}',
+                "mandatory": 1,
+                "validate_condition": "doc.status == 'Closed'",
+            }
+        )
+        rule.insert(ignore_permissions=True)
+
+        # Create a test document
+        test_doc = frappe.get_doc(
+            {
+                "doctype": "ToDo",
+                "description": "Test document for validate condition",
+                "status": "Open",
+            }
+        )
+        test_doc.insert(ignore_permissions=True)
+        
+        from tweaks.utils.document_review import evaluate_document_reviews
+        evaluate_document_reviews(test_doc)
+
+        # Check that review was created
+        reviews = frappe.get_all(
+            "Document Review",
+            filters={
+                "reference_doctype": test_doc.doctype,
+                "reference_name": test_doc.name,
+                "docstatus": 0,
+            },
+        )
+        self.assertTrue(len(reviews) > 0, "Draft review should be created")
+
+        # Try to close the document (should trigger validation and throw error)
+        test_doc.status = "Closed"
+        test_doc.save(ignore_permissions=True)
+        
+        with self.assertRaises(frappe.ValidationError):
+            evaluate_document_reviews(test_doc)
+
+        # Clean up
+        for r in frappe.get_all("Document Review", filters={"reference_doctype": test_doc.doctype, "reference_name": test_doc.name}):
+            frappe.delete_doc("Document Review", r.name, force=1)
+        frappe.delete_doc("ToDo", test_doc.name, force=1)
+        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+
+    def test_conditions_with_no_script_means_no_action(self):
+        """Test that empty condition scripts don't trigger actions"""
+        # Create a rule without any conditions
+        rule = frappe.get_doc(
+            {
+                "doctype": "Document Review Rule",
+                "title": "Test No Conditions",
+                "reference_doctype": "ToDo",
+                "script": 'result = {"message": "Review needed"}',
+                "mandatory": 0,
+                "users": [
+                    {"user": self.test_user_1, "ignore_permissions": 1},
+                ],
+            }
+        )
+        rule.insert(ignore_permissions=True)
+
+        # Create a test document
+        test_doc = frappe.get_doc(
+            {
+                "doctype": "ToDo",
+                "description": "Test document for no conditions",
+            }
+        )
+        test_doc.insert(ignore_permissions=True)
+        
+        from tweaks.utils.document_review import evaluate_document_reviews
+        evaluate_document_reviews(test_doc)
+
+        # Check that review was created but user was NOT assigned (no assign_condition)
+        reviews = frappe.get_all(
+            "Document Review",
+            filters={
+                "reference_doctype": test_doc.doctype,
+                "reference_name": test_doc.name,
+            },
+        )
+        self.assertTrue(len(reviews) > 0, "Review should be created")
+
+        assignments = frappe.get_all(
+            "ToDo",
+            filters={
+                "reference_type": test_doc.doctype,
+                "reference_name": test_doc.name,
+                "status": "Open",
+            },
+        )
+        self.assertEqual(len(assignments), 0, "User should NOT be assigned without assign_condition")
+
+        # Clean up
+        for r in reviews:
+            frappe.delete_doc("Document Review", r.name, force=1)
+        frappe.delete_doc("ToDo", test_doc.name, force=1)
+        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+
+
