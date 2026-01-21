@@ -133,13 +133,13 @@ class GoogleSheetsService:
             frappe.log_error(f"Error fetching sheet titles: {str(e)}")
             frappe.throw(f"Failed to fetch sheet titles: {str(e)}")
 
-    def get_values(self, sheet=None, range=None):
+    def get_values(self, sheet=None, cell_range=None):
         """
         Get values from a specific range in the spreadsheet
 
         Args:
             sheet (str, optional): The name of the sheet. If not provided, uses first sheet.
-            range (str, optional): The A1 notation of the range (e.g., "A1:C10"). If not provided, gets all data.
+            cell_range (str, optional): The A1 notation of the range (e.g., "A1:C10"). If not provided, gets all data.
 
         Returns:
             list: List of lists containing the cell values
@@ -154,8 +154,8 @@ class GoogleSheetsService:
                 sheet = sheet_titles[0]
 
             # Build the range_name
-            if range:
-                range_name = f"'{sheet}'!{range}"
+            if cell_range:
+                range_name = f"'{sheet}'!{cell_range}"
             else:
                 range_name = f"'{sheet}'"
 
@@ -174,7 +174,7 @@ class GoogleSheetsService:
     def get_rows(
         self,
         sheet=None,
-        range=None,
+        cell_range=None,
         first_row_as_headers=False,
         columns=None,
     ):
@@ -183,14 +183,14 @@ class GoogleSheetsService:
 
         Args:
             sheet (str, optional): The name of the sheet. If not provided, uses first sheet.
-            range (str, optional): The A1 notation of the range (e.g., "A1:C10"). If not provided, gets all data.
+            cell_range (str, optional): The A1 notation of the range (e.g., "A1:C10"). If not provided, gets all data.
             first_row_as_headers (bool): If True, use first row as keys for dictionaries
             columns (list): Array of column names to use as keys instead of first row
 
         Returns:
             list: List of dictionaries with column names as keys
         """
-        values = self.get_values(sheet=sheet, range=range)
+        values = self.get_values(sheet=sheet, cell_range=cell_range)
 
         if not values:
             return []
@@ -394,13 +394,13 @@ class GoogleDriveExcelService:
             frappe.log_error(f"Error fetching sheet titles: {str(e)}")
             frappe.throw(f"Failed to fetch sheet titles: {str(e)}")
 
-    def get_values(self, sheet=None, range=None):
+    def get_values(self, sheet=None, cell_range=None):
         """
         Get values from a specific range in the Excel file
 
         Args:
             sheet (str, optional): The name of the sheet. If not provided, uses first sheet (index 0).
-            range (str, optional): The A1 notation of the cell range (e.g., "A1:C10"). If not provided, gets all data.
+            cell_range (str, optional): The A1 notation of the cell range (e.g., "A1:C10"). If not provided, gets all data.
 
         Returns:
             list: List of lists containing the cell values
@@ -421,8 +421,8 @@ class GoogleDriveExcelService:
             )
 
             # Parse cell range if specified
-            if range:
-                start_cell, end_cell = self._parse_cell_range(range)
+            if cell_range:
+                start_cell, end_cell = self._parse_cell_range(cell_range)
                 df = self._slice_dataframe(df, start_cell, end_cell)
 
             # Convert to list of lists, replacing NaN with empty strings
@@ -435,7 +435,7 @@ class GoogleDriveExcelService:
     def get_rows(
         self,
         sheet=None,
-        range=None,
+        cell_range=None,
         first_row_as_headers=False,
         columns=None,
     ):
@@ -444,14 +444,14 @@ class GoogleDriveExcelService:
 
         Args:
             sheet (str, optional): The name of the sheet. If not provided, uses first sheet (index 0).
-            range (str, optional): The A1 notation of the cell range (e.g., "A1:C10"). If not provided, gets all data.
+            cell_range (str, optional): The A1 notation of the cell range (e.g., "A1:C10"). If not provided, gets all data.
             first_row_as_headers (bool): If True, use first row as keys for dictionaries
             columns (list): Array of column names to use as keys instead of first row
 
         Returns:
             list: List of dictionaries with column names as keys
         """
-        values = self.get_values(sheet=sheet, range=range)
+        values = self.get_values(sheet=sheet, cell_range=cell_range)
 
         if not values:
             return []
@@ -538,7 +538,7 @@ def get_sheet_titles(spreadsheet_id, serviceaccount=None, file_type="sheets"):
 
 @frappe.whitelist()
 def get_values(
-    spreadsheet_id, sheet=None, range=None, serviceaccount=None, file_type="sheets"
+    spreadsheet_id, sheet=None, cell_range=None, serviceaccount=None, file_type="sheets"
 ):
     """
     Whitelisted method to get values from a spreadsheet
@@ -546,7 +546,7 @@ def get_values(
     Args:
         spreadsheet_id (str): The ID of the Google Spreadsheet or Excel file
         sheet (str, optional): The name of the sheet. If not provided, uses first sheet.
-        range (str, optional): The A1 notation of the range (e.g., "A1:C10"). If not provided, gets all data.
+        cell_range (str, optional): The A1 notation of the range (e.g., "A1:C10"). If not provided, gets all data.
         serviceaccount (str, optional): Name of the Google Service Account document.
                                         If not provided, uses the default account.
         file_type (str, optional): Type of file - "sheets" or "excel". Defaults to "sheets".
@@ -566,14 +566,14 @@ def get_values(
     else:
         service = doc.get_sheets_service(spreadsheet_id)
 
-    return service.get_values(sheet=sheet, range=range)
+    return service.get_values(sheet=sheet, cell_range=cell_range)
 
 
 @frappe.whitelist()
 def get_rows(
     spreadsheet_id,
     sheet=None,
-    range=None,
+    cell_range=None,
     first_row_as_headers=False,
     columns=None,
     serviceaccount=None,
@@ -585,7 +585,7 @@ def get_rows(
     Args:
         spreadsheet_id (str): The ID of the Google Spreadsheet or Excel file
         sheet (str, optional): The name of the sheet. If not provided, uses first sheet.
-        range (str, optional): The A1 notation of the range (e.g., "A1:C10"). If not provided, gets all data.
+        cell_range (str, optional): The A1 notation of the range (e.g., "A1:C10"). If not provided, gets all data.
         first_row_as_headers (bool): If True, use first row as keys for dictionaries
         columns (list): Array of column names to use as keys instead of first row
         serviceaccount (str, optional): Name of the Google Service Account document.
@@ -620,13 +620,13 @@ def get_rows(
 
     return service.get_rows(
         sheet=sheet,
-        range=range,
+        cell_range=cell_range,
         first_row_as_headers=first_row_as_headers,
         columns=columns,
     )
 
 
-def get_default_account():
+def get_default_account() -> GoogleServiceAccount:
     """
     Get the default Google Service Account
 
