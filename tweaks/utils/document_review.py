@@ -120,12 +120,15 @@ def evaluate_condition(condition_script, doc):
     """
     Evaluate a condition script with the document context.
     
+    Condition scripts should only set the 'result' variable to True or False
+    and should not modify the document or perform other side effects.
+    
     Args:
-        condition_script: Python code to evaluate
-        doc: Document instance
+        condition_script: Python code to evaluate. If empty/None, returns False.
+        doc: Document instance (read-only context)
         
     Returns:
-        bool: True if condition is met, False otherwise
+        bool: True if condition is met, False otherwise (including empty scripts)
     """
     if not condition_script:
         return False
@@ -319,11 +322,20 @@ def _evaluate_rule_conditions(doc, rules):
     """
     Evaluate condition scripts for all rules and execute appropriate actions.
     
+    Uses OR-based aggregation: if ANY rule's condition is true, that action is triggered.
+    This means a single rule can trigger actions that affect all reviews for the document.
+    
+    For example:
+    - If any rule has assign_condition=True, assignments are applied based on ALL pending reviews
+    - If any rule has unassign_condition=True, ALL assignments are cleared
+    - If any rule has submit_condition=True, ALL pending reviews are submitted
+    - If any rule has validate_condition=True, validation checks ALL mandatory pending reviews
+    
     Args:
         doc: Reference document instance
         rules: List of Document Review Rule dicts
     """
-    # Track which conditions are true across all rules
+    # Track which conditions are true across all rules (OR-based)
     should_assign = False
     should_unassign = False
     should_submit = False
@@ -432,7 +444,7 @@ def _validate_no_pending_mandatory_reviews(doc):
         )
 
         frappe.throw(
-            _("Cannot proceed with pending mandatory reviews: {0}").format(
+            _("Cannot proceed: pending mandatory reviews must be completed: {0}").format(
                 ", ".join(rule_titles)
             ),
             frappe.ValidationError,
