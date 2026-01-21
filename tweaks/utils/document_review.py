@@ -201,23 +201,6 @@ def evaluate_document_reviews(doc, method=None):
     _evaluate_rule_conditions(doc, rules)
 
 
-def check_mandatory_reviews(doc, method=None):
-    """
-    DEPRECATED: This function is kept for backward compatibility but is now a no-op.
-    
-    The document review system now uses condition-based evaluation instead of hooks.
-    Use validate_condition in Document Review Rule to control when validation occurs.
-    
-    Called automatically on before_submit event (legacy hook).
-
-    Args:
-            doc: Document instance
-            method: Hook method name (unused)
-    """
-    # No-op: Validation is now handled by validate_condition in rules
-    pass
-
-
 def _delete_draft_reviews(reference_doctype, reference_name, review_rule):
     """
     Delete all draft Document Review records for a specific rule and document.

@@ -30,7 +30,6 @@ doc_events = {
         "before_transition": [
             "tweaks.utils.workflow.check_workflow_transition_permission"
         ],
-        "before_submit": ["tweaks.utils.document_review.check_mandatory_reviews"],
     },
     "Customer": {
         "before_validate": "tweaks.custom.doctype.customer.before_validate",
