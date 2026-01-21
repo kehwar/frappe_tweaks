@@ -377,7 +377,7 @@ def _clear_all_assignments(ref_doctype, ref_name):
         fields=["name", "allocated_to"],
     )
     
-    # Cancel all open assignments
+    # Close all open assignments
     for assignment in current_assignments:
         try:
             set_status(
@@ -385,7 +385,7 @@ def _clear_all_assignments(ref_doctype, ref_name):
                 ref_name,
                 todo=assignment["name"],
                 assign_to=assignment["allocated_to"],
-                status="Cancelled",
+                status="Closed",
                 ignore_permissions=True,
             )
         except Exception as e:
@@ -546,7 +546,7 @@ def apply_auto_assignments(ref_doctype, ref_name):
     removed_users = current_users - desired_users  # Users to remove
     # existing_users = desired_users & current_users  # Users that remain (no action needed)
     
-    # Handle removed users - cancel all assignments
+    # Handle removed users - close existing assignments
     for user in removed_users:
         assignment_name = user_to_assignment[user]
         
@@ -556,7 +556,7 @@ def apply_auto_assignments(ref_doctype, ref_name):
                 ref_name,
                 todo=assignment_name,
                 assign_to=user,
-                status="Cancelled",
+                status="Closed",
                 ignore_permissions=True,
             )
         except Exception as e:
