@@ -506,6 +506,18 @@ def get_resource_filter_query(
     return frappe._dict({"query": resource_filter_query, "access": access})
 
 
+def get_allowed_docs_query(doctype, action="read"):
+
+    conditions = _get_permission_query_conditions_for_doctype(
+        doctype=doctype, action=action
+    )
+
+    if not conditions:
+        return f"SELECT `tab{doctype}`.`name` FROM `tab{doctype}`"
+
+    return f"SELECT `tab{doctype}`.`name` FROM `tab{doctype}` WHERE {conditions}"
+
+
 @frappe.whitelist()
 def has_resource_access(
     resource="",

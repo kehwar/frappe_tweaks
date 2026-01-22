@@ -18,6 +18,12 @@ from frappe.utils.xlsxutils import (
 
 from tweaks.custom.utils.formatter import to_snake_case
 from tweaks.custom.utils.naming import setseries
+from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import (
+    get_allowed_docs_query,
+    get_resource_filter_query,
+    has_ac_permission,
+    has_resource_access,
+)
 from tweaks.tweaks.doctype.open_observe_api.open_observe_api import (
     search_logs,
     send_logs,
@@ -147,6 +153,12 @@ def safe_exec_globals(out):
                 submit_document_review=submit_document_review,
                 submit_all_document_reviews=submit_all_document_reviews,
                 get_document_review_status=get_document_review_status,
+            ),
+            "ac": NamespaceDict(
+                get_resource_filter_query=get_resource_filter_query,
+                has_ac_permission=has_ac_permission,
+                has_resource_access=has_resource_access,
+                get_allowed_docs_query=get_allowed_docs_query,
             ),
         }
     )
