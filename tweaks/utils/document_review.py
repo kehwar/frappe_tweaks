@@ -689,16 +689,16 @@ def get_document_review_status(doctype, docname):
             - "Can Approve": User can approve some pending reviews
             - "Can Submit": User can approve all pending reviews
     """
-    filters = {
-        "reference_doctype": doctype,
-        "reference_name": docname,
-        "docstatus": 0,
-    }
 
     # Get all pending reviews
     all_pending = frappe.get_list(
         "Document Review",
-        filters=filters,
+        filters={
+            "reference_doctype": doctype,
+            "reference_name": docname,
+            "docstatus": 0,
+            "mandatory": 1,
+        },
         pluck="name",
     )
 
