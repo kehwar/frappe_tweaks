@@ -7,7 +7,7 @@ from frappe import _
 
 def execute(filters=None):
     """
-    Customizations Report
+    Form Customizations Report
 
     Aggregates Custom Fields and Property Setters to show all customizations.
     - One row for each Custom Field

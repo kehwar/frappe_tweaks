@@ -53,11 +53,11 @@
  "modified": "2026-01-14 13:33:47.253349",
  "modified_by": "Administrator",
  "module": "Tweaks",
- "name": "Customizations",
+ "name": "Form Customizations",
  "owner": "Administrator",
  "prepared_report": 1,
  "ref_doctype": "Custom Field",
- "report_name": "Customizations",
+ "report_name": "Form Customizations",
  "report_type": "Script Report",
  "roles": [
   {
