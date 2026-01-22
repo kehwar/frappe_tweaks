@@ -635,7 +635,6 @@ def submit_document_review(review_name, review=None, action="approve"):
     return doc
 
 
-@frappe.whitelist()
 def submit_all_document_reviews(doctype, docname, review=None, action="approve"):
     """
     Submit all Document Reviews for a document.
@@ -673,7 +672,6 @@ def submit_all_document_reviews(doctype, docname, review=None, action="approve")
     return results
 
 
-@frappe.whitelist()
 def get_document_review_status(doctype, docname):
     """
     Get the review status for a document.
