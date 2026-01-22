@@ -11,19 +11,19 @@
   "column_break_xkcd",
   "mandatory",
   "disabled",
-  "section_break_assignment",
-  "assignment_note",
-  "users",
   "section_break_script",
   "script",
   "script_help",
-  "section_break_conditions",
-  "conditions_help",
+  "section_break_assignment",
+  "column_break_eacv",
+  "submit_condition",
+  "validate_condition",
+  "column_break_exuh",
   "assign_condition",
   "unassign_condition",
-  "column_break_conditions",
-  "submit_condition",
-  "validate_condition"
+  "column_break_qrnd",
+  "users",
+  "assignment_note"
  ],
  "fields": [
   {
@@ -76,9 +76,10 @@
    "fieldtype": "HTML"
   },
   {
+   "collapsible": 1,
    "fieldname": "section_break_assignment",
    "fieldtype": "Section Break",
-   "label": "Auto-Assignment"
+   "label": "Settings"
   },
   {
    "fieldname": "assignment_note",
@@ -88,18 +89,8 @@
   {
    "fieldname": "users",
    "fieldtype": "Table",
-   "label": "Assign Users",
+   "label": "Auto Assign Users",
    "options": "Document Review User"
-  },
-  {
-   "fieldname": "section_break_conditions",
-   "fieldtype": "Section Break",
-   "label": "Conditions"
-  },
-  {
-   "fieldname": "conditions_help",
-   "fieldtype": "HTML",
-   "options": "<div class=\"form-message blue\">\n<p><strong>Condition Scripts</strong> are evaluated when the referenced document changes. Use these to control when actions occur:</p>\n<ul>\n<li><strong>Assign Condition:</strong> When true, assign users from the table above to the referenced document</li>\n<li><strong>Unassign Condition:</strong> When true, clear all open assignments from the referenced document</li>\n<li><strong>Submit Condition:</strong> When true, auto-submit all reviews this user can submit (e.g., <code>doc.docstatus == 1</code>)</li>\n<li><strong>Validate Condition:</strong> When true, run validation and error if draft reviews exist (e.g., <code>doc.docstatus == 1</code>)</li>\n</ul>\n<p>Leave blank to disable the action. Scripts have access to <code>doc</code> (the referenced document) and should return <code>True</code> or <code>False</code>.</p>\n</div>"
   },
   {
    "fieldname": "assign_condition",
@@ -114,10 +105,6 @@
    "options": "Python"
   },
   {
-   "fieldname": "column_break_conditions",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "submit_condition",
    "fieldtype": "Code",
    "label": "Submit Condition",
@@ -128,6 +115,18 @@
    "fieldtype": "Code",
    "label": "Validate Condition",
    "options": "Python"
+  },
+  {
+   "fieldname": "column_break_exuh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_eacv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_qrnd",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -137,8 +136,8 @@
    "link_fieldname": "review_rule"
   }
  ],
- "modified": "2026-01-16 14:00:37.287876",
- "modified_by": "sistemas2@soldamundoperu.com",
+ "modified": "2026-01-21 22:06:36.891404",
+ "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Document Review Rule",
  "naming_rule": "Random",
