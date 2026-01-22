@@ -504,10 +504,10 @@ def get_resource_filter_query(
     return frappe._dict({"query": resource_filter_query, "access": access})
 
 
-def get_allowed_docs_query(doctype, action="read"):
+def get_allowed_docs_query(doctype, user=None, action="read"):
 
     conditions = _get_permission_query_conditions_for_doctype(
-        doctype=doctype, action=action
+        doctype=doctype, user=user, action=action
     )
 
     if not conditions:
