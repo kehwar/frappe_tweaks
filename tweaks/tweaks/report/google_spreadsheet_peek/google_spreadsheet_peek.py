@@ -33,7 +33,7 @@ def execute(filters=None):
         account = get_default_account()
 
         # Create service based on the type
-        if spreadsheet_doc.type == "Excel":
+        if spreadsheet_doc.type.lower() == "excel":
             service = account.get_excel_service(spreadsheet_doc.spreadsheet_id)
         else:
             # Default to Sheet type
