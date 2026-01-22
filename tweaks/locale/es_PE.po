@@ -1606,8 +1606,8 @@ msgstr ""
 
 #: tweaks/public/js/tweaks/document_review.js:34
 msgid ""
-"This document has {0} pending review(s). Please review before proceeding."
-msgstr "Este documento tiene {0} revisión(es) pendiente(s). Por favor revisa antes de continuar."
+"This document has {0} pending review(s)."
+msgstr "Este documento tiene {0} revisión(es) pendiente(s)."
 
 #. Label of a Duration field in DocType 'Sync Job'
 #: tweaks/tweaks/doctype/sync_job/sync_job.json

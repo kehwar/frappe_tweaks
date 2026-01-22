@@ -26,7 +26,7 @@ function showPendingReviewsBanner(frm) {
     if (pendingReviews.length > 0) {
         frm.set_intro();
         frm.set_intro(
-            __("This document has {0} pending review(s). Please review before proceeding.", [pendingReviews.length]),
+            __("This document has {0} pending review(s).", [pendingReviews.length]),
             "orange"
         );
         
