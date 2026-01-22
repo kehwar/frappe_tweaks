@@ -361,7 +361,6 @@ def get_principal_filter_sql(filter):
     return ""
 
 
-@frappe.whitelist()
 def get_resource_rules(
     resource="",
     doctype="",
@@ -376,9 +375,6 @@ def get_resource_rules(
     type, key, fieldname, action, user = get_params(
         resource, doctype, report, type, key, fieldname, action, user
     )
-
-    if user != frappe.session.user:
-        frappe.only_for("System Manager")
 
     rule_map = get_rule_map()
 
