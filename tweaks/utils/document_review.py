@@ -764,6 +764,7 @@ def get_document_reviews_for_timeline(doctype, docname):
             "modified_by",
             "docstatus",
             "review_rule",
+            "title",
             "message",
             "mandatory",
         ],
@@ -811,6 +812,7 @@ def get_document_reviews_for_timeline(doctype, docname):
                 "_doc_status": doc_status,
                 "_doc_status_indicator": status_indicator,
                 "type": "Document Review",
+                "subject": review.title,
                 "review_docstatus": review.docstatus,
                 "communication_type": f"Document Review::{review.docstatus}",
             }
