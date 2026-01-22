@@ -8,8 +8,8 @@
     "doctype": "Report",
     "filters": [
         {
-            "fieldname": "impersonate_user",
-            "label": "Impersonate User",
+            "fieldname": "preview_for_user",
+            "label": "Preview For User",
             "fieldtype": "Link",
             "options": "User",
             "reqd": 0

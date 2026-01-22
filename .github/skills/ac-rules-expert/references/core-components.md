@@ -64,6 +64,11 @@ Reusable filter definitions used in both principal and resource filtering.
 
 ### 3. Python Filters
 - Python code that sets `conditions` variable OR `filters` variable
+- **Available variables in context**:
+  - `resource`: The Query Filter document dict
+  - `conditions`: String variable to set SQL WHERE clause (returned as-is)
+  - `filters`: Dict/array variable to set Frappe filters (converted to SQL)
+  - `user`: Username being evaluated (defaults to `frappe.session.user`, but can be overridden)
 - **Two output options**:
   1. **conditions**: Set SQL WHERE clause directly (returned as-is)
   2. **filters**: Set Frappe filter dict/array (converted to SQL like JSON filters)
@@ -74,7 +79,8 @@ Reusable filter definitions used in both principal and resource filtering.
 **Examples**:
 ```python
 # Option 1: Using conditions (direct SQL)
-conditions = f"status = 'Active' AND tenant_id = {frappe.db.get_value('User', frappe.session.user, 'tenant_id')}"
+# The 'user' variable is automatically available in Python filters
+conditions = f"status = 'Active' AND tenant_id = {frappe.db.get_value('User', user, 'tenant_id')}"
 
 # Option 2: Using filters (like JSON)
 filters = [["status", "=", "Active"], ["tenant_id", "=", 1]]
@@ -83,8 +89,31 @@ filters = {"status": "Active", "tenant_id": 1}
 ```
 
 **Important Methods**:
-- `get_sql()`: Converts filter to SQL WHERE clause
+- `get_sql(user=None)`: Converts filter to SQL WHERE clause
+  - `user`: Optional username to evaluate the filter for (defaults to `frappe.session.user`)
+  - Useful when evaluating rules for a different user (e.g., admin checking another user's permissions)
 - Uses `@frappe.request_cache` for performance optimization
+
+**User Parameter**:
+The `user` parameter allows evaluating filters in the context of a specific user, which is essential when:
+- An administrator needs to preview what another user can see
+- Testing permissions for different users
+- Auditing access control rules
+
+```python
+# Evaluate filter for current user (default)
+sql = query_filter.get_sql()
+
+# Evaluate filter for specific user
+sql = query_filter.get_sql(user="john@example.com")
+
+# In Python-type filters, the user variable is available
+filters = """
+# user variable is automatically available
+user_dept = frappe.db.get_value("User", user, "department")
+conditions = f"`tabCustomer`.`account_manager` = {frappe.db.escape(user)}"
+"""
+```
 
 **SQL Generation Logic**:
 ```python
@@ -250,14 +279,15 @@ Use current user context for filtering:
 
 ```python
 # Principal filter based on user metadata
+# The 'user' variable is automatically provided in Python filters
 filters = """
-user_dept = frappe.db.get_value("User", frappe.session.user, "department")
+user_dept = frappe.db.get_value("User", user, "department")
 conditions = f"`tabUser`.`department` = {frappe.db.escape(user_dept)}"
 """
 
 # Resource filter based on user's assigned records
 filters = """
-user = frappe.session.user
+# 'user' variable contains the username being evaluated
 conditions = f"`tabCustomer`.`account_manager` = {frappe.db.escape(user)}"
 """
 ```

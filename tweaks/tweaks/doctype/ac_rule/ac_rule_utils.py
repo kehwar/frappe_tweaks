@@ -122,10 +122,14 @@ def check_user_matches_rule_principals(user, principals):
     """
     # Build SQL query to check if user matches principals
     allowed = [
-        get_principal_filter_sql(r) for r in principals if r.get("exception", 0) == 0
+        get_principal_filter_sql(r, user=user)
+        for r in principals
+        if r.get("exception", 0) == 0
     ]
     denied = [
-        get_principal_filter_sql(r) for r in principals if r.get("exception", 0) == 1
+        get_principal_filter_sql(r, user=user)
+        for r in principals
+        if r.get("exception", 0) == 1
     ]
 
     allowed = [r for r in allowed if r]
@@ -317,12 +321,12 @@ def get_params(
     return type, key, fieldname, action, user
 
 
-def get_principal_filter_sql(filter):
+def get_principal_filter_sql(filter, user=None):
 
     if filter.get("name"):
         filter = frappe.get_cached_doc("Query Filter", filter.get("name"))
 
-    sql = filter.get_sql()
+    sql = get_sql(filter, user=user)
     if filter.get("reference_doctype") == "User":
         return sql
     if filter.get("reference_doctype") == "User Group":
@@ -397,14 +401,14 @@ def get_resource_rules(
     return frappe._dict({"rules": rules})
 
 
-def get_resource_filter_sql(filter):
+def get_resource_filter_sql(filter, user=None):
 
     if filter.get("all"):
         return "1=1"
 
     if filter.get("name"):
         filter = frappe.get_cached_doc("Query Filter", filter.get("name"))
-        return filter.get_sql()
+        return get_sql(filter, user=user)
 
     return "1=0"
 
@@ -437,12 +441,12 @@ def get_resource_filter_query(
     for rule in folder:
 
         allowed = [
-            get_resource_filter_sql(r)
+            get_resource_filter_sql(r, user=user)
             for r in rule.get("resources")
             if r.get("exception", 0) == 0
         ]
         denied = [
-            get_resource_filter_sql(r)
+            get_resource_filter_sql(r, user=user)
             for r in rule.get("resources")
             if r.get("exception", 0) == 1
         ]

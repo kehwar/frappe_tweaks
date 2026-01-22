@@ -28,7 +28,8 @@ managed_customers_filter = frappe.get_doc({
     "reference_doctype": "Customer",
     "filters_type": "Python",
     "filters": """
-conditions = f"`tabCustomer`.`account_manager` = {frappe.db.escape(frappe.session.user)}"
+# The 'user' variable is automatically available in Python filters
+conditions = f"`tabCustomer`.`account_manager` = {frappe.db.escape(user)}"
 """
 }).insert()
 ```
@@ -823,3 +824,119 @@ reject_rule = frappe.get_doc({
 ```
 
 **Result**: Territory managers see both "Approve" and "Reject", non-territory approvers only see "Reject"
+
+## Example 9: Testing Permissions for Different Users
+
+**Goal**: Allow administrators to preview what another user can see, useful for testing and debugging permissions.
+
+### Step 1: Create Query Filter with User Context
+
+```python
+# Query filter that uses the 'user' variable
+user_dept_filter = frappe.get_doc({
+    "doctype": "Query Filter",
+    "filter_name": "User Department Customers",
+    "reference_doctype": "Customer",
+    "filters_type": "Python",
+    "filters": """
+# The 'user' variable is automatically provided
+user_dept = frappe.db.get_value("User", user, "department")
+if user_dept:
+    conditions = f"`tabCustomer`.`territory` = {frappe.db.escape(user_dept)}"
+else:
+    conditions = "1=0"  # No access if no department
+"""
+}).insert()
+```
+
+### Step 2: Test Filter for Different Users
+
+```python
+# Get the filter document
+query_filter = frappe.get_doc("Query Filter", "User Department Customers")
+
+# Test for current user (default behavior)
+sql_for_current_user = query_filter.get_sql()
+print(f"Current user SQL: {sql_for_current_user}")
+
+# Test for another user (admin preview)
+sql_for_john = query_filter.get_sql(user="john@example.com")
+print(f"John's SQL: {sql_for_john}")
+
+sql_for_jane = query_filter.get_sql(user="jane@example.com")
+print(f"Jane's SQL: {sql_for_jane}")
+```
+
+### Step 3: Use in Report with Preview Feature
+
+```python
+def execute(filters=None):
+    columns = get_columns()
+    
+    # Check if admin wants to preview for another user
+    preview_user = filters.get("preview_for_user")
+    
+    if preview_user and frappe.has_permission("User", "read"):
+        # Admin can preview for another user
+        result = get_resource_filter_query(
+            report="Customer Report",
+            action="read",
+            user=preview_user
+        )
+    else:
+        # Normal evaluation for current user
+        result = get_resource_filter_query(
+            report="Customer Report",
+            action="read"
+        )
+    
+    if result.get("access") == "none":
+        return columns, []
+    
+    ac_filter = result.get("query", "1=1")
+    
+    data = frappe.db.sql(f"""
+        SELECT * FROM `tabCustomer`
+        WHERE {ac_filter}
+    """, as_dict=True)
+    
+    return columns, data
+```
+
+### Step 4: Add Filter to Report
+
+```python
+# In get_filters() function
+def get_filters():
+    filters = [
+        # ... other filters ...
+    ]
+    
+    # Add preview option for users with permission
+    if frappe.has_permission("User", "read"):
+        filters.append({
+            "fieldname": "preview_for_user",
+            "label": "Preview For User",
+            "fieldtype": "Link",
+            "options": "User",
+            "description": "See what this user can access (admin only)"
+        })
+    
+    return filters
+```
+
+**Use Cases**:
+- **Testing**: Verify permissions work correctly for different users without switching accounts
+- **Debugging**: Troubleshoot why a user can't see certain records
+- **Auditing**: Generate access reports showing what different users can see
+- **Support**: Help users understand their access without needing their credentials
+
+**Important Notes**:
+- The `user` parameter flows through the entire AC Rule evaluation chain:
+  - `get_resource_filter_query(user=...)` → passes to `get_resource_filter_sql()`
+  - `get_resource_filter_sql(user=...)` → passes to `get_sql()`
+  - `get_sql(user=...)` → available as `user` variable in Python filters
+- By default, `user` is set to `frappe.session.user` if not provided
+- Use `frappe.session.user` for normal operations; use explicit `user` parameter only for preview/testing
+- Always check permissions before allowing users to preview other users' access
+

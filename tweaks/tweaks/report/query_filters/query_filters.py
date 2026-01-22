@@ -13,11 +13,11 @@ def execute(filters=None):
     Useful for debugging and understanding how Query Filters are evaluated in different contexts.
 
     Filters:
-        impersonate_user (optional): User to impersonate when calculating SQL.
-            When set, the report switches to the specified user's context to calculate SQL,
-            then switches back. This is useful for testing how filters evaluate for specific users,
+        preview_for_user (optional): User to evaluate filters for when calculating SQL.
+            When set, the report calculates SQL as if the specified user is accessing the system.
+            This is useful for testing how filters evaluate for specific users,
             debugging permission-related issues, and understanding context-dependent filter behavior
-            (e.g., Python filters using frappe.session.user).
+            (e.g., Python filters using the 'user' variable).
 
     Columns:
         - Name: Link to the Query Filter document
@@ -31,14 +31,13 @@ def execute(filters=None):
 
     Features:
         - Only shows enabled Query Filters (disabled filters are excluded)
-        - Calculates SQL in impersonated user context if specified
+        - Calculates SQL in context of specified user if provided
         - Error handling: Shows "ERROR: <message>" if SQL calculation fails
-        - Original user context is always restored via finally block
         - Filter column includes "View Filter" button to display code in dialog
 
     Usage Examples:
         - View all enabled filters: Open report without filters
-        - Test as another user: Set "Impersonate User" filter and refresh
+        - Test as another user: Set "Preview For User" filter and refresh
         - Debug broken filters: Look for "ERROR:" prefix in SQL column
 
     Permissions:
@@ -112,63 +111,57 @@ def get_columns():
 def get_data(filters):
     """Fetch Query Filter data and calculate SQL for each"""
 
-    # Get the impersonation user if specified
-    impersonate_user = filters.get("impersonate_user") if filters else None
-    original_user = frappe.session.user
+    # Get the preview user if specified
+    preview_user = filters.get("preview_for_user") if filters else None
 
-    try:
-        # Switch to impersonated user if specified
-        if impersonate_user:
-            frappe.set_user(impersonate_user)
+    # Fetch all query filters (excluding disabled ones)
+    query_filters = frappe.get_all(
+        "Query Filter",
+        filters={"disabled": 0},
+        fields=[
+            "name",
+            "filter_name",
+            "reference_doctype",
+            "reference_report",
+            "reference_docname",
+            "filters_type",
+            "filters",
+        ],
+        order_by="filter_name ASC, name ASC",
+    )
 
-        # Fetch all query filters (excluding disabled ones)
-        query_filters = frappe.get_all(
-            "Query Filter",
-            filters={"disabled": 0},
-            fields=[
-                "name",
-                "filter_name",
-                "reference_doctype",
-                "reference_report",
-                "reference_docname",
-                "filters_type",
-                "filters",
-            ],
-            order_by="filter_name ASC, name ASC",
-        )
+    # Calculate SQL for each filter
+    data = []
+    for qf in query_filters:
+        try:
+            # Get the full document to calculate SQL
+            filter_doc = frappe.get_doc("Query Filter", qf.name)
+            # Use the user parameter if preview_user is specified
+            sql = (
+                filter_doc.get_sql(user=preview_user)
+                if preview_user
+                else filter_doc.get_sql()
+            )
+            # Remove line breaks from SQL
+            sql = sql.replace("\n", " ").replace("\r", " ")
+        except Exception as e:
+            # If there's an error calculating SQL, show the error message
+            sql = f"ERROR: {str(e)}"
 
-        # Calculate SQL for each filter
-        data = []
-        for qf in query_filters:
-            try:
-                # Get the full document to calculate SQL
-                filter_doc = frappe.get_doc("Query Filter", qf.name)
-                sql = filter_doc.get_sql()
-                # Remove line breaks from SQL
-                sql = sql.replace("\n", " ").replace("\r", " ")
-            except Exception as e:
-                # If there's an error calculating SQL, show the error message
-                sql = f"ERROR: {str(e)}"
+        # Add calculated SQL to the row
+        qf["sql"] = sql
 
-            # Add calculated SQL to the row
-            qf["sql"] = sql
+        # Determine reference type and reference value
+        if qf.get("reference_report"):
+            qf["reference_type"] = "Report"
+            qf["reference"] = qf["reference_report"]
+        elif qf.get("reference_doctype"):
+            qf["reference_type"] = "DocType"
+            qf["reference"] = qf["reference_doctype"]
+        else:
+            qf["reference_type"] = None
+            qf["reference"] = None
 
-            # Determine reference type and reference value
-            if qf.get("reference_report"):
-                qf["reference_type"] = "Report"
-                qf["reference"] = qf["reference_report"]
-            elif qf.get("reference_doctype"):
-                qf["reference_type"] = "DocType"
-                qf["reference"] = qf["reference_doctype"]
-            else:
-                qf["reference_type"] = None
-                qf["reference"] = None
+        data.append(qf)
 
-            data.append(qf)
-
-        return data
-
-    finally:
-        # Always switch back to the original user
-        if impersonate_user and original_user:
-            frappe.set_user(original_user)
+    return data
