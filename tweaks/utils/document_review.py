@@ -695,7 +695,7 @@ def get_document_review_status(doctype, docname):
     """
 
     # Get all pending reviews
-    all_pending = frappe.get_list(
+    all_pending = frappe.get_all(
         "Document Review",
         filters={
             "reference_doctype": doctype,
