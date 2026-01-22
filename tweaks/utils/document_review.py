@@ -529,7 +529,10 @@ def apply_auto_assignments(ref_doctype, ref_name):
                             # Store the title or rule title for this user (only if not already set)
                             if user not in user_messages:
                                 user_messages[user] = (
-                                    review.title or rule.title or "Document Review"
+                                    review.message
+                                    or review.title
+                                    or rule.title
+                                    or "Document Review"
                                 )
                     except Exception:
                         # Permission check failed, skip this user
@@ -540,7 +543,10 @@ def apply_auto_assignments(ref_doctype, ref_name):
                     # Store the title or rule title for this user (only if not already set)
                     if user not in user_messages:
                         user_messages[user] = (
-                            review.title or rule.title or "Document Review"
+                            review.message
+                            or review.title
+                            or rule.title
+                            or "Document Review"
                         )
 
     # Get current assignments for the referenced document
