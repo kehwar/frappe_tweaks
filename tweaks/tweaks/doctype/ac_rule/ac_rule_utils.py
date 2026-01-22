@@ -160,7 +160,6 @@ def check_user_matches_rule_principals(user, principals):
     return result[0].get("count", 0) > 0 if result else False
 
 
-@frappe.whitelist()
 def get_rule_map():
     # Early returns for system states
     if frappe.flags.in_patch and not frappe.db.table_exists("AC Rule"):
@@ -410,7 +409,6 @@ def get_resource_filter_sql(filter):
     return "1=0"
 
 
-@frappe.whitelist()
 def get_resource_filter_query(
     resource="",
     doctype="",
@@ -514,7 +512,6 @@ def get_allowed_docs_query(doctype, action="read"):
     return f"SELECT `tab{doctype}`.`name` FROM `tab{doctype}` WHERE {conditions}"
 
 
-@frappe.whitelist()
 def has_resource_access(
     resource="",
     doctype="",
@@ -544,7 +541,6 @@ def has_resource_access(
     return frappe._dict({"access": access})
 
 
-@frappe.whitelist()
 def has_ac_permission(
     docname="",
     doctype="",
