@@ -557,15 +557,11 @@ def has_ac_permission(
         docname: Document name
         doctype: DocType name
         action: Action name (e.g., "read", "write", "approve", "reject")
-        user: User name (defaults to current user, only System Manager can check for other users)
+        user: User name (defaults to current user)
 
     Returns:
         bool: True if user has permission, False otherwise
     """
-    # Only System Manager can check permissions for other users
-    if user and user != frappe.session.user:
-        frappe.only_for("System Manager")
-
     user = user or frappe.session.user
 
     # Administrator always has full access
