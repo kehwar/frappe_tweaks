@@ -11,6 +11,7 @@
   "column_break_ref",
   "reference_doctype",
   "section_break_details",
+  "title",
   "message",
   "review",
   "section_break_data",
@@ -57,6 +58,12 @@
    "reqd": 1,
    "search_index": 1,
    "set_only_once": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "read_only": 1
   },
   {
    "fieldname": "message",

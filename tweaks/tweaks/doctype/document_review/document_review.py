@@ -22,6 +22,7 @@ class DocumentReview(Document):
         reference_title: DF.Data | None
         review_data: DF.JSON | None
         review_rule: DF.Link
+        title: DF.Data | None
     # end: auto-generated types
 
     def before_save(self):
@@ -58,4 +59,3 @@ class DocumentReview(Document):
                 title=f"Failed to notify reference document {self.reference_doctype} {self.reference_name}",
                 message=str(e),
             )
-
