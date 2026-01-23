@@ -1,3 +1,5 @@
+import time
+
 import frappe
 from frappe import _
 from frappe.core.doctype.prepared_report.prepared_report import make_prepared_report
@@ -28,22 +30,36 @@ def start_job(report_name, **kwargs):
 
 
 @frappe.whitelist()
-def check_status(job_id):
+def check_status(job_id, attempts=2, sleep=5):
     """
     Check the status of a prepared report job.
+    Polls up to attempts times with sleep seconds between attempts.
 
     Args:
         job_id: The prepared report name
+        attempts: Maximum number of polling attempts (default: 2)
+        sleep: Time in seconds to sleep between attempts (default: 5)
 
     Returns:
         dict: Status information with 'status' field ("Queued", "Started", "Completed", "Error")
               Returns empty dict if job not found
     """
-    try:
-        prepared_report = frappe.get_doc("Prepared Report", job_id)
-        return 1 if prepared_report.status in ("Completed", "Error") else 0
-    except frappe.DoesNotExistError:
-        return 1
+    attempts = int(attempts)
+    sleep = float(sleep)
+
+    for attempt in range(attempts):
+        try:
+            prepared_report = frappe.get_doc("Prepared Report", job_id)
+            if prepared_report.status in ("Completed", "Error"):
+                return 1
+            # Sleep before next attempt (except on last attempt)
+            if attempt < attempts - 1:
+                time.sleep(sleep)
+        except frappe.DoesNotExistError:
+            return 1
+
+    # After attempts, still not complete
+    return 0
 
 
 @frappe.whitelist()
