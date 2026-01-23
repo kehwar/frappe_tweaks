@@ -22,6 +22,8 @@ def start_job(report_name, **kwargs):
     # Use Frappe's native make_prepared_report function
     result = make_prepared_report(report_name=report_name, filters=kwargs)
 
+    frappe.db.commit()
+
     return result.get("name")
 
 
