@@ -1,0 +1,137 @@
+---
+name: power-query-expert
+description: Expert guidance for connecting Power Query (Power BI, Excel) to Frappe apps and reports. Use when building Power Query M code for Frappe data access, integrating Frappe reports with Power BI/Excel, implementing authentication for Power Query connections, handling heavy/long-running reports with report_long_polling API to avoid timeouts, applying column types and transformations, or troubleshooting Power Query caching and connection issues.
+---
+
+# Power Query Expert
+
+Connect Microsoft Power Query (Power BI, Excel) to Frappe apps with M code for report data access.
+
+## Quick Start
+
+### Simple Frappe Report Connection
+
+For fast reports that won't timeout:
+
+```fsharp
+let
+    BaseUrl = "https://your-site.frappe.cloud",
+    ReportName = "Simple Report",
+    ApiUrl = BaseUrl & "/api/method/frappe.desk.query_report.run?report_name=" & Uri.EscapeDataString(ReportName),
+    Response = Json.Document(Web.Contents(ApiUrl)),
+    Data = Response[message][result],
+    Table = Table.FromRecords(Data)
+in
+    Table
+```
+
+**Use for:** Small, fast reports (< 1000 rows, < 30 seconds execution)
+
+### Long-Running Reports with report_long_polling
+
+For heavy reports, use the **report_long_polling API** to prevent timeouts. This API executes reports asynchronously in Frappe's background worker queue.
+
+**Three-step workflow:**
+
+1. **Start job** - Create Prepared Report job
+2. **Poll status** - Wait for completion  
+3. **Get result** - Retrieve data with column metadata
+
+See [references/long-polling-api-reference.md](references/long-polling-api-reference.md) for API endpoint details.
+
+## Power BI/Excel Integration
+
+**1. Get Data → Blank Query**
+
+**2. Advanced Editor** - Paste M code from [references/long-polling-power-query-example.md](references/long-polling-power-query-example.md)
+
+**3. Configure:**
+```fsharp
+BaseUrl = "https://your-site.frappe.cloud"
+ReportName = "Item Prices"
+Filters = []  // Add filters as needed
+```
+
+**4. Add Authentication** (production):
+```fsharp
+Web.Contents(url, [
+    Headers = [#"Authorization" = "token api_key:api_secret"]
+])
+```
+
+**5. Close & Apply**
+
+## Authentication
+
+### Create API Keys in Frappe
+1. User → API Access
+2. Generate Keys
+3. Copy API Key and Secret
+4. Use format: `token {api_key}:{api_secret}`
+
+### Security
+- Store credentials in Power BI parameters
+- Use minimal permissions on API user
+- Rotate keys regularly
+
+## Column Transformation
+
+The report_long_polling API returns column metadata enabling automatic transformation:
+
+```json
+{"fieldname": "item_code", "label": "Item Code", "fieldtype": "Link"}
+```
+
+**Automatic type mapping:**
+- Int/Long Int → Int64.Type
+- Currency → Currency.Type  
+- Date → Date.Type
+- Datetime → DateTime.Type
+- Check → Logical.Type
+- Text types → type text
+
+**Manual override:**
+```fsharp
+ManualTypeMap = [
+    Rate = Currency.Type,          // Force currency
+    #"Stock Qty" = Int64.Type      // Force integer
+]
+```
+
+See [references/long-polling-api-reference.md](references/long-polling-api-reference.md) for full type mapping table.
+
+## Cache-Busting
+
+Power Query caches aggressively. Add timestamps to force fresh requests:
+
+```fsharp
+Timestamp = Text.From(Number.Round(
+    Duration.TotalSeconds(DateTime.LocalNow() - #datetime(1970, 1, 1, 0, 0, 0)) * 1000
+)),
+UrlWithCacheBuster = BaseUrl & "&_ts=" & Timestamp
+```
+
+## Common Use Cases
+
+- **Power BI Dashboards**: Live sales, inventory, financial reports
+- **Excel Workbooks**: Monthly analysis with pivot tables
+- **Scheduled Refresh**: Daily/hourly dataset updates
+- **Cross-System Reporting**: Combine Frappe data with external sources
+
+## Troubleshooting
+
+See [references/troubleshooting.md](references/troubleshooting.md) for detailed solutions.
+
+**Quick fixes:**
+
+- **Timeout errors**: Increase maxAttempts, verify workers running
+- **Connection errors**: Check BaseUrl, authentication, permissions
+- **Empty results**: Verify filters, check Prepared Report status
+- **Type errors**: Use manual type overrides, check for nulls
+- **Stale data**: Add cache-busting timestamps, clear cache
+
+## Resources
+
+- **Complete M Code**: [references/long-polling-power-query-example.md](references/long-polling-power-query-example.md)
+- **API Details**: [references/long-polling-api-reference.md](references/long-polling-api-reference.md)
+- **Troubleshooting**: [references/troubleshooting.md](references/troubleshooting.md)
