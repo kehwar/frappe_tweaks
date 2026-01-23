@@ -1,0 +1,304 @@
+# Power Query M Code Example
+
+This example demonstrates how to integrate the report_long_polling API with Microsoft Power Query for Power BI or Excel.
+
+## Complete Power Query M Code
+
+```java
+let
+    // Configuration
+    BaseUrl = "http://127.0.0.1:8000",
+    ReportName = "Item Prices",
+    
+    // Add your filters here (optional)
+    Filters = [],
+    
+    // Helper function to build query string
+    BuildQueryString = (params as record) =>
+        Text.Combine(
+            List.Transform(
+                Record.FieldNames(params),
+                each _ & "=" & Uri.EscapeDataString(Text.From(Record.Field(params, _)))
+            ),
+            "&"
+        ),
+    
+    // Step 1: Start the report job
+    StartJobParams = Record.Combine({[report_name = ReportName], Filters}),
+    StartJobUrl = BaseUrl & "/api/method/tweaks.utils.report_long_polling.start_job?" & BuildQueryString(StartJobParams),
+    StartJobResponse = Json.Document(Web.Contents(StartJobUrl)),
+    JobId = StartJobResponse[message],
+    
+    // Step 2: Base URL for polling
+    CheckStatusUrl = BaseUrl & "/api/method/tweaks.utils.report_long_polling.check_status?job_id=" & Uri.EscapeDataString(JobId),
+    
+    // Recursive polling function
+    PollUntilComplete = (baseUrl as text, maxAttempts as number) as logical =>
+        let
+            Poll = (attemptNumber as number) as logical =>
+                if attemptNumber > maxAttempts then
+                    error "Report generation timed out after " & Text.From(maxAttempts) & " attempts"
+                else
+                    let
+                        PollTimestamp = Text.From(Number.Round(Duration.TotalSeconds(DateTime.LocalNow() - #datetime(1970, 1, 1, 0, 0, 0)) * 1000)),
+                        UrlWithCacheBuster = baseUrl & "&attempts=2&sleep=5&_attempt=" & Text.From(attemptNumber) & "&_ts=" & PollTimestamp,
+                        StatusResponse = Json.Document(Web.Contents(UrlWithCacheBuster)),
+                        Status = StatusResponse[message],
+                        IsComplete = Status = 1
+                    in
+                        if IsComplete then
+                            true
+                        else
+                            @Poll(attemptNumber + 1)
+        in
+            Poll(1),
+    
+    // Wait for completion (max 100 attempts)
+    IsComplete = PollUntilComplete(CheckStatusUrl, 100),
+    
+    // Step 3: Get the report result (only after polling confirms completion)
+    ResultTimestamp = Text.From(Number.Round(Duration.TotalSeconds(DateTime.LocalNow() - #datetime(1970, 1, 1, 0, 0, 0)) * 1000)),
+    GetResultUrl = BaseUrl & "/api/method/tweaks.utils.report_long_polling.get_result?job_id=" & Uri.EscapeDataString(JobId) & "&_ts=" & ResultTimestamp,
+    // Force evaluation by using IsComplete in a conditional
+    ResultResponse = if IsComplete then Json.Document(Web.Contents(GetResultUrl)) else error "Report generation failed",
+    ResultData = ResultResponse[message],
+    
+    // Step 4: Convert columns metadata to a usable format
+    Columns = ResultData[columns],
+    ColumnNames = List.Transform(Columns, each [fieldname]),
+    ColumnLabels = List.Transform(Columns, each if Record.HasFields(_, "label") then [label] else [fieldname]),
+    
+    // Step 5: Extract result rows and convert to table
+    ResultRows = ResultData[result],
+    Table = Table.FromRecords(ResultRows),
+    
+    // Step 6: Get actual columns in the table
+    ActualColumns = Table.ColumnNames(Table),
+    
+    // Step 7: Build rename list only for columns that exist in the table
+    RenameList = List.Select(
+        List.Zip({ColumnNames, ColumnLabels}),
+        each List.Contains(ActualColumns, _{0})
+    ),
+    
+    // Step 8: Rename columns with proper labels
+    RenamedTable = Table.RenameColumns(Table, RenameList),
+    
+    // Step 9: Apply column types if available
+    TypedTable = 
+        let
+            // Comprehensive Frappe field type to Power Query type mapping
+            TypeMapping = [
+                // Numeric types
+                Int = Int64.Type,
+                #"Long Int" = Int64.Type,
+                Float = Number.Type,
+                Currency = Currency.Type,
+                Percent = Percentage.Type,
+                
+                // Date/Time types
+                Date = Date.Type,
+                Datetime = DateTime.Type,
+                Time = Time.Type,
+                Duration = Duration.Type,
+                
+                // Boolean type
+                Check = Logical.Type,
+                
+                // Text types (all map to text)
+                Data = type text,
+                Text = type text,
+                #"Small Text" = type text,
+                #"Long Text" = type text,
+                #"Text Editor" = type text,
+                #"HTML Editor" = type text,
+                #"Markdown Editor" = type text,
+                Code = type text,
+                Password = type text,
+                #"Read Only" = type text,
+                
+                // Link types
+                Link = type text,
+                #"Dynamic Link" = type text,
+                Select = type text,
+                
+                // Attachment types
+                Attach = type text,
+                #"Attach Image" = type text,
+                Signature = type text,
+                
+                // Special types
+                Barcode = type text,
+                Phone = type text,
+                Geolocation = type text,
+                JSON = type text,
+                Autocomplete = type text,
+                Icon = type text,
+                Color = type text,
+                Rating = Number.Type,
+                Image = type text,
+                Button = type text,
+                HTML = type text
+            ],
+            
+            // Build type list only for columns that exist in the table
+            FinalColumnNames = Table.ColumnNames(RenamedTable),
+            ColumnTypes = List.Select(
+                List.Transform(
+                    Columns,
+                    each 
+                        let
+                            fieldname = [fieldname],
+                            fieldtype = if Record.HasFields(_, "fieldtype") then [fieldtype] else "Data",
+                            label = if Record.HasFields(_, "label") then [label] else fieldname,
+                            powerQueryType = Record.FieldOrDefault(TypeMapping, fieldtype, type text),
+                            // Use label as the column name after renaming
+                            finalName = if List.Contains(ActualColumns, fieldname) then label else fieldname
+                        in
+                            {finalName, powerQueryType}
+                ),
+                each List.Contains(FinalColumnNames, _{0})
+            ),
+            
+            // Apply types to the table
+            TypedTable = Table.TransformColumnTypes(RenamedTable, ColumnTypes)
+        in
+            TypedTable,
+    
+    // Step 10: Reorder columns to match the order in the columns list
+    ReorderedTable = 
+        let
+            // Get labels for columns that exist in the table
+            FinalColumnNames = Table.ColumnNames(TypedTable),
+            OrderedLabels = List.Select(ColumnLabels, each List.Contains(FinalColumnNames, _))
+        in
+            Table.ReorderColumns(TypedTable, OrderedLabels)
+in
+    ReorderedTable
+```
+
+## Key Implementation Details
+
+### 1. Configuration
+
+```m
+BaseUrl = "http://127.0.0.1:8000",
+ReportName = "Item Prices",
+Filters = []
+```
+
+Replace with your Frappe instance URL and report name. Add filters as needed:
+
+```m
+Filters = [customer_group = "Retail", from_date = "2024-01-01"]
+```
+
+### 2. Cache Busting
+
+Power Query aggressively caches API responses. Use timestamps to force fresh requests:
+
+```m
+PollTimestamp = Text.From(Number.Round(Duration.TotalSeconds(DateTime.LocalNow() - #datetime(1970, 1, 1, 0, 0, 0)) * 1000)),
+UrlWithCacheBuster = baseUrl & "&_attempt=" & Text.From(attemptNumber) & "&_ts=" & PollTimestamp
+```
+
+### 3. Recursive Polling
+
+The `PollUntilComplete` function recursively calls `check_status` until the job completes:
+
+```m
+PollUntilComplete = (baseUrl as text, maxAttempts as number) as logical =>
+    let
+        Poll = (attemptNumber as number) as logical =>
+            if attemptNumber > maxAttempts then
+                error "Report generation timed out"
+            else
+                let
+                    StatusResponse = Json.Document(Web.Contents(UrlWithCacheBuster)),
+                    Status = StatusResponse[message],
+                    IsComplete = Status = 1
+                in
+                    if IsComplete then true else @Poll(attemptNumber + 1)
+    in
+        Poll(1)
+```
+
+### 4. Column Metadata Processing
+
+Frappe returns column metadata with each result. Use it to:
+
+- **Rename columns**: Map `fieldname` to `label`
+- **Apply types**: Map `fieldtype` to Power Query types
+- **Reorder columns**: Match report definition order
+
+### 5. Type Mapping
+
+The code includes comprehensive Frappe-to-Power Query type mapping:
+
+| Frappe Type | Power Query Type |
+|-------------|------------------|
+| Int, Long Int | Int64.Type |
+| Float | Number.Type |
+| Currency | Currency.Type |
+| Date | Date.Type |
+| Datetime | DateTime.Type |
+| Check | Logical.Type |
+| Data, Text, Link | type text |
+
+## Usage in Power BI/Excel
+
+### Power BI
+
+1. Get Data → Blank Query
+2. Open Advanced Editor
+3. Paste the M code
+4. Update `BaseUrl` and `ReportName`
+5. Close & Apply
+
+### Excel
+
+1. Data → Get Data → From Other Sources → Blank Query
+2. Open Advanced Editor
+3. Paste the M code
+4. Update `BaseUrl` and `ReportName`
+5. Load to worksheet
+
+## Authentication
+
+For production use, add authentication headers to `Web.Contents()`:
+
+```m
+StartJobResponse = Json.Document(
+    Web.Contents(
+        StartJobUrl,
+        [
+            Headers = [
+                #"Authorization" = "token " & ApiKey & ":" & ApiSecret
+            ]
+        ]
+    )
+)
+```
+
+Replace `ApiKey` and `ApiSecret` with your Frappe API credentials.
+
+## Troubleshooting
+
+**"Report generation timed out":**
+- Increase `maxAttempts` in `PollUntilComplete(CheckStatusUrl, 100)`
+- Check that background workers are running in Frappe
+
+**Empty table returned:**
+- Verify report permissions for the API user
+- Check report filters are valid
+- Review Prepared Report status in Frappe
+
+**Type conversion errors:**
+- Check column metadata matches actual data
+- Add missing field types to `TypeMapping`
+- Use `type text` as fallback for unknown types
+
+**Caching issues:**
+- Ensure cache-busting timestamps are included
+- Clear Power Query cache (Data → Refresh → Clear)
+- Use unique `_attempt` parameter for each poll
