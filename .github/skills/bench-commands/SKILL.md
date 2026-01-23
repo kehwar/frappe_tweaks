@@ -148,6 +148,6 @@ Always ensure commands use the correct site name (`development.localhost`) and i
 
 - Backups are automatically created in `./sites/development.localhost/private/backups/` unless specified otherwise
 - Runtime MariaDB settings (memory limits) are lost on container restart - add to docker-compose.yml to persist
+- **Database users are lost on MariaDB container restart** - if you get "Access denied" errors, recreate the database user (see [database-operations.md](references/database-operations.md#access-denied-for-user-after-container-restart))
 - When recreating a site, always set the encryption_key from backup before restoring data
 - Use `--skip-search-index` flag with migrate for faster migrations during development
-

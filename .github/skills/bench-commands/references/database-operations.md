@@ -104,9 +104,9 @@ To persist settings, add them to `/workspace/.devcontainer/docker-compose.yml`:
 
 ```yaml
 services:
-  mariadb:
-    command:
-      - --max_allowed_packet=536870912
+    mariadb:
+        command:
+            - --max_allowed_packet=536870912
 ```
 
 ## Performance Tuning Guidelines
@@ -119,6 +119,47 @@ services:
 | > 5GB | 512MB+ | Full tuning required |
 
 ## Troubleshooting
+
+### "Access denied for user" after container restart
+
+**Error:**
+```
+pymysql.err.OperationalError: (1045, "Access denied for user '_xxxxx'@'172.x.x.x' (using password: YES)")
+```
+
+**Cause:** When MariaDB container restarts, database users created at runtime are lost while the databases themselves persist. The site_config.json still contains the credentials, but the user no longer exists in MariaDB.
+
+**Solution:**
+
+1. Get database credentials from site config:
+```bash
+cat sites/development.localhost/site_config.json
+# Look for: db_name, db_password
+```
+
+2. Recreate the database user:
+```bash
+mariadb -h mariadb -u root -p123 <<EOF
+DROP USER IF EXISTS 'DB_USER'@'%';
+CREATE USER 'DB_USER'@'%' IDENTIFIED BY 'DB_PASSWORD';
+GRANT ALL PRIVILEGES ON \`DB_NAME\`.* TO 'DB_USER'@'%';
+FLUSH PRIVILEGES;
+EOF
+```
+
+Replace `DB_USER`, `DB_PASSWORD`, and `DB_NAME` with values from site_config.json.
+
+**Example:**
+```bash
+mariadb -h mariadb -u root -p123 <<EOF
+DROP USER IF EXISTS '_54cc49b9a1aab38b'@'%';
+CREATE USER '_54cc49b9a1aab38b'@'%' IDENTIFIED BY '1KFLli6XZnKEKcGp';
+GRANT ALL PRIVILEGES ON \`_54cc49b9a1aab38b\`.* TO '_54cc49b9a1aab38b'@'%';
+FLUSH PRIVILEGES;
+EOF
+```
+
+3. Retry the failed command (e.g., `bench --site development.localhost migrate`)
 
 ### "Packet too large" errors
 ```sql

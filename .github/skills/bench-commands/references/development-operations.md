@@ -205,18 +205,52 @@ bench start
 ```
 
 ### Port Already in Use
+
+**Error:** `Error: listen EADDRINUSE: address already in use :::9000`
+
+This happens when socketio node process from previous bench session didn't terminate properly.
+
+**Solution 1: Quick Cleanup**
 ```bash
 # Kill existing processes
 pkill -SIGINT -f bench
 pkill -SIGINT -f socketio
 
-# Check ports
-lsof -i :8000
-lsof -i :9000
+# Start again
+bench start
+```
+
+**Solution 2: Find and Kill Specific Process**
+```bash
+# Find what's using the port
+netstat -tlnp | grep :9000
+# or
+ss -tlnp | grep :9000
+
+# Kill the specific process (replace PID)
+kill -9 <PID>
 
 # Start again
 bench start
 ```
+
+**Solution 3: Kill by Port (if fuser available)**
+```bash
+# Kill process using port 9000
+fuser -k 9000/tcp
+
+# Start again
+bench start
+```
+
+**Why this happens:**
+- Honcho (process manager) doesn't always cleanly kill child processes on Ctrl+C
+- SocketIO node process may not receive SIGINT signal properly
+- Incomplete shutdown when stopping from VS Code debugger
+
+**Prevention:**
+- Use the VS Code task "Clean Honcho SocketIO Watch Schedule Worker" before starting
+- Always check for stale processes after stopping bench
 
 ### Build Errors
 ```bash
