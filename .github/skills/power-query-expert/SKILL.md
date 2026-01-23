@@ -9,6 +9,29 @@ Connect Microsoft Power Query (Power BI, Excel) to Frappe apps with M code for r
 
 ## Quick Start
 
+### Simple REST API Connection
+
+For direct document access and small lists (< 1000 records):
+
+```fsharp
+let
+    BaseUrl = "https://your-site.frappe.cloud",
+    DocType = "Item",
+    Fields = "[""item_code"", ""item_name"", ""standard_rate""]",
+    
+    ApiUrl = BaseUrl & "/api/resource/" & DocType & "?fields=" & Uri.EscapeDataString(Fields),
+    Response = Json.Document(Web.Contents(ApiUrl, [
+        Headers = [#"Authorization" = "token api_key:api_secret"]
+    ])),
+    Table = Table.FromRecords(Response[data])
+in
+    Table
+```
+
+**Use for:** Direct document reads, small queries, real-time data
+
+See [references/rest-api-power-query-example.md](references/rest-api-power-query-example.md) for complete REST API examples with filters, sorting, and pagination.
+
 ### Simple Frappe Report Connection
 
 For fast reports that won't timeout:
@@ -132,6 +155,7 @@ See [references/troubleshooting.md](references/troubleshooting.md) for detailed 
 
 ## Resources
 
-- **Complete M Code**: [references/long-polling-power-query-example.md](references/long-polling-power-query-example.md)
+- **REST API Examples**: [references/rest-api-power-query-example.md](references/rest-api-power-query-example.md)
+- **Long-Polling M Code**: [references/long-polling-power-query-example.md](references/long-polling-power-query-example.md)
 - **API Details**: [references/long-polling-api-reference.md](references/long-polling-api-reference.md)
 - **Troubleshooting**: [references/troubleshooting.md](references/troubleshooting.md)
