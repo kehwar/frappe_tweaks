@@ -37,15 +37,15 @@ def check_status(job_id, attempts=2, sleep=5):
 
     Args:
         job_id: The prepared report name
-        attempts: Maximum number of polling attempts (default: 2)
-        sleep: Time in seconds to sleep between attempts (default: 5)
+        attempts: Maximum number of polling attempts (default: 2, max: 3)
+        sleep: Time in seconds to sleep between attempts (default: 5, max: 10)
 
     Returns:
         dict: Status information with 'status' field ("Queued", "Started", "Completed", "Error")
               Returns empty dict if job not found
     """
-    attempts = int(attempts)
-    sleep = float(sleep)
+    attempts = min(int(attempts), 3)
+    sleep = min(float(sleep), 10)
 
     for attempt in range(attempts):
         try:
