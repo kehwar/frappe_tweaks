@@ -1,16 +1,17 @@
 # REST API Power Query Example
 
-Power Query M code examples for accessing Frappe document data using the REST API.
+Power Query M code template for fetching all records from Frappe using the REST API with automatic pagination.
 
 ## Overview
 
-Frappe's REST API provides direct access to DocType data without needing background jobs. Use this for:
-- **Small datasets** (< 1000 records)
-- **Single document reads**
-- **Simple queries** with basic filters
-- **Real-time data** that doesn't require heavy processing
+This template provides a complete solution for fetching all records from any Frappe DocType with:
+- **Automatic pagination** - Fetches all records across multiple pages
+- **Filters** - Filter records server-side
+- **Sorting** - Order results by any field
+- **Custom fields** - Select specific fields to return
+- **Link expansion** - Optionally expand linked documents
 
-For large or slow queries, use the [long-polling API](long-polling-power-query-example.md) instead.
+**Use this for datasets < 10,000 records.** For larger datasets or complex queries, use the [long-polling API](long-polling-power-query-example.md) instead.
 
 ## Authentication
 
@@ -31,384 +32,67 @@ Excel/Power BI automatically adds the `Authorization` header using **HTTP Basic 
 4. When Excel/Power BI prompts for credentials, enter:
    - **Username**: Your API Key
    - **Password**: Your API Secret
-5. Excel/Power BI will create header: `Authorization: Basic base64(api_key:api_secret)`
+5. Complete Template: Fetch
 
-## Read Single Document
-
-Fetch a single document by DocType and name.
-
-**API Endpoint:** `GET /api/resource/:doctype/:name`
-
-```fsharp
-let
-    BaseUrl = "https://your-site.frappe.cloud",
-    DocType = "Item",
-    DocumentName = "ITEM-001",
-    
-    ApiUrl = BaseUrl & "/api/resource/" & DocType & "/" & Uri.EscapeDataString(DocumentName),
-    
-    Response = Json.Document(Web.Contents(ApiUrl)),
-    
-    Data = Response[data],
-    Table = Record.ToTable(Data)
-in
-    Table
-```
-
-**Result:** Two-column table with field names and values from the document.
-
-### Expand Link Fields
-
-Expand linked documents by adding `expand_links=True`:
-
-```fsharp
-let
-    BaseUrl = "https://your-site.frappe.cloud",
-    DocType = "Sales Order",
-    DocumentName = "SO-00001",
-    
-    ApiUrl = BaseUrl & "/api/resource/" & DocType & "/" & Uri.EscapeDataString(DocumentName) & "?expand_links=True",
-    
-    Response = Json.Document(Web.Contents(ApiUrl)),
-    
-    Data = Response[data]
-in
-    Data
-```
-
-**Result:** Record with expanded link fields showing full linked document data.
-
-## List Documents
-
-Query multiple documents with filters, sorting, and pagination.
-
-**API Endpoint:** `GET /api/resource/:doctype`
-
-### Basic List
-
-```fsharp
-let
-    BaseUrl = "https://your-site.frappe.cloud",
-    DocType = "Item",
-    
-    ApiUrl = BaseUrl & "/api/resource/" & DocType,
-    
-    Response = Json.Document(Web.Contents(ApiUrl)),
-    
-    Data = Response[data],
-    Table = Table.FromRecords(Data)
-in
-    Table
-```
-
-**Result:** Table with first 20 documents (only `name` field by default).
-
-### Specify Fields
-
-Select specific fields to return:
+## Fetching All Records with Pagination
 
 ```fsharp
 let
     // ========== CONFIGURATION ==========
     BaseUrl = "https://your-site.frappe.cloud",
-    DocType = "Item",
-    
-    // Edit field list here - separate with commas
-    FieldList = {
-        "item_code",
-        "item_name", 
-        "item_group",
-        "standard_rate"
-    },
-    // ====================================
-    
-    // Convert list to JSON (don't edit below)
-    Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
-    
-    ApiUrl = BaseUrl & "/api/resource/" & DocType & "?fields=" & Uri.EscapeDataString(Fields),
-    
-    Response = Json.Document(Web.Contents(ApiUrl)),
-    
-    Data = Response[data],
-    Table = Table.FromRecords(Data)
-in
-    Table
-```
-
-**Result:** Table with specified fields only.
-
-### Apply Filters
-
-Filter records using Frappe's filter syntax: `[field, operator, value]`
-
-```fsharp
-let
-    // ========== CONFIGURATION ==========
-    BaseUrl = "https://your-site.frappe.cloud",
-    DocType = "Sales Invoice",
+    DocType = "Quotation",
     
     // Edit field list here
     FieldList = {
         "name",
-        "customer",
-        "posting_date",
+        "party_name",
+        "transaction_date",
         "grand_total",
-        "status"
+        "status",
+        "valid_till"
     },
     
     // Edit filters here: {field, operator, value}
-    // Filters are combined with AND logic
+    // Leave empty {} for no filters
     FilterList = {
-        {"posting_date", ">=", "2024-01-01"},
-        {"status", "=", "Paid"}
-    },
-    // ====================================
-    
-    // Convert to JSON (don't edit below)
-    Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
-    Filters = "[" & Text.Combine(
-        List.Transform(FilterList, each "[""" & _{0} & """, """ & _{1} & """, """ & _{2} & """]"),
-        ", "
-    ) & "]",
-    
-    ApiUrl = BaseUrl & "/api/resource/" & DocType 
-        & "?fields=" & Uri.EscapeDataString(Fields)
-        & "&filters=" & Uri.EscapeDataString(Filters),
-    
-    Response = Json.Document(Web.Contents(ApiUrl)),
-    
-    Data = Response[data],
-    Table = Table.FromRecords(Data)
-in
-    Table
-```
-
-**Filter operators:**
-- `=` - equals
-- `!=` - not equals
-- `>` - greater than
-- `<` - less than
-- `>=` - greater than or equal
-- `<=` - less than or equal
-- `like` - SQL LIKE pattern
-- `in` - in list
-- `not in` - not in list
-
-### OR Filters
-
-Use `or_filters` for OR logic:
-
-```fsharp
-let
-    // ========== CONFIGURATION ==========
-    BaseUrl = "https://your-site.frappe.cloud",
-    DocType = "Item",
-    
-    // Edit field list here
-    FieldList = {
-        "item_code",
-        "item_name",
-        "item_group"
-    },
-    
-    // Edit OR filters here: {field, operator, value}
-    // Filters are combined with OR logic
-    OrFilterList = {
-        {"item_group", "=", "Products"},
-        {"item_group", "=", "Raw Materials"}
-    },
-    // ====================================
-    
-    // Convert to JSON (don't edit below)
-    Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
-    OrFilters = "[" & Text.Combine(
-        List.Transform(OrFilterList, each "[""" & _{0} & """, """ & _{1} & """, """ & _{2} & """]"),
-        ", "
-    ) & "]",
-    
-    ApiUrl = BaseUrl & "/api/resource/" & DocType 
-        & "?fields=" & Uri.EscapeDataString(Fields)
-        & "&or_filters=" & Uri.EscapeDataString(OrFilters),
-    
-    Response = Json.Document(Web.Contents(ApiUrl)),
-    
-    Data = Response[data],
-    Table = Table.FromRecords(Data)
-in
-    Table
-```
-
-### Sorting
-
-Sort results with `order_by`:
-
-```fsharp
-let
-    // ========== CONFIGURATION ==========
-    BaseUrl = "https://your-site.frappe.cloud",
-    DocType = "Item",
-    
-    // Edit field list here
-    FieldList = {
-        "item_code",
-        "item_name",
-        "standard_rate"
-    },
-    
-    // Sort: "fieldname asc" or "fieldname desc"
-    OrderBy = "standard_rate desc",
-    // ====================================
-    
-    // Convert to JSON (don't edit below)
-    Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
-    
-    ApiUrl = BaseUrl & "/api/resource/" & DocType 
-        & "?fields=" & Uri.EscapeDataString(Fields)
-        & "&order_by=" & Uri.EscapeDataString(OrderBy),
-    
-    Response = Json.Document(Web.Contents(ApiUrl)),
-    
-    Data = Response[data],
-    Table = Table.FromRecords(Data)
-in
-    Table
-```
-
-### Pagination
-
-Use `limit_start` and `limit_page_length` for pagination:
-
-```fsharp
-let
-    // ========== CONFIGURATION ==========
-    BaseUrl = "https://your-site.frappe.cloud",
-    DocType = "Customer",
-    
-    // Edit field list here
-    FieldList = {
-        "name",
-        "customer_name",
-        "customer_group"
-    },
-    
-    LimitStart = 0,      // Start at record 0
-    LimitLength = 100,    // Fetch 100 records
-    // ====================================
-    
-    // Convert to JSON (don't edit below)
-    Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
-    
-    ApiUrl = BaseUrl & "/api/resource/" & DocType 
-        & "?fields=" & Uri.EscapeDataString(Fields)
-        & "&limit_start=" & Number.ToText(LimitStart)
-        & "&limit_page_length=" & Number.ToText(LimitLength),
-    
-    Response = Json.Document(Web.Contents(ApiUrl)),
-    
-    Data = Response[data],
-    Table = Table.FromRecords(Data)
-in
-    Table
-```
-
-### Complete Example with All Parameters
-
-```fsharp
-let
-    // ========== CONFIGURATION ==========
-    BaseUrl = "https://your-site.frappe.cloud",
-    DocType = "Sales Invoice",
-    
-    // Edit field list here
-    FieldList = {
-        "name",
-        "customer",
-        "posting_date",
-        "grand_total",
-        "status"
-    },
-    
-    // Edit filters here: {field, operator, value}
-    FilterList = {
-        {"posting_date", ">=", "2024-01-01"},
+        {"transaction_date", ">=", "2024-01-01"},
         {"docstatus", "=", "1"}
     },
     
     // Sort: "fieldname asc" or "fieldname desc"
-    OrderBy = "posting_date desc",
-    
-    // Pagination
-    LimitStart = 0,
-    LimitLength = 500,
-    
-    // Column types (optional but recommended)
-    ColumnTypes = {
-        {"name", type text},
-        {"customer", type text},
-        {"posting_date", type date},
-        {"grand_total", Currency.Type},
-        {"status", type text}
-    },
-    // ====================================
-    
-    // Convert to JSON (don't edit below)
-    Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
-    Filters = "[" & Text.Combine(
-        List.Transform(FilterList, each "[""" & _{0} & """, """ & _{1} & """, """ & _{2} & """]"),
-        ", "
-    ) & "]",
-    
-    // Build URL
-    ApiUrl = BaseUrl & "/api/resource/" & DocType 
-        & "?fields=" & Uri.EscapeDataString(Fields)
-        & "&filters=" & Uri.EscapeDataString(Filters)
-        & "&order_by=" & Uri.EscapeDataString(OrderBy)
-        & "&limit_start=" & Number.ToText(LimitStart)
-        & "&limit_page_length=" & Number.ToText(LimitLength),
-    
-    // Make request (auth handled automatically by Excel/Power BI)
-    Response = Json.Document(Web.Contents(ApiUrl)),
-    
-    // Extract data
-    Data = Response[data],
-    Table = Table.FromRecords(Data),
-    
-    // Apply column types
-    TypedTable = Table.TransformColumnTypes(Table, ColumnTypes)
-in
-    TypedTable
-```
-
-## Fetching All Records with Pagination
-
-For DocTypes with many records, use pagination to fetch all data:
-
-```fsharp
-let
-    // ========== CONFIGURATION ==========
-    BaseUrl = "https://your-site.frappe.cloud",
-    DocType = "Item",
-    
-    // Edit field list here
-    FieldList = {
-        "item_code",
-        "item_name",
-        "item_group"
-    },
+    // Leave as "" for no sorting
+    OrderBy = "transaction_date desc",
     
     PageSize = 100,
     // ====================================
     
     // Convert to JSON (don't edit below)
     Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
+    Filters = if List.Count(FilterList) > 0 then
+        "[" & Text.Combine(
+            List.Transform(FilterList, each "[""" & _{0} & """, """ & _{1} & """, """ & _{2} & """]"),
+            ", "
+        ) & "]"
+        else "",
     
     // Function to fetch a single page
     FetchPage = (StartIndex as number) =>
         let
-            ApiUrl = BaseUrl & "/api/resource/" & DocType 
+            // Build base URL with fields
+            BaseApiUrl = BaseUrl & "/api/resource/" & DocType 
                 & "?fields=" & Uri.EscapeDataString(Fields)
                 & "&limit_start=" & Number.ToText(StartIndex)
                 & "&limit_page_length=" & Number.ToText(PageSize),
+            
+            // Add filters if provided
+            UrlWithFilters = if Filters <> "" then
+                BaseApiUrl & "&filters=" & Uri.EscapeDataString(Filters)
+                else BaseApiUrl,
+            
+            // Add sorting if provided
+            ApiUrl = if OrderBy <> "" then
+                UrlWithFilters & "&order_by=" & Uri.EscapeDataString(OrderBy)
+                else UrlWithFilters,
             
             Response = Json.Document(Web.Contents(ApiUrl)),
             
@@ -432,99 +116,122 @@ in
     Table
 ```
 
-**Note:** This recursive approach works for moderate datasets. For very large datasets (> 10,000 records), consider using the long-polling API instead.
+**How it works:**
+- Automatically fetches all records across multiple pages
+- Supports filters, sorting, and custom fields
+- Stops when fewer records than `PageSize` are returned
 
-## Child Table Data
+## How to Use This Template
 
-Frappe doesn't provide direct REST endpoints for child tables. To fetch child table data:
+### 1. Set Your DocType and Fields
 
-**Option 1: Read parent document with expand**
-
-```fsharp
-// Fetches parent with all child tables included
-GET /api/resource/Sales Order/SO-00001?expand_links=True
-```
-
-**Option 2: Use a custom whitelisted method**
-
-Create a custom Python method to return child table data and call it via `/api/method/`.
-
-## Comparison: REST API vs Long-Polling API
-
-| Feature | REST API | Long-Polling API |
-|---------|----------|------------------|
-| **Best for** | < 1000 records, < 30s | > 1000 records, heavy queries |
-| **Timeout risk** | High for large datasets | None (background execution) |
-| **Real-time** | Immediate response | Polling delay (seconds) |
-| **Column metadata** | No automatic metadata | Yes, includes field types |
-| **Complexity** | Simple, direct calls | More complex (3-step workflow) |
-| **Filters** | Basic (field operators) | Full report filter support |
-| **Background workers** | Not required | Required |
-
-**Rule of thumb:**
-- REST API: Quick lookups, small lists, single documents
-- Long-Polling API: Reports, large exports, complex aggregations
-
-## Error Handling
+Edit the configuration section at the top:
 
 ```fsharp
-let
-    BaseUrl = "https://your-site.frappe.cloud",
-    DocType = "Item",
-    
-    ApiUrl = BaseUrl & "/api/resource/" & DocType,
-    
-    Response = try 
-        Json.Document(Web.Contents(ApiUrl))
-    otherwise null,
-    
-    Data = if Response <> null and Record.HasFields(Response, "data") 
-        then Response[data] 
-        else [],
-    
-    Table = if List.Count(Data) > 0 
-        then Table.FromRecords(Data) 
-        else #table({"name"}, {})
-in
-    Table
+DocType = "Quotation",  // Change to your DocType
+
+FieldList = {
+    "name",
+    "party_name",
+    "transaction_date"
+    // Add or remove fields as needed
+},
 ```
 
-## Best Practices
+### 2. Add Filters (Optional)
 
-### 1. Limit Fields
-Only request fields you need to reduce response size and improve performance:
+Use `{field, operator, value}` format:
+
 ```fsharp
-Fields = "[""name"", ""item_code"", ""item_name""]"  // Good
-Fields = "[]"  // Fetches all fields - avoid unless needed
+FilterList = {
+    {"transaction_date", ">=", "2024-01-01"},
+    {"status", "=", "Open"}
+},
+
+// Or leave empty for no filters:
+FilterList = {},
 ```
 
-### 2. Use Filters Server-Side
-Filter on the server rather than in Power Query:
+**Available operators:** `=`, `!=`, `>`, `<`, `>=`, `<=`, `like`, `in`, `not in`
+
+### 3. Set Sorting (Optional)
+
 ```fsharp
-// Good - filters on server
-Filters = "[[""item_group"", ""="", ""Products""]]"
-
-// Bad - fetches everything then filters in Power Query
+OrderBy = "transaction_date desc",  // Sort descending
+// or
+OrderBy = "party_name asc",         // Sort ascending
+// or
+OrderBy = "",                        // No sorting
 ```
 
-### 3. Page Large Datasets
-Don't fetch thousands of records in one call:
+## Expanding Link Fields
+
+To fetch full data from linked documents (e.g., expand `customer` to get customer details), add the link field name to your field list with special syntax:
+
+### Example: Expand Customer Link
+
 ```fsharp
-limit_page_length = "100"  // Good for most cases
-limit_page_length = "10000"  // May timeout or consume too much memory
+FieldList = {
+    "name",
+    "party_name",
+    "customer.customer_name",      // Expands customer link
+    "customer.customer_group",     // Gets customer's group
+    "customer.territory",          // Gets customer's territory
+    "transaction_date",
+    "grand_total"
+},
 ```
 
-### 4. Cache-Bust When Needed
-For data that changes frequently, add timestamps:
+**Syntax:** `"linked_field.field_name"`
+
+This is equivalent to using `expand_links=True` in the API, but gives you control over exactly which linked fields to fetch.
+
+### Multiple Link Expansions
+
+You can expand multiple link fields:
+
 ```fsharp
-ApiUrl & "&_ts=" & Number.ToText(DateTime.LocalNow())
+FieldList = {
+    "name",
+    "party_name",
+    "customer.customer_name",
+    "customer.territory",
+    "sales_person.sales_person_name",  // Expand sales person
+    "sales_person.commission_rate",
+    "transaction_date",
+    "grand_total"
+},
 ```
 
-### 5. Credentials Are Managed by Excel/Power BI
-Excel and Power BI handle authentication through their built-in forms - no need to hardcode credentials in M code.
+**Note:** Each expanded field adds to response size and query time. Only expand what you need.
 
-## Resources
+## Performance Tips
 
-- **Frappe REST API Docs**: https://docs.frappe.io/framework/user/en/api/rest
-- **Long-Polling API**: [long-polling-power-query-example.md](long-polling-power-query-example.md)
-- **Troubleshooting**: [troubleshooting.md](troubleshooting.md)
+1. **Limit Fields**: Only request fields you need - this significantly reduces data transfer and improves speed
+
+2. **Use Filters**: Filter on the server, not in Power Query - this reduces the number of records fetched
+
+3. **Adjust PageSize**: 
+   - Smaller pages (50-100): Better for slower connections
+   - Larger pages (200-500): Faster for good connections, but may timeout on slow queries
+
+4. **Avoid Over-Expansion**: Expanding many link fields increases query complexity - only expand what you need
+
+5. **For Large Datasets**: If you have > 10,000 records, consider using the [long-polling API](long-polling-power-query-example.md) instead
+
+## Troubleshooting
+
+**Query times out:**
+- Reduce `PageSize` to 50 or lower
+- Add more specific filters to reduce total records
+- Consider using long-polling API for heavy queries
+
+**Missing data:**
+- Verify field names match exactly (case-sensitive)
+- Check filter syntax: `{field, operator, value}`
+- Ensure you have permission to access the DocType
+
+**Link fields not expanding:**
+- Use dot notation: `"customer.customer_name"`
+- Verify the link field exists and is accessible
+- Check that linked document has the field you're requesting
