@@ -1,6 +1,6 @@
 # REST API Power Query Example
 
-Power Query M code template for fetching all records from Frappe using the REST API with automatic pagination.
+Power Query M code template for fetching all records from Frappe using the Report View API with automatic pagination.
 
 ## Overview
 
@@ -9,9 +9,12 @@ This template provides a complete solution for fetching all records from any Fra
 - **Filters** - Filter records server-side
 - **Sorting** - Order results by any field
 - **Custom fields** - Select specific fields to return
+- **Child table fields** - Access child table data directly in results
 - **Link expansion** - Optionally expand linked documents
 
 **Use this for datasets < 10,000 records.** For larger datasets or complex queries, use the [long-polling API](long-polling-power-query-example.md) instead.
+
+**Note:** This uses `frappe.desk.reportview.get` which returns a compressed format (`keys` and `values`). The M code automatically expands this into a proper table.
 
 ## Authentication
 
@@ -42,63 +45,116 @@ let
     BaseUrl = "https://your-site.frappe.cloud",
     DocType = "Quotation",
     
-    // Edit field list here
+    // OPTIONAL: Set if you want to include child table fields
+    // Leave as "" to only query parent fields
+    ChildDocType = "Quotation Item",
+    
+    // Fields: {DocType or ChildDocType, FieldName}
     FieldList = {
-        "name",
-        "party_name",
-        "transaction_date",
-        "grand_total",
-        "status",
-        "valid_till"
+        {DocType, "name"},
+        {DocType, "party_name"},
+        {DocType, "transaction_date"},
+        {DocType, "grand_total"},
+        {DocType, "status"},
+        {DocType, "valid_till"},
+        // Child table fields (optional - only if ChildDocType is set)
+        {ChildDocType, "item_code"},
+        {ChildDocType, "qty"},
+        {ChildDocType, "rate"},
+        {ChildDocType, "amount"}
     },
     
-    // Edit filters here: {field, operator, value}
+    // Filters: {DocType, Field, Operator, Value}
+    // Use DocType for parent, ChildDocType for child fields
     // Leave empty {} for no filters
     FilterList = {
-        {"transaction_date", ">=", "2024-01-01"},
-        {"docstatus", "=", "1"}
+        {DocType, "transaction_date", ">=", "2026-01-15"},
+        {DocType, "docstatus", "=", "1"}
+        // Filter by child field:
+        // {ChildDocType, "item_code", "=", "ITEM-001"}
     },
     
-    // Sort: "fieldname asc" or "fieldname desc"
-    // Leave as "" for no sorting
-    OrderBy = "transaction_date desc",
+    // Sort: List of {DocType or ChildDocType, FieldName, "asc" or "desc"}
+    // Leave as {} for no sorting
+    OrderByList = {
+        {DocType, "transaction_date", "desc"}
+        // Add more sort fields if needed:
+        // {DocType, "name", "asc"}
+    },
     
     PageSize = 100,
     // ====================================
     
-    // Convert to JSON (don't edit below)
-    Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
-    Filters = if List.Count(FilterList) > 0 then
-        "[" & Text.Combine(
-            List.Transform(FilterList, each "[""" & _{0} & """, """ & _{1} & """, """ & _{2} & """]"),
+    // Format OrderBy clauses
+    OrderByClause = if List.Count(OrderByList) > 0 then
+        Text.Combine(
+            List.Transform(
+                OrderByList,
+                each "`tab" & _{0} & "`.`" & _{1} & "` " & _{2}
+            ),
             ", "
-        ) & "]"
+        )
         else "",
     
-    // Function to fetch a single page
+    // Helper function to format field with backticks and alias
+    FormatField = (fieldDef as list) as text =>
+        let
+            doctype = fieldDef{0},
+            fieldname = fieldDef{1},
+            
+            // Format: `tabDocType`.`fieldname`
+            fullField = "`tab" & doctype & "`.`" & fieldname & "`",
+            
+            // Add alias for child tables
+            withAlias = if doctype <> DocType then
+                fullField & " as '" & doctype & ":" & fieldname & "'"
+                else fullField
+        in
+            withAlias,
+    
+    // Convert fields to JSON array
+    Fields = "[" & Text.Combine(
+        List.Transform(FieldList, each """" & FormatField(_) & """"),
+        ", "
+    ) & "]",
+    
+    // Convert filters to JSON array
+    Filters = if List.Count(FilterList) > 0 then
+        "[" & Text.Combine(
+            List.Transform(FilterList, 
+                each "[""" & _{0} & """, """ & _{1} & """, """ & _{2} & """, """ & Text.From(_{3}) & """]"
+            ),
+            ", "
+        ) & "]"
+        else "[]",
+    
+    // Function to fetch a single page using reportview.get
     FetchPage = (StartIndex as number) =>
         let
-            // Build base URL with fields
-            BaseApiUrl = BaseUrl & "/api/resource/" & DocType 
-                & "?fields=" & Uri.EscapeDataString(Fields)
-                & "&limit_start=" & Number.ToText(StartIndex)
-                & "&limit_page_length=" & Number.ToText(PageSize),
-            
-            // Add filters if provided
-            UrlWithFilters = if Filters <> "" then
-                BaseApiUrl & "&filters=" & Uri.EscapeDataString(Filters)
-                else BaseApiUrl,
-            
-            // Add sorting if provided
-            ApiUrl = if OrderBy <> "" then
-                UrlWithFilters & "&order_by=" & Uri.EscapeDataString(OrderBy)
-                else UrlWithFilters,
+            // Build API URL for frappe.desk.reportview.get
+            ApiUrl = BaseUrl & "/api/method/frappe.desk.reportview.get"
+                & "?doctype=" & Uri.EscapeDataString(DocType)
+                & "&fields=" & Uri.EscapeDataString(Fields)
+                & "&filters=" & Uri.EscapeDataString(Filters)
+                & "&start=" & Number.ToText(StartIndex)
+                & "&page_length=" & Number.ToText(PageSize)
+                & "&view=Report"
+                & (if OrderByClause <> "" then "&order_by=" & Uri.EscapeDataString(OrderByClause) else ""),
             
             Response = Json.Document(Web.Contents(ApiUrl)),
             
-            Data = Response[data]
+            // Handle compressed response format
+            Message = Response[message],
+            Keys = Message[keys],
+            Values = Message[values],
+            
+            // Convert compressed format to records
+            Records = List.Transform(
+                Values,
+                each Record.FromList(_, Keys)
+            )
         in
-            Data,
+            Records,
     
     // Fetch all pages recursively
     FetchAllPages = (StartIndex as number) as list =>
@@ -117,8 +173,11 @@ in
 ```
 
 **How it works:**
-- Automatically fetches all records across multiple pages
-- Supports filters, sorting, and custom fields
+- Uses `frappe.desk.reportview.get` which supports child table fields
+- Properly formats fields with backticks: `` `tabDocType`.`fieldname` ``
+- Adds aliases for child table fields to match Frappe's format
+- Automatically decompresses the response format (`keys` + `values` → records)
+- Fetches all records across multiple pages
 - Stops when fewer records than `PageSize` are returned
 
 ## How to Use This Template
@@ -130,80 +189,170 @@ Edit the configuration section at the top:
 ```fsharp
 DocType = "Quotation",  // Change to your DocType
 
+// OPTIONAL: Set only if you want child table fields
+ChildDocType = "Quotation Item",  // Or "" to skip child table
+
+// Fields: {DocType or ChildDocType, FieldName}
 FieldList = {
-    "name",
-    "party_name",
-    "transaction_date"
-    // Add or remove fields as needed
+    {DocType, "name"},
+    {DocType, "party_name"},
+    {DocType, "transaction_date"},
+    {DocType, "grand_total"},
+    // Child table fields (optional)
+    {ChildDocType, "item_code"},
+    {ChildDocType, "qty"},
+    {ChildDocType, "rate"}
 },
 ```
 
+**Note:** When including child table fields, you'll get one row per child record. For example, a Quotation with 3 items will return 3 rows with the parent data duplicated.
+
 ### 2. Add Filters (Optional)
 
-Use `{field, operator, value}` format:
+Use `{DocType, field, operator, value}` format. Use `DocType` for parent fields or `ChildDocType` for child fields:
 
 ```fsharp
 FilterList = {
-    {"transaction_date", ">=", "2024-01-01"},
-    {"status", "=", "Open"}
+    {DocType, "transaction_date", ">=", "2024-01-01"},
+    {DocType, "status", "=", "Open"},
+    // Filter by child table field
+    {ChildDocType, "item_code", "=", "ITEM-001"}
 },
 
 // Or leave empty for no filters:
 FilterList = {},
 ```
 
+**Filter Format:** `{DocType or ChildDocType, FieldName, Operator, Value}`
+
 **Available operators:** `=`, `!=`, `>`, `<`, `>=`, `<=`, `like`, `in`, `not in`
 
 ### 3. Set Sorting (Optional)
 
+Use a list of `{DocType or ChildDocType, FieldName, "asc" or "desc"}` tuples. You can specify multiple sort fields:
+
 ```fsharp
-OrderBy = "transaction_date desc",  // Sort descending
-// or
-OrderBy = "party_name asc",         // Sort ascending
-// or
-OrderBy = "",                        // No sorting
+OrderByList = {
+    {DocType, "transaction_date", "desc"},     // Primary sort
+    {DocType, "name", "asc"}                    // Secondary sort
+},
+// or single sort:
+OrderByList = {
+    {ChildDocType, "qty", "asc"}
+},
+// or no sorting:
+OrderByList = {},
+```
+
+**Sort Format:** `{DocType or ChildDocType, FieldName, Direction}`
+
+**Direction:** `"asc"` (ascending) or `"desc"` (descending)
+
+**Multiple sorts:** Add multiple tuples to sort by multiple fields. First tuple is primary sort, second is secondary, etc.
+
+## Accessing Child Table Fields
+
+To include child table fields, set `ChildDocType` and add field names to `ChildFields`.
+
+### Example: Sales Order with Items
+
+```fsharp
+DocType = "Sales Order",
+ChildDocType = "Sales Order Item",
+
+FieldList = {
+    {DocType, "name"},
+    {DocType, "customer"},
+    {DocType, "transaction_date"},
+    {DocType, "grand_total"},
+    {ChildDocType, "item_code"},
+    {ChildDocType, "qty"},
+    {ChildDocType, "rate"},
+    {ChildDocType, "amount"}
+},
+```
+
+**Important:** When you include child table fields:
+- You get **one row per child record**
+- A Sales Order with 3 items returns **3 rows**
+- Parent fields are duplicated across rows
+- This is a LEFT JOIN, so orders with no items return 1 row with null child values
+
+### Filtering by Child Table Fields
+
+Use `ChildDocType` in your filters:
+
+```fsharp
+FilterList = {
+    {DocType, "transaction_date", ">=", "2024-01-01"},
+    {ChildDocType, "item_code", "=", "ITEM-001"}  // Filter by child field
+},
+```
+
+### Querying Only Parent Fields
+
+To query without child tables, just set `ChildDocType = ""` and only use `DocType` in your field list:
+
+```fsharp
+DocType = "Sales Order",
+ChildDocType = "",  // No child table
+
+FieldList = {
+    {DocType, "name"},
+    {DocType, "customer"},
+    {DocType, "transaction_date"},
+    {DocType, "grand_total"}
+    // No ChildDocType fields
+},
 ```
 
 ## Expanding Link Fields
 
-To fetch full data from linked documents (e.g., expand `customer` to get customer details), add the link field name to your field list with special syntax:
+To fetch data from linked documents, you need to use the Link doctype and its fields.
 
 ### Example: Expand Customer Link
 
 ```fsharp
 FieldList = {
-    "name",
-    "party_name",
-    "customer.customer_name",      // Expands customer link
-    "customer.customer_group",     // Gets customer's group
-    "customer.territory",          // Gets customer's territory
-    "transaction_date",
-    "grand_total"
+    {"Quotation", "name", null},
+    {"Quotation", "party_name", null},
+    {"Quotation", "customer", null},           // Link field itself
+    {"Customer", "customer_name", "Customer Name"},  // Expanded field
+    {"Customer", "customer_group", "Customer Group"},
+    {"Customer", "territory", "Territory"},
+    {"Quotation", "transaction_date", null},
+    {"Quotation", "grand_total", null}
 },
 ```
 
-**Syntax:** `"linked_field.field_name"`
+**Note:** The link field (e.g., `customer`) must exist in the parent DocType's schema for the expansion to work.
 
-This is equivalent to using `expand_links=True` in the API, but gives you control over exactly which linked fields to fetch.
+### Combining Child Tables and Link Expansion
 
-### Multiple Link Expansions
-
-You can expand multiple link fields:
+You can use both child table fields and link expansion together:
 
 ```fsharp
 FieldList = {
-    "name",
-    "party_name",
-    "customer.customer_name",
-    "customer.territory",
-    "sales_person.sales_person_name",  // Expand sales person
-    "sales_person.commission_rate",
-    "transaction_date",
-    "grand_total"
+    // Parent fields
+    {"Quotation", "name", null},
+    {"Quotation", "customer", null},
+    
+    // Expand parent link
+    {"Customer", "customer_name", "Customer Name"},
+    {"Customer", "territory", "Territory"},
+    
+    // Child table fields
+    {"Quotation Item", "item_code", "Item Code"},
+    {"Quotation Item", "qty", "Qty"},
+    {"Quotation Item", "rate", "Rate"},
+    
+    // Expand link in child table
+    {"Item", "item_name", "Item Name"},
+    {"Item", "item_group", "Item Group"}
 },
 ```
 
-**Note:** Each expanded field adds to response size and query time. Only expand what you need.
+**Note:** Each expanded field and child table join adds to response size and query time. Only include what you need.
 
 ## Performance Tips
 
@@ -231,7 +380,24 @@ FieldList = {
 - Check filter syntax: `{field, operator, value}`
 - Ensure you have permission to access the DocType
 
+**Child table fields not showing:**
+- Make sure `ChildDocType` is set correctly
+- Use `{ChildDocType, "field_name"}` format in `FieldList`
+- Remember: Including child fields returns one row per child record
+- Verify the child table field exists and is accessible
+
 **Link fields not expanding:**
-- Use dot notation: `"customer.customer_name"`
-- Verify the link field exists and is accessible
+- Specify the linked DocType: `{"Customer", "customer_name", "Customer Name"}`
+- The link field itself must exist in the main DocType
 - Check that linked document has the field you're requesting
+
+**Getting error "Invalid field name":**
+- Check for typos in field names (case-sensitive)
+- Ensure you're using the correct DocType name
+- Verify you have read permission on the fields you're requesting
+
+**Sort not working:**
+- Use format: `{DocType, "fieldname", "asc"}` or `{DocType, "fieldname", "desc"}`
+- Example: `OrderByList = {{DocType, "transaction_date", "desc"}}`
+- Make sure direction is `"asc"` or `"desc"` (lowercase, in quotes)
+- For multiple sorts, add more tuples: `{{DocType, "date", "desc"}, {DocType, "name", "asc"}}`
