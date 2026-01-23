@@ -109,21 +109,27 @@ Select specific fields to return:
 
 ```fsharp
 let
+    // ========== CONFIGURATION ==========
     BaseUrl = "https://your-site.frappe.cloud",
     DocType = "Item",
     
-    // Specify fields as JSON array
-    Fields = "[""item_code"", ""item_name"", ""item_group"", ""standard_rate""]",
+    // Edit field list here - separate with commas
+    FieldList = {
+        "item_code",
+        "item_name", 
+        "item_group",
+        "standard_rate"
+    },
+    // ====================================
+    
+    // Convert list to JSON (don't edit below)
+    Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
     
     ApiUrl = BaseUrl & "/api/resource/" & DocType & "?fields=" & Uri.EscapeDataString(Fields),
     
     Response = Json.Document(Web.Contents(ApiUrl)),
     
     Data = Response[data],
-    Table = Table.FromRecords(Data)
-in
-    Table
-```
     Table = Table.FromRecords(Data)
 in
     Table
@@ -137,13 +143,33 @@ Filter records using Frappe's filter syntax: `[field, operator, value]`
 
 ```fsharp
 let
+    // ========== CONFIGURATION ==========
     BaseUrl = "https://your-site.frappe.cloud",
     DocType = "Sales Invoice",
     
-    Fields = "[""name"", ""customer"", ""posting_date"", ""grand_total"", ""status""]",
+    // Edit field list here
+    FieldList = {
+        "name",
+        "customer",
+        "posting_date",
+        "grand_total",
+        "status"
+    },
     
-    // Filters: posting_date >= 2024-01-01 AND status = "Paid"
-    Filters = "[[""posting_date"", "">="", ""2024-01-01""], [""status"", ""="", ""Paid""]]",
+    // Edit filters here: {field, operator, value}
+    // Filters are combined with AND logic
+    FilterList = {
+        {"posting_date", ">=", "2024-01-01"},
+        {"status", "=", "Paid"}
+    },
+    // ====================================
+    
+    // Convert to JSON (don't edit below)
+    Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
+    Filters = "[" & Text.Combine(
+        List.Transform(FilterList, each "[""" & _{0} & """, """ & _{1} & """, """ & _{2} & """]"),
+        ", "
+    ) & "]",
     
     ApiUrl = BaseUrl & "/api/resource/" & DocType 
         & "?fields=" & Uri.EscapeDataString(Fields)
@@ -174,13 +200,31 @@ Use `or_filters` for OR logic:
 
 ```fsharp
 let
+    // ========== CONFIGURATION ==========
     BaseUrl = "https://your-site.frappe.cloud",
     DocType = "Item",
     
-    Fields = "[""item_code"", ""item_name"", ""item_group""]",
+    // Edit field list here
+    FieldList = {
+        "item_code",
+        "item_name",
+        "item_group"
+    },
     
-    // item_group = "Products" OR item_group = "Raw Materials"
-    OrFilters = "[[""item_group"", ""="", ""Products""], [""item_group"", ""="", ""Raw Materials""]]",
+    // Edit OR filters here: {field, operator, value}
+    // Filters are combined with OR logic
+    OrFilterList = {
+        {"item_group", "=", "Products"},
+        {"item_group", "=", "Raw Materials"}
+    },
+    // ====================================
+    
+    // Convert to JSON (don't edit below)
+    Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
+    OrFilters = "[" & Text.Combine(
+        List.Transform(OrFilterList, each "[""" & _{0} & """, """ & _{1} & """, """ & _{2} & """]"),
+        ", "
+    ) & "]",
     
     ApiUrl = BaseUrl & "/api/resource/" & DocType 
         & "?fields=" & Uri.EscapeDataString(Fields)
@@ -200,13 +244,23 @@ Sort results with `order_by`:
 
 ```fsharp
 let
+    // ========== CONFIGURATION ==========
     BaseUrl = "https://your-site.frappe.cloud",
     DocType = "Item",
     
-    Fields = "[""item_code"", ""item_name"", ""standard_rate""]",
+    // Edit field list here
+    FieldList = {
+        "item_code",
+        "item_name",
+        "standard_rate"
+    },
     
-    // Sort by standard_rate descending
+    // Sort: "fieldname asc" or "fieldname desc"
     OrderBy = "standard_rate desc",
+    // ====================================
+    
+    // Convert to JSON (don't edit below)
+    Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
     
     ApiUrl = BaseUrl & "/api/resource/" & DocType 
         & "?fields=" & Uri.EscapeDataString(Fields)
@@ -226,18 +280,28 @@ Use `limit_start` and `limit_page_length` for pagination:
 
 ```fsharp
 let
+    // ========== CONFIGURATION ==========
     BaseUrl = "https://your-site.frappe.cloud",
     DocType = "Customer",
     
-    Fields = "[""name"", ""customer_name"", ""customer_group""]",
+    // Edit field list here
+    FieldList = {
+        "name",
+        "customer_name",
+        "customer_group"
+    },
     
-    LimitStart = "0",      // Start at record 0
-    LimitLength = "100",    // Fetch 100 records
+    LimitStart = 0,      // Start at record 0
+    LimitLength = 100,    // Fetch 100 records
+    // ====================================
+    
+    // Convert to JSON (don't edit below)
+    Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
     
     ApiUrl = BaseUrl & "/api/resource/" & DocType 
         & "?fields=" & Uri.EscapeDataString(Fields)
-        & "&limit_start=" & LimitStart
-        & "&limit_page_length=" & LimitLength,
+        & "&limit_start=" & Number.ToText(LimitStart)
+        & "&limit_page_length=" & Number.ToText(LimitLength),
     
     Response = Json.Document(Web.Contents(ApiUrl)),
     
@@ -251,24 +315,56 @@ in
 
 ```fsharp
 let
-    // Configuration
+    // ========== CONFIGURATION ==========
     BaseUrl = "https://your-site.frappe.cloud",
     DocType = "Sales Invoice",
     
-    // Query parameters
-    Fields = "[""name"", ""customer"", ""posting_date"", ""grand_total"", ""status""]",
-    Filters = "[[""posting_date"", "">="", ""2024-01-01""], [""docstatus"", ""="", ""1""]]",
+    // Edit field list here
+    FieldList = {
+        "name",
+        "customer",
+        "posting_date",
+        "grand_total",
+        "status"
+    },
+    
+    // Edit filters here: {field, operator, value}
+    FilterList = {
+        {"posting_date", ">=", "2024-01-01"},
+        {"docstatus", "=", "1"}
+    },
+    
+    // Sort: "fieldname asc" or "fieldname desc"
     OrderBy = "posting_date desc",
-    LimitStart = "0",
-    LimitLength = "500",
+    
+    // Pagination
+    LimitStart = 0,
+    LimitLength = 500,
+    
+    // Column types (optional but recommended)
+    ColumnTypes = {
+        {"name", type text},
+        {"customer", type text},
+        {"posting_date", type date},
+        {"grand_total", Currency.Type},
+        {"status", type text}
+    },
+    // ====================================
+    
+    // Convert to JSON (don't edit below)
+    Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
+    Filters = "[" & Text.Combine(
+        List.Transform(FilterList, each "[""" & _{0} & """, """ & _{1} & """, """ & _{2} & """]"),
+        ", "
+    ) & "]",
     
     // Build URL
     ApiUrl = BaseUrl & "/api/resource/" & DocType 
         & "?fields=" & Uri.EscapeDataString(Fields)
         & "&filters=" & Uri.EscapeDataString(Filters)
         & "&order_by=" & Uri.EscapeDataString(OrderBy)
-        & "&limit_start=" & LimitStart
-        & "&limit_page_length=" & LimitLength,
+        & "&limit_start=" & Number.ToText(LimitStart)
+        & "&limit_page_length=" & Number.ToText(LimitLength),
     
     // Make request (auth handled automatically by Excel/Power BI)
     Response = Json.Document(Web.Contents(ApiUrl)),
@@ -278,16 +374,7 @@ let
     Table = Table.FromRecords(Data),
     
     // Apply column types
-    TypedTable = Table.TransformColumnTypes(
-        Table,
-        {
-            {"name", type text},
-            {"customer", type text},
-            {"posting_date", type date},
-            {"grand_total", Currency.Type},
-            {"status", type text}
-        }
-    )
+    TypedTable = Table.TransformColumnTypes(Table, ColumnTypes)
 in
     TypedTable
 ```
@@ -298,10 +385,22 @@ For DocTypes with many records, use pagination to fetch all data:
 
 ```fsharp
 let
+    // ========== CONFIGURATION ==========
     BaseUrl = "https://your-site.frappe.cloud",
     DocType = "Item",
-    Fields = "[""item_code"", ""item_name"", ""item_group""]",
+    
+    // Edit field list here
+    FieldList = {
+        "item_code",
+        "item_name",
+        "item_group"
+    },
+    
     PageSize = 100,
+    // ====================================
+    
+    // Convert to JSON (don't edit below)
+    Fields = "[" & Text.Combine(List.Transform(FieldList, each """" & _ & """"), ", ") & "]",
     
     // Function to fetch a single page
     FetchPage = (StartIndex as number) =>
