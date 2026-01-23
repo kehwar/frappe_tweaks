@@ -9,13 +9,15 @@ Document Review Rule scripts support two ways to indicate that a review is neede
 ### Option 1: Using `result` variable (traditional approach)
 ```python
 result = {
+    "title": "Review Title",  # Optional
     "message": "Review message here",
-    "data": {"key": "value"}
+    "data": {"key": "value"}  # Optional
 }
 ```
 
-### Option 2: Using direct `message` and `data` variables (new approach)
+### Option 2: Using direct `title`, `message`, and `data` variables (new approach)
 ```python
+title = "Review Title"  # Optional
 message = "Review message here"
 data = {"key": "value"}  # Optional
 ```
@@ -32,6 +34,7 @@ threshold = 100000
 
 if doc.grand_total and doc.grand_total > threshold:
     result = {
+        "title": "High Value Order",
         "message": f"Order value ${doc.grand_total:,.2f} exceeds approval threshold of ${threshold:,.2f}",
         "data": {
             "grand_total": doc.grand_total,

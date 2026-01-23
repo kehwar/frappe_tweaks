@@ -50,6 +50,7 @@ A submittable record representing a required review. Created automatically when 
 **Key properties:**
 - `reference_doctype` + `reference_name`: Link to the document being reviewed
 - `review_rule`: Link to the rule that created this review
+- `title`: Optional custom title for the review
 - `message`: Explanation of why review is needed
 - `review_data`: Additional structured data (JSON)
 - `mandatory`: Whether this review blocks submission
@@ -82,6 +83,7 @@ Example script:
 # Check if total is above threshold
 if doc.grand_total > 100000:
     result = {
+        "title": "High Value Order",
         "message": "Order exceeds approval threshold of $100,000",
         "data": {
             "grand_total": doc.grand_total,
