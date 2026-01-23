@@ -92,6 +92,11 @@ let
     },
     
     PageSize = 100,
+    
+    // OPTIONAL: Set a maximum number of records to fetch
+    // Set to 0 to fetch all records (no limit)
+    // Set to a number (e.g., 1000) to stop after fetching that many records
+    RecordLimit = 0,
     // ====================================
     
     // Format OrderBy clauses
@@ -177,16 +182,40 @@ let
             Records,
     
     // Fetch all pages recursively
-    FetchAllPages = (StartIndex as number) as list =>
+    FetchAllPages = (StartIndex as number, RemainingLimit as number) as list =>
         let
+            // Determine how many records to fetch this page
+            ActualPageSize = if RemainingLimit > 0 and RemainingLimit < PageSize 
+                then RemainingLimit 
+                else PageSize,
+            
             CurrentPage = FetchPage(StartIndex),
-            NextPages = if List.Count(CurrentPage) = PageSize 
-                then @FetchAllPages(StartIndex + PageSize) 
+            CurrentPageCount = List.Count(CurrentPage),
+            
+            // Trim current page if we've exceeded the limit
+            TrimmedPage = if RemainingLimit > 0 and CurrentPageCount > RemainingLimit
+                then List.FirstN(CurrentPage, RemainingLimit)
+                else CurrentPage,
+            
+            TrimmedPageCount = List.Count(TrimmedPage),
+            
+            // Calculate new remaining limit
+            NewRemainingLimit = if RemainingLimit > 0 
+                then RemainingLimit - TrimmedPageCount 
+                else 0,
+            
+            // Determine if we should continue fetching
+            ShouldContinue = 
+                CurrentPageCount = PageSize and  // We got a full page
+                (RemainingLimit = 0 or NewRemainingLimit > 0),  // And we haven't hit the limit
+            
+            NextPages = if ShouldContinue
+                then @FetchAllPages(StartIndex + PageSize, NewRemainingLimit) 
                 else {}
         in
-            List.Combine({CurrentPage, NextPages}),
+            List.Combine({TrimmedPage, NextPages}),
     
-    AllData = FetchAllPages(0),
+    AllData = FetchAllPages(0, RecordLimit),
     Table = Table.FromRecords(AllData)
 in
     Table
@@ -198,7 +227,7 @@ in
 - Adds aliases for child table fields to match Frappe's format
 - Automatically decompresses the response format (`keys` + `values` → records)
 - Fetches all records across multiple pages
-- Stops when fewer records than `PageSize` are returned
+- Stops when fewer records than `PageSize` are returned or when `RecordLimit` is reached
 
 ## How to Use This Template
 
@@ -227,7 +256,35 @@ FieldList = {
 
 **Note:** When including child table fields, you'll get one row per child record. For example, a Quotation with 3 items will return 3 rows with the parent data duplicated.
 
-### 2. Add Filters (Optional)
+### 2. Set Record Limit (Optional)
+
+Control how many records to fetch:
+
+```fsharp
+// Fetch all records (no limit) - default
+RecordLimit = 0,
+
+// Fetch only first 1000 records
+RecordLimit = 1000,
+
+// Fetch only first 500 records
+RecordLimit = 500,
+```
+
+**When to use `RecordLimit`:**
+- **Testing:** Quickly preview data without fetching everything
+- **Performance:** Limit data for faster initial loads
+- **Data sampling:** Get a representative sample for analysis
+- **Development:** Work with smaller datasets during report development
+
+**Important notes:**
+- The limit is applied **after** filtering and sorting
+- Records are fetched in pages until the limit is reached
+- If you set `RecordLimit = 500` with `PageSize = 100`, it will fetch 5 pages and stop
+- The actual number of records may be slightly less if the last page is incomplete
+- Use `0` to fetch all available records (default behavior)
+
+### 3. Add Filters (Optional)
 
 Use `{DocType, field, operator, value}` format. Use `DocType` for parent fields or `ChildDocType` for child fields:
 
@@ -273,7 +330,7 @@ OrFilterList = {
 // Result: date >= 2024 AND status = Open AND (customer = A OR customer = B)
 ```
 
-### 3. Set Sorting (Optional)
+### 4. Set Sorting (Optional)
 
 Use a list of `{DocType or ChildDocType, FieldName, "asc" or "desc"}` tuples. You can specify multiple sort fields:
 
