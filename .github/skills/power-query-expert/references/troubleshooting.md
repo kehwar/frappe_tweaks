@@ -143,16 +143,19 @@ Complete troubleshooting reference for Power Query and Frappe integration.
 ### 401 Unauthorized
 
 **Solutions:**
-- Verify API key and secret are correct
-- Check format: `token {api_key}:{api_secret}`
-- Ensure API key is not disabled or expired
+- Verify credentials in Excel/Power BI authentication dialog
+- **For Username/Password**: Check username and password are correct
+- **For API Key/Token**: Ensure API Key (username) and API Secret (password) are correct
+- Excel/Power BI uses HTTP Basic Authentication: `Authorization: Basic base64(key:token)`
+- Frappe accepts both Basic auth and token format
+- Ensure API key is not disabled or expired in Frappe
 - Verify user account is active
 - Check API key has proper permissions
 
 ### 403 Forbidden
 
 **Solutions:**
-- Grant report permissions to API user
+- Grant report permissions to the user/API user
 - Check role permissions in Role Permission Manager
 - Verify report is not restricted by domain
 - Check user is assigned to correct roles
@@ -184,8 +187,8 @@ Complete troubleshooting reference for Power Query and Frappe integration.
 - Cache intermediate results in custom reports
 
 ### 5. Secure properly
-- Store credentials in parameters, not code
+- Credentials are entered through Excel/Power BI authentication forms, not in code
 - Use role-based report permissions
 - Audit API access regularly
 - Rotate API keys periodically
-- Never commit credentials to version control
+- API keys preferred over passwords for automated refreshes

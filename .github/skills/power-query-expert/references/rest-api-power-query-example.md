@@ -14,15 +14,24 @@ For large or slow queries, use the [long-polling API](long-polling-power-query-e
 
 ## Authentication
 
-All examples use token-based authentication. Add to all `Web.Contents()` calls:
+Authentication is handled automatically by Excel and Power BI through their built-in authentication forms:
 
-```fsharp
-Headers = [
-    #"Accept" = "application/json",
-    #"Content-Type" = "application/json",
-    #"Authorization" = "token api_key:api_secret"
-]
-```
+- **Username/Password**: Use your Frappe account credentials
+- **API Key/Token**: Enter API Key as username, API Secret as password
+
+Excel/Power BI automatically adds the `Authorization` header using **HTTP Basic Authentication** format: `Authorization: Basic base64(username:password)`. Frappe's API accepts this format alongside its native token format.
+
+**Do not include authentication headers in your M code** - they are added automatically by Excel/Power BI.
+
+### Create API Keys in Frappe
+
+1. Go to User → API Access
+2. Click "Generate Keys"
+3. Copy API Key and Secret
+4. When Excel/Power BI prompts for credentials, enter:
+   - **Username**: Your API Key
+   - **Password**: Your API Secret
+5. Excel/Power BI will create header: `Authorization: Basic base64(api_key:api_secret)`
 
 ## Read Single Document
 
@@ -38,17 +47,7 @@ let
     
     ApiUrl = BaseUrl & "/api/resource/" & DocType & "/" & Uri.EscapeDataString(DocumentName),
     
-    Response = Json.Document(
-        Web.Contents(
-            ApiUrl,
-            [
-                Headers = [
-                    #"Accept" = "application/json",
-                    #"Authorization" = "token api_key:api_secret"
-                ]
-            ]
-        )
-    ),
+    Response = Json.Document(Web.Contents(ApiUrl)),
     
     Data = Response[data],
     Table = Record.ToTable(Data)
@@ -70,17 +69,7 @@ let
     
     ApiUrl = BaseUrl & "/api/resource/" & DocType & "/" & Uri.EscapeDataString(DocumentName) & "?expand_links=True",
     
-    Response = Json.Document(
-        Web.Contents(
-            ApiUrl,
-            [
-                Headers = [
-                    #"Accept" = "application/json",
-                    #"Authorization" = "token api_key:api_secret"
-                ]
-            ]
-        )
-    ),
+    Response = Json.Document(Web.Contents(ApiUrl)),
     
     Data = Response[data]
 in
@@ -104,17 +93,7 @@ let
     
     ApiUrl = BaseUrl & "/api/resource/" & DocType,
     
-    Response = Json.Document(
-        Web.Contents(
-            ApiUrl,
-            [
-                Headers = [
-                    #"Accept" = "application/json",
-                    #"Authorization" = "token api_key:api_secret"
-                ]
-            ]
-        )
-    ),
+    Response = Json.Document(Web.Contents(ApiUrl)),
     
     Data = Response[data],
     Table = Table.FromRecords(Data)
@@ -138,19 +117,13 @@ let
     
     ApiUrl = BaseUrl & "/api/resource/" & DocType & "?fields=" & Uri.EscapeDataString(Fields),
     
-    Response = Json.Document(
-        Web.Contents(
-            ApiUrl,
-            [
-                Headers = [
-                    #"Accept" = "application/json",
-                    #"Authorization" = "token api_key:api_secret"
-                ]
-            ]
-        )
-    ),
+    Response = Json.Document(Web.Contents(ApiUrl)),
     
     Data = Response[data],
+    Table = Table.FromRecords(Data)
+in
+    Table
+```
     Table = Table.FromRecords(Data)
 in
     Table
@@ -176,17 +149,7 @@ let
         & "?fields=" & Uri.EscapeDataString(Fields)
         & "&filters=" & Uri.EscapeDataString(Filters),
     
-    Response = Json.Document(
-        Web.Contents(
-            ApiUrl,
-            [
-                Headers = [
-                    #"Accept" = "application/json",
-                    #"Authorization" = "token api_key:api_secret"
-                ]
-            ]
-        )
-    ),
+    Response = Json.Document(Web.Contents(ApiUrl)),
     
     Data = Response[data],
     Table = Table.FromRecords(Data)
@@ -223,17 +186,7 @@ let
         & "?fields=" & Uri.EscapeDataString(Fields)
         & "&or_filters=" & Uri.EscapeDataString(OrFilters),
     
-    Response = Json.Document(
-        Web.Contents(
-            ApiUrl,
-            [
-                Headers = [
-                    #"Accept" = "application/json",
-                    #"Authorization" = "token api_key:api_secret"
-                ]
-            ]
-        )
-    ),
+    Response = Json.Document(Web.Contents(ApiUrl)),
     
     Data = Response[data],
     Table = Table.FromRecords(Data)
@@ -259,17 +212,7 @@ let
         & "?fields=" & Uri.EscapeDataString(Fields)
         & "&order_by=" & Uri.EscapeDataString(OrderBy),
     
-    Response = Json.Document(
-        Web.Contents(
-            ApiUrl,
-            [
-                Headers = [
-                    #"Accept" = "application/json",
-                    #"Authorization" = "token api_key:api_secret"
-                ]
-            ]
-        )
-    ),
+    Response = Json.Document(Web.Contents(ApiUrl)),
     
     Data = Response[data],
     Table = Table.FromRecords(Data)
@@ -296,17 +239,7 @@ let
         & "&limit_start=" & LimitStart
         & "&limit_page_length=" & LimitLength,
     
-    Response = Json.Document(
-        Web.Contents(
-            ApiUrl,
-            [
-                Headers = [
-                    #"Accept" = "application/json",
-                    #"Authorization" = "token api_key:api_secret"
-                ]
-            ]
-        )
-    ),
+    Response = Json.Document(Web.Contents(ApiUrl)),
     
     Data = Response[data],
     Table = Table.FromRecords(Data)
@@ -321,8 +254,6 @@ let
     // Configuration
     BaseUrl = "https://your-site.frappe.cloud",
     DocType = "Sales Invoice",
-    ApiKey = "your_api_key",
-    ApiSecret = "your_api_secret",
     
     // Query parameters
     Fields = "[""name"", ""customer"", ""posting_date"", ""grand_total"", ""status""]",
@@ -339,19 +270,8 @@ let
         & "&limit_start=" & LimitStart
         & "&limit_page_length=" & LimitLength,
     
-    // Make request
-    Response = Json.Document(
-        Web.Contents(
-            ApiUrl,
-            [
-                Headers = [
-                    #"Accept" = "application/json",
-                    #"Content-Type" = "application/json",
-                    #"Authorization" = "token " & ApiKey & ":" & ApiSecret
-                ]
-            ]
-        )
-    ),
+    // Make request (auth handled automatically by Excel/Power BI)
+    Response = Json.Document(Web.Contents(ApiUrl)),
     
     // Extract data
     Data = Response[data],
@@ -380,8 +300,6 @@ For DocTypes with many records, use pagination to fetch all data:
 let
     BaseUrl = "https://your-site.frappe.cloud",
     DocType = "Item",
-    ApiKey = "your_api_key",
-    ApiSecret = "your_api_secret",
     Fields = "[""item_code"", ""item_name"", ""item_group""]",
     PageSize = 100,
     
@@ -393,17 +311,7 @@ let
                 & "&limit_start=" & Number.ToText(StartIndex)
                 & "&limit_page_length=" & Number.ToText(PageSize),
             
-            Response = Json.Document(
-                Web.Contents(
-                    ApiUrl,
-                    [
-                        Headers = [
-                            #"Accept" = "application/json",
-                            #"Authorization" = "token " & ApiKey & ":" & ApiSecret
-                        ]
-                    ]
-                )
-            ),
+            Response = Json.Document(Web.Contents(ApiUrl)),
             
             Data = Response[data]
         in
@@ -468,17 +376,7 @@ let
     ApiUrl = BaseUrl & "/api/resource/" & DocType,
     
     Response = try 
-        Json.Document(
-            Web.Contents(
-                ApiUrl,
-                [
-                    Headers = [
-                        #"Accept" = "application/json",
-                        #"Authorization" = "token api_key:api_secret"
-                    ]
-                ]
-            )
-        )
+        Json.Document(Web.Contents(ApiUrl))
     otherwise null,
     
     Data = if Response <> null and Record.HasFields(Response, "data") 
@@ -523,8 +421,8 @@ For data that changes frequently, add timestamps:
 ApiUrl & "&_ts=" & Number.ToText(DateTime.LocalNow())
 ```
 
-### 5. Store Credentials Securely
-Use Power BI parameters for credentials, not hardcoded values.
+### 5. Credentials Are Managed by Excel/Power BI
+Excel and Power BI handle authentication through their built-in forms - no need to hardcode credentials in M code.
 
 ## Resources
 

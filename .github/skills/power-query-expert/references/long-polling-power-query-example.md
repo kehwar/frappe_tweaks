@@ -286,7 +286,10 @@ ManualTypeMap = [
 2. Open Advanced Editor
 3. Paste the M code
 4. Update `BaseUrl` and `ReportName`
-5. Close & Apply
+5. When prompted, configure authentication:
+   - **Username**: API Key or Frappe username
+   - **Password**: API Secret or Frappe password
+6. Close & Apply
 
 ### Excel
 
@@ -294,26 +297,31 @@ ManualTypeMap = [
 2. Open Advanced Editor
 3. Paste the M code
 4. Update `BaseUrl` and `ReportName`
-5. Load to worksheet
+5. When prompted, configure authentication:
+   - **Username**: API Key or Frappe username
+   - **Password**: API Secret or Frappe password
+6. Load to worksheet
 
 ## Authentication
 
-For production use, add authentication headers to `Web.Contents()`:
+Excel and Power BI handle authentication automatically through their built-in forms. When you first connect, they will prompt for credentials:
 
-```fsharp
-StartJobResponse = Json.Document(
-    Web.Contents(
-        StartJobUrl,
-        [
-            Headers = [
-                #"Authorization" = "token " & ApiKey & ":" & ApiSecret
-            ]
-        ]
-    )
-)
-```
+**Option 1 - Username/Password:**
+- Enter your Frappe username and password
+- Excel/Power BI uses HTTP Basic Authentication
+- Header format: `Authorization: Basic base64(username:password)`
 
-Replace `ApiKey` and `ApiSecret` with your Frappe API credentials.
+**Option 2 - API Key/Token (Recommended):**
+- Create API keys in Frappe: User → API Access → Generate Keys
+- In the Excel/Power BI authentication prompt:
+  - **Username**: Enter your API Key
+  - **Password**: Enter your API Secret
+- Excel/Power BI uses HTTP Basic Authentication
+- Header format: `Authorization: Basic base64(api_key:api_secret)`
+
+**Note:** Excel/Power BI uses HTTP Basic Authentication (not Frappe's `token` format). Frappe's API accepts both formats, so authentication works seamlessly.
+
+**No need to include authorization headers in M code** - Excel and Power BI add them automatically based on the credentials you provide.
 
 ## Troubleshooting
 

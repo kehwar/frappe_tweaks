@@ -20,9 +20,7 @@ let
     Fields = "[""item_code"", ""item_name"", ""standard_rate""]",
     
     ApiUrl = BaseUrl & "/api/resource/" & DocType & "?fields=" & Uri.EscapeDataString(Fields),
-    Response = Json.Document(Web.Contents(ApiUrl, [
-        Headers = [#"Authorization" = "token api_key:api_secret"]
-    ])),
+    Response = Json.Document(Web.Contents(ApiUrl)),
     Table = Table.FromRecords(Response[data])
 in
     Table
@@ -75,27 +73,40 @@ ReportName = "Item Prices"
 Filters = []  // Add filters as needed
 ```
 
-**4. Add Authentication** (production):
-```fsharp
-Web.Contents(url, [
-    Headers = [#"Authorization" = "token api_key:api_secret"]
-])
-```
+**4. Close & Apply**
 
-**5. Close & Apply**
+**5. Configure Authentication** when prompted:
+- Excel/Power BI will prompt for credentials on first connection
+- **Option 1 - Username/Password**: Enter your Frappe username and password
+- **Option 2 - API Key/Token**: Enter API Key as username, API Secret as password
+- Authentication is handled automatically via HTTP Basic Auth
+- No need to add Authorization headers in M code
 
 ## Authentication
 
-### Create API Keys in Frappe
-1. User → API Access
-2. Generate Keys
-3. Copy API Key and Secret
-4. Use format: `token {api_key}:{api_secret}`
+Excel and Power BI handle authentication automatically through their built-in authentication forms. You have two options:
 
-### Security
-- Store credentials in Power BI parameters
-- Use minimal permissions on API user
+### Option 1: Username/Password
+- Use your Frappe account username and password
+- Excel/Power BI uses HTTP Basic Authentication
+- Header format: `Authorization: Basic base64(username:password)`
+
+### Option 2: API Key/Token (Recommended for Production)
+1. **Create API Keys in Frappe**: User → API Access → Generate Keys
+2. **Copy API Key and Secret**
+3. **In Excel/Power BI authentication prompt**:
+   - Username: Enter your API Key
+   - Password: Enter your API Secret
+4. Excel/Power BI uses HTTP Basic Authentication
+5. Header format: `Authorization: Basic base64(api_key:api_secret)`
+
+**Note:** Excel/Power BI uses HTTP Basic Authentication, not Frappe's `token` format. Frappe's API accepts both formats, so authentication works seamlessly.
+
+### Security Best Practices
+- Use API keys instead of passwords for automated refreshes
+- Grant minimal permissions to the API user
 - Rotate keys regularly
+- Never include credentials in M code
 
 ## Column Transformation
 
