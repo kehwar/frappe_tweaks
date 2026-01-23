@@ -67,11 +67,20 @@ let
     // Filters: {DocType, Field, Operator, Value}
     // Use DocType for parent, ChildDocType for child fields
     // Leave empty {} for no filters
+    // All conditions in FilterList are combined with AND
     FilterList = {
         {DocType, "transaction_date", ">=", "2026-01-15"},
         {DocType, "docstatus", "=", "1"}
         // Filter by child field:
         // {ChildDocType, "item_code", "=", "ITEM-001"}
+    },
+    
+    // All conditions in OrFilterList are combined with OR
+    // Leave empty {} if not needed
+    OrFilterList = {
+        // Example: Get quotes from multiple customers
+        // {DocType, "customer", "=", "Customer A"},
+        // {DocType, "customer", "=", "Customer B"}
     },
     
     // Sort: List of {DocType or ChildDocType, FieldName, "asc" or "desc"}
@@ -128,6 +137,16 @@ let
         ) & "]"
         else "[]",
     
+    // Convert OR filters to JSON array
+    OrFilters = if List.Count(OrFilterList) > 0 then
+        "[" & Text.Combine(
+            List.Transform(OrFilterList, 
+                each "[""" & _{0} & """, """ & _{1} & """, """ & _{2} & """, """ & Text.From(_{3}) & """]"
+            ),
+            ", "
+        ) & "]"
+        else "[]",
+    
     // Function to fetch a single page using reportview.get
     FetchPage = (StartIndex as number) =>
         let
@@ -136,6 +155,7 @@ let
                 & "?doctype=" & Uri.EscapeDataString(DocType)
                 & "&fields=" & Uri.EscapeDataString(Fields)
                 & "&filters=" & Uri.EscapeDataString(Filters)
+                & "&or_filters=" & Uri.EscapeDataString(OrFilters)
                 & "&start=" & Number.ToText(StartIndex)
                 & "&page_length=" & Number.ToText(PageSize)
                 & "&view=Report"
@@ -212,6 +232,7 @@ FieldList = {
 Use `{DocType, field, operator, value}` format. Use `DocType` for parent fields or `ChildDocType` for child fields:
 
 ```fsharp
+// AND Filters - all conditions must be true
 FilterList = {
     {DocType, "transaction_date", ">=", "2024-01-01"},
     {DocType, "status", "=", "Open"},
@@ -219,13 +240,38 @@ FilterList = {
     {ChildDocType, "item_code", "=", "ITEM-001"}
 },
 
-// Or leave empty for no filters:
+// OR Filters - at least one condition must be true
+OrFilterList = {
+    {DocType, "customer", "=", "Customer A"},
+    {DocType, "customer", "=", "Customer B"}
+},
+
+// Or leave both empty for no filters:
 FilterList = {},
+OrFilterList = {},
 ```
 
 **Filter Format:** `{DocType or ChildDocType, FieldName, Operator, Value}`
 
 **Available operators:** `=`, `!=`, `>`, `<`, `>=`, `<=`, `like`, `in`, `not in`
+
+**Combining AND and OR:**
+- All conditions in `FilterList` are combined with AND
+- All conditions in `OrFilterList` are combined with OR
+- If both are used, the query becomes: `(FilterList conditions) AND (OrFilterList conditions)`
+
+**Example:** Get open quotations from 2024 for either Customer A or Customer B:
+```fsharp
+FilterList = {
+    {DocType, "transaction_date", ">=", "2024-01-01"},
+    {DocType, "status", "=", "Open"}
+},
+OrFilterList = {
+    {DocType, "customer", "=", "Customer A"},
+    {DocType, "customer", "=", "Customer B"}
+},
+// Result: date >= 2024 AND status = Open AND (customer = A OR customer = B)
+```
 
 ### 3. Set Sorting (Optional)
 
