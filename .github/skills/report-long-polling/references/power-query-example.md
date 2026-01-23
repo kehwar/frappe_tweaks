@@ -87,6 +87,10 @@ let
     // Step 9: Apply column types if available
     TypedTable = 
         let
+            // Manual column type overrides (use column labels, not fieldnames)
+            // Example: ManualTypeMap = [Price = Currency.Type, Quantity = Int64.Type]
+            ManualTypeMap = [],
+            
             // Comprehensive Frappe field type to Power Query type mapping
             TypeMapping = [
                 // Numeric types
@@ -151,7 +155,11 @@ let
                             fieldname = [fieldname],
                             fieldtype = if Record.HasFields(_, "fieldtype") then [fieldtype] else "Data",
                             label = if Record.HasFields(_, "label") then [label] else fieldname,
-                            powerQueryType = Record.FieldOrDefault(TypeMapping, fieldtype, type text),
+                            // Use manual override if specified, otherwise use auto-mapping
+                            powerQueryType = if Record.HasFields(ManualTypeMap, label) then 
+                                Record.Field(ManualTypeMap, label) 
+                            else 
+                                Record.FieldOrDefault(TypeMapping, fieldtype, type text),
                             // Use label as the column name after renaming
                             finalName = if List.Contains(ActualColumns, fieldname) then label else fieldname
                         in
@@ -193,7 +201,22 @@ Replace with your Frappe instance URL and report name. Add filters as needed:
 Filters = [price_list = "Standard Selling", item_group = "Products"]
 ```
 
-### 2. Cache Busting
+### 3. Manual Type Overrides
+
+Override automatic type detection for specific columns:
+
+```fsharp
+ManualTypeMap = [
+    Price = Currency.Type,
+    Quantity = Int64.Type,
+    #"Item Code" = type text,
+    #"Modified Date" = Date.Type
+]
+```
+
+**Important:** Use column labels (after renaming), not fieldnames. Manual types take precedence over automatic type mapping.
+
+### 4. Cache Busting
 
 Power Query aggressively caches API responses. Use timestamps to force fresh requests:
 
@@ -202,7 +225,7 @@ PollTimestamp = Text.From(Number.Round(Duration.TotalSeconds(DateTime.LocalNow()
 UrlWithCacheBuster = baseUrl & "&_attempt=" & Text.From(attemptNumber) & "&_ts=" & PollTimestamp
 ```
 
-### 3. Recursive Polling
+### 5. Recursive Polling
 
 The `PollUntilComplete` function recursively calls `check_status` until the job completes:
 
@@ -223,15 +246,15 @@ PollUntilComplete = (baseUrl as text, maxAttempts as number) as logical =>
         Poll(1)
 ```
 
-### 4. Column Metadata Processing
+### 6. Column Metadata Processing
 
 Frappe returns column metadata with each result. Use it to:
 
 - **Rename columns**: Map `fieldname` to `label`
-- **Apply types**: Map `fieldtype` to Power Query types
+- **Apply types**: Map `fieldtype` to Power Query types (or use manual overrides)
 - **Reorder columns**: Match report definition order
 
-### 5. Type Mapping
+### 7. Type Mapping
 
 The code includes comprehensive Frappe-to-Power Query type mapping:
 
@@ -244,6 +267,16 @@ The code includes comprehensive Frappe-to-Power Query type mapping:
 | Datetime | DateTime.Type |
 | Check | Logical.Type |
 | Data, Text, Link | type text |
+
+**Manual overrides** take precedence over automatic mapping. Use the `ManualTypeMap` record at the top of Step 9:
+
+```fsharp
+ManualTypeMap = [
+    #"Stock Qty" = Int64.Type,  // Force integer instead of float
+    Rate = Currency.Type,       // Force currency formatting
+    Description = type text     // Keep as text even if detected differently
+]
+```
 
 ## Usage in Power BI/Excel
 
