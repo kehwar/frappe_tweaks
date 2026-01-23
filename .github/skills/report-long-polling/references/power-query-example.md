@@ -4,7 +4,7 @@ This example demonstrates how to integrate the report_long_polling API with Micr
 
 ## Complete Power Query M Code
 
-```java
+```fsharp
 let
     // Configuration
     BaseUrl = "http://127.0.0.1:8000",
@@ -181,7 +181,7 @@ in
 
 ### 1. Configuration
 
-```m
+```fsharp
 BaseUrl = "http://127.0.0.1:8000",
 ReportName = "Item Prices",
 Filters = []
@@ -189,15 +189,15 @@ Filters = []
 
 Replace with your Frappe instance URL and report name. Add filters as needed:
 
-```m
-Filters = [customer_group = "Retail", from_date = "2024-01-01"]
+```fsharp
+Filters = [price_list = "Standard Selling", item_group = "Products"]
 ```
 
 ### 2. Cache Busting
 
 Power Query aggressively caches API responses. Use timestamps to force fresh requests:
 
-```m
+```fsharp
 PollTimestamp = Text.From(Number.Round(Duration.TotalSeconds(DateTime.LocalNow() - #datetime(1970, 1, 1, 0, 0, 0)) * 1000)),
 UrlWithCacheBuster = baseUrl & "&_attempt=" & Text.From(attemptNumber) & "&_ts=" & PollTimestamp
 ```
@@ -206,7 +206,7 @@ UrlWithCacheBuster = baseUrl & "&_attempt=" & Text.From(attemptNumber) & "&_ts="
 
 The `PollUntilComplete` function recursively calls `check_status` until the job completes:
 
-```m
+```fsharp
 PollUntilComplete = (baseUrl as text, maxAttempts as number) as logical =>
     let
         Poll = (attemptNumber as number) as logical =>
@@ -267,7 +267,7 @@ The code includes comprehensive Frappe-to-Power Query type mapping:
 
 For production use, add authentication headers to `Web.Contents()`:
 
-```m
+```fsharp
 StartJobResponse = Json.Document(
     Web.Contents(
         StartJobUrl,

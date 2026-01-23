@@ -12,7 +12,7 @@ Expert guidance for implementing asynchronous report execution using the Frappe 
 The report_long_polling module (`tweaks.utils.report_long_polling`) provides a three-endpoint API for executing long-running Frappe reports asynchronously:
 
 1. **start_job** - Create a Prepared Report job
-2. **check_status** - Poll job status with configurable attempts and sleep
+2. **CHECK STATUS** - Poll job status with configurable attempts and sleep
 3. **get_result** - Retrieve completed report data
 
 This pattern prevents timeouts on large reports and enables integration with external systems like Power Query, Power BI, or other third-party applications.
@@ -33,7 +33,7 @@ This pattern prevents timeouts on large reports and enables integration with ext
 
 **Example:**
 ```
-GET /api/method/tweaks.utils.report_long_polling.start_job?report_name=SAP%20Customers&customer_group=Retail
+GET /api/method/tweaks.utils.report_long_polling.start_job?report_name=Item%20Prices
 ```
 
 **Response:**
@@ -43,7 +43,7 @@ GET /api/method/tweaks.utils.report_long_polling.start_job?report_name=SAP%20Cus
 }
 ```
 
-### 2. Check Status
+### 2. CHECK STATUS
 
 **Endpoint:** `/api/method/tweaks.utils.report_long_polling.check_status`
 
@@ -95,12 +95,13 @@ GET /api/method/tweaks.utils.report_long_polling.get_result?job_id=prep-report-j
 {
     "message": {
         "columns": [
-            {"fieldname": "customer_id", "label": "Customer ID", "fieldtype": "Data"},
-            {"fieldname": "customer_name", "label": "Customer Name", "fieldtype": "Data"}
+            {"fieldname": "item_code", "label": "Item Code", "fieldtype": "Link"},
+            {"fieldname": "item_name", "label": "Item Name", "fieldtype": "Data"},
+            {"fieldname": "price_list_rate", "label": "Rate", "fieldtype": "Currency"}
         ],
         "result": [
-            {"customer_id": "CUST-001", "customer_name": "ABC Corp"},
-            {"customer_id": "CUST-002", "customer_name": "XYZ Ltd"}
+            {"item_code": "ITEM-001", "item_name": "Product A", "price_list_rate": 100.00},
+            {"item_code": "ITEM-002", "item_name": "Product B", "price_list_rate": 250.00}
         ]
     }
 }
@@ -119,7 +120,7 @@ The typical integration workflow:
 2. **Poll for completion** - Repeatedly call `check_status` until it returns 1
 3. **Retrieve results** - Call `get_result` to get the report data
 
-**Important:** Always poll `check_status` before calling `get_result`. The check_status endpoint has built-in polling logic that waits for completion, reducing API calls.
+**Important:** Always poll `CHECK STATUS` before calling `get_result`. The CHECK STATUS endpoint has built-in polling logic that waits for completion, reducing API calls.
 
 ## Integration Guidelines
 
