@@ -6,11 +6,22 @@ This example demonstrates how to integrate the report_long_polling API with Micr
 
 ```fsharp
 let
-    // Configuration
+    // ========== LOAD PARAMETERS FROM TABLE (OPTIONAL) ==========
+    // To use this: Create a table named "Parameters" in Excel with columns:
+    // Parameter | Value
+    // Then uncomment this section and use GetParam() in your filters
+    
+    // ParametersTable = Excel.CurrentWorkbook(){[Name="Parameters"]}[Content],
+    // GetParam = (paramName as text) => 
+    //     let Row = Table.SelectRows(ParametersTable, each [Parameter] = paramName)
+    //     in if Table.RowCount(Row) > 0 then Row{0}[Value] else null,
+    
+    // ========== CONFIGURATION ==========
     BaseUrl = "http://127.0.0.1:8000",
     ReportName = "Item Prices",
     
     // Add your filters here (optional)
+    // To use parameters: [price_list = GetParam("PriceList"), from_date = GetParam("StartDate")]
     Filters = [],
     
     // Helper function to build query string
@@ -201,7 +212,43 @@ Replace with your Frappe instance URL and report name. Add filters as needed:
 Filters = [price_list = "Standard Selling", item_group = "Products"]
 ```
 
-### 3. Manual Type Overrides
+**Using parameters from a table:**
+
+If you uncommented the parameter loading section at the top, you can reference values from your Parameters table:
+
+```fsharp
+Filters = [
+    price_list = GetParam("PriceList"), 
+    from_date = GetParam("StartDate"),
+    to_date = GetParam("EndDate"),
+    item_group = GetParam("ItemGroup")
+]
+```
+
+To make parameters optional (skip filter if empty):
+
+```fsharp
+// Get parameter values
+PriceList = GetParam("PriceList"),
+StartDate = GetParam("StartDate"),
+EndDate = GetParam("EndDate"),
+
+// Build filters conditionally
+Filters = Record.FromList(
+    List.RemoveNulls({
+        if PriceList <> null and PriceList <> "" then {"price_list", PriceList} else null,
+        if StartDate <> null then {"from_date", StartDate} else null,
+        if EndDate <> null then {"to_date", EndDate} else null
+    }),
+    List.RemoveNulls({
+        if PriceList <> null and PriceList <> "" then "price_list" else null,
+        if StartDate <> null then "from_date" else null,
+        if EndDate <> null then "to_date" else null
+    })
+),
+```
+
+### 2. Manual Type Overrides
 
 Override automatic type detection for specific columns:
 
@@ -216,7 +263,7 @@ ManualTypeMap = [
 
 **Important:** Use column labels (after renaming), not fieldnames. Manual types take precedence over automatic type mapping.
 
-### 4. Cache Busting
+### 3. Cache Busting
 
 Power Query aggressively caches API responses. Use timestamps to force fresh requests:
 
@@ -225,7 +272,7 @@ PollTimestamp = Text.From(Number.Round(Duration.TotalSeconds(DateTime.LocalNow()
 UrlWithCacheBuster = baseUrl & "&_attempt=" & Text.From(attemptNumber) & "&_ts=" & PollTimestamp
 ```
 
-### 5. Recursive Polling
+### 4. Recursive Polling
 
 The `PollUntilComplete` function recursively calls `check_status` until the job completes:
 
@@ -246,7 +293,7 @@ PollUntilComplete = (baseUrl as text, maxAttempts as number) as logical =>
         Poll(1)
 ```
 
-### 6. Column Metadata Processing
+### 5. Column Metadata Processing
 
 Frappe returns column metadata with each result. Use it to:
 
@@ -254,7 +301,7 @@ Frappe returns column metadata with each result. Use it to:
 - **Apply types**: Map `fieldtype` to Power Query types (or use manual overrides)
 - **Reorder columns**: Match report definition order
 
-### 7. Type Mapping
+### 6. Type Mapping
 
 The code includes comprehensive Frappe-to-Power Query type mapping:
 

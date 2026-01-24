@@ -41,6 +41,16 @@ Excel/Power BI automatically adds the `Authorization` header using **HTTP Basic 
 
 ```fsharp
 let
+    // ========== LOAD PARAMETERS FROM TABLE (OPTIONAL) ==========
+    // To use this: Create a table named "Parameters" in Excel with columns:
+    // Parameter | Value
+    // Then uncomment this section and use GetParam() in your filters
+    
+    // ParametersTable = Excel.CurrentWorkbook(){[Name="Parameters"]}[Content],
+    // GetParam = (paramName as text) => 
+    //     let Row = Table.SelectRows(ParametersTable, each [Parameter] = paramName)
+    //     in if Table.RowCount(Row) > 0 then Row{0}[Value] else null,
+    
     // ========== CONFIGURATION ==========
     BaseUrl = "https://your-site.frappe.cloud",
     DocType = "Quotation",
@@ -68,11 +78,16 @@ let
     // Use DocType for parent, ChildDocType for child fields
     // Leave empty {} for no filters
     // All conditions in FilterList are combined with AND
+    // To use parameters: GetParam("StartDate"), GetParam("CardName"), etc.
     FilterList = {
         {DocType, "transaction_date", ">=", "2026-01-15"},
         {DocType, "docstatus", "=", "1"}
         // Filter by child field:
         // {ChildDocType, "item_code", "=", "ITEM-001"}
+        // Using parameters (uncomment GetParam section above first):
+        // {DocType, "transaction_date", ">=", GetParam("StartDate")},
+        // {DocType, "party_name", "=", GetParam("CardName")},
+        // {DocType, "grand_total", ">=", Number.From(GetParam("MinAmount"))}
     },
     
     // All conditions in OrFilterList are combined with OR
@@ -228,6 +243,186 @@ in
 - Automatically decompresses the response format (`keys` + `values` → records)
 - Fetches all records across multiple pages
 - Stops when fewer records than `PageSize` are returned or when `RecordLimit` is reached
+
+## Populating Filter Values from a Workbook Table
+
+For a more user-friendly approach, you can create a "Parameters" sheet where end users can modify filter values without touching Power Query code. The filter structure remains in the query, but values come from the table.
+
+### Creating a Parameters Sheet
+
+1. **Create a table in Excel** with parameter names and values:
+
+| Parameter | Value |
+|-----------|-------|
+| StartDate | 2026-01-01 |
+| EndDate | 2026-12-31 |
+| CardName | Customer ABC |
+| MinAmount | 1000 |
+
+2. **Convert to a table**: Select the data → Insert → Table (or Ctrl+T)
+
+3. **Name the table**: Right-click the table → Table Design → Table Name: "Parameters"
+
+### Using Parameters in Filter Values
+
+Add this code at the beginning of your query to load parameters:
+
+```fsharp
+let
+    // ========== LOAD PARAMETERS FROM TABLE ==========
+    ParametersTable = Excel.CurrentWorkbook(){[Name="Parameters"]}[Content],
+    
+    // Helper function to get parameter value
+    GetParam = (paramName as text) as any =>
+        let
+            Row = Table.SelectRows(ParametersTable, each [Parameter] = paramName),
+            Value = if Table.RowCount(Row) > 0 then Row{0}[Value] else null
+        in
+            Value,
+    
+    // ========== CONFIGURATION ==========
+    BaseUrl = "https://your-site.frappe.cloud",
+    DocType = "Quotation",
+    ChildDocType = "Quotation Item",
+    
+    FieldList = {
+        {DocType, "name"},
+        {DocType, "party_name"},
+        {DocType, "transaction_date"},
+        {DocType, "grand_total"},
+        {ChildDocType, "item_code"},
+        {ChildDocType, "qty"}
+    },
+    
+    // Use GetParam() to reference parameter values in filters
+    FilterList = {
+        {DocType, "transaction_date", ">=", GetParam("StartDate")},
+        {DocType, "transaction_date", "<=", GetParam("EndDate")},
+        {DocType, "party_name", "=", GetParam("CardName")},
+        {DocType, "grand_total", ">=", GetParam("MinAmount")}
+    },
+    
+    OrFilterList = {},
+    
+    OrderByList = {
+        {DocType, "transaction_date", "desc"}
+    },
+    
+    PageSize = 100,
+    RecordLimit = 0,
+    // ====================================
+    
+    // ... rest of the query code remains the same ...
+```
+
+### Handling Optional Parameters
+
+To make parameters optional (skip filter if empty):
+
+```fsharp
+let
+    // Load parameters
+    ParametersTable = Excel.CurrentWorkbook(){[Name="Parameters"]}[Content],
+    
+    GetParam = (paramName as text) as any =>
+        let
+            Row = Table.SelectRows(ParametersTable, each [Parameter] = paramName),
+            Value = if Table.RowCount(Row) > 0 then Row{0}[Value] else null
+        in
+            Value,
+    
+    // Get parameter values
+    StartDate = GetParam("StartDate"),
+    EndDate = GetParam("EndDate"),
+    CardName = GetParam("CardName"),
+    MinAmount = GetParam("MinAmount"),
+    
+    // Build filter list conditionally
+    FilterList = List.RemoveNulls({
+        if StartDate <> null then {DocType, "transaction_date", ">=", StartDate} else null,
+        if EndDate <> null then {DocType, "transaction_date", "<=", EndDate} else null,
+        if CardName <> null and CardName <> "" then {DocType, "party_name", "=", CardName} else null,
+        if MinAmount <> null then {DocType, "grand_total", ">=", MinAmount} else null
+    }),
+    
+    // ... rest of configuration ...
+```
+
+**How it works:**
+- Each parameter is checked before adding to the filter list
+- If parameter is null or empty, that filter is skipped
+- `List.RemoveNulls()` cleans up the list
+- Users can leave parameters blank to disable specific filters
+
+### Type Conversion for Parameters
+
+Always convert parameter values to the correct type:
+
+```fsharp
+// Numbers
+MinAmount = try Number.From(GetParam("MinAmount")) otherwise 0,
+
+// Dates (if stored as text in parameters table)
+StartDate = try Date.From(GetParam("StartDate")) otherwise #date(2026, 1, 1),
+
+// Text - use directly
+CardName = GetParam("CardName"),
+
+// With defaults if missing
+MaxAmount = try Number.From(GetParam("MaxAmount")) otherwise 999999,
+```
+
+### Example: Complete Integration
+
+Here's a practical example with date range, customer, and amount filters:
+
+**Parameters Table:**
+
+| Parameter | Value |
+|-----------|-------|
+| StartDate | 2026-01-01 |
+| EndDate | 2026-01-31 |
+| CustomerName | ACME Corp |
+| MinAmount | 5000 |
+| Status | Open |
+
+**Power Query Code:**
+
+```fsharp
+let
+    // Load parameters
+    ParametersTable = Excel.CurrentWorkbook(){[Name="Parameters"]}[Content],
+    GetParam = (paramName as text) => 
+        let Row = Table.SelectRows(ParametersTable, each [Parameter] = paramName)
+        in if Table.RowCount(Row) > 0 then Row{0}[Value] else null,
+    
+    // Configuration
+    BaseUrl = "https://your-site.frappe.cloud",
+    DocType = "Quotation",
+    
+    // Build filters using parameters
+    FilterList = {
+        {DocType, "transaction_date", ">=", GetParam("StartDate")},
+        {DocType, "transaction_date", "<=", GetParam("EndDate")},
+        {DocType, "party_name", "=", GetParam("CustomerName")},
+        {DocType, "grand_total", ">=", Number.From(GetParam("MinAmount"))},
+        {DocType, "status", "=", GetParam("Status")}
+    },
+    
+    // ... rest of template code ...
+```
+
+### Best Practices
+
+1. **Simple values only**: Use parameters for filter values (dates, names, amounts), not for entire filter structures
+
+2. **Clear parameter names**: Use descriptive names like `StartDate`, `MinAmount`, `CustomerName` so users understand what to enter
+
+3. **Add a Help sheet**: Document what each parameter does and what format to use (especially for dates)
+
+4. **Type conversion**: Convert numbers and dates from text using `Number.From()` or `Date.From()`
+
+5. **Optional parameters**: Use conditional logic to skip filters when parameters are empty
 
 ## How to Use This Template
 
