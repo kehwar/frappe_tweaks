@@ -514,6 +514,25 @@ def apply_auto_assignments(ref_doctype, ref_name):
             for user_row in rule.users:
                 user = user_row.user
 
+                # Evaluate per-user condition if set
+                if user_row.get("condition"):
+                    try:
+                        condition_result = safe_eval(
+                            user_row.get("condition"),
+                            eval_globals=None,
+                            eval_locals={"doc": ref_doc},
+                        )
+                        if not condition_result:
+                            # Condition not met, skip this user
+                            continue
+                    except Exception as e:
+                        # Condition evaluation failed, log and skip this user
+                        frappe.log_error(
+                            title=f"Error evaluating user condition for {user}",
+                            message=f"Condition: {user_row.get('condition')}\nError: {str(e)}",
+                        )
+                        continue
+
                 # Check if we should filter by permissions (per-user setting)
                 if not user_row.ignore_permissions:
                     try:
