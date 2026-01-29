@@ -122,11 +122,11 @@ def evaluate_condition(condition_script, doc):
     """
     Evaluate a condition script with the document context.
 
-    Condition scripts should only set the 'result' variable to True or False
-    and should not modify the document or perform other side effects.
+    Condition scripts are evaluated as Python expressions that return a truthy/falsy value.
+    They should not modify the document or perform other side effects.
 
     Args:
-        condition_script: Python code to evaluate. If empty/None, returns False.
+        condition_script: Python expression to evaluate. If empty/None, returns False.
         doc: Document instance (read-only context)
 
     Returns:
@@ -515,23 +515,11 @@ def apply_auto_assignments(ref_doctype, ref_name):
                 user = user_row.user
 
                 # Evaluate per-user condition if set
-                if user_row.get("condition"):
-                    try:
-                        condition_result = safe_eval(
-                            user_row.get("condition"),
-                            eval_globals=None,
-                            eval_locals={"doc": ref_doc},
-                        )
-                        if not condition_result:
-                            # Condition not met, skip this user
-                            continue
-                    except Exception as e:
-                        # Condition evaluation failed, log and skip this user
-                        frappe.log_error(
-                            title=f"Error evaluating user condition for {user}",
-                            message=f"Condition: {user_row.get('condition')}\nError: {str(e)}",
-                        )
-                        continue
+                if user_row.get("condition") and not evaluate_condition(
+                    user_row.get("condition"), ref_doc
+                ):
+                    # Condition not met, skip this user
+                    continue
 
                 # Check if we should filter by permissions (per-user setting)
                 if not user_row.ignore_permissions:
