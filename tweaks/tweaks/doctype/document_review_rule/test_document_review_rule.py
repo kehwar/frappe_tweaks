@@ -764,4 +764,185 @@ result = {
         frappe.delete_doc("ToDo", test_doc.name, force=1)
         frappe.delete_doc("Document Review Rule", rule.name, force=1)
 
+    def test_user_condition(self):
+        """Test that per-user condition controls user assignment"""
+        # Create a rule with per-user conditions
+        rule = frappe.get_doc(
+            {
+                "doctype": "Document Review Rule",
+                "title": "Test User Condition",
+                "reference_doctype": "ToDo",
+                "script": 'result = {"message": "Review needed"}',
+                "mandatory": 0,
+                "assign_condition": "True",  # Always assign when conditions are met
+                "users": [
+                    {
+                        "user": self.test_user_1,
+                        "ignore_permissions": 1,
+                        "condition": "doc.priority == 'High'",  # Only assign if priority is High
+                    },
+                    {
+                        "user": self.test_user_2,
+                        "ignore_permissions": 1,
+                        "condition": "doc.priority == 'Low'",  # Only assign if priority is Low
+                    },
+                ],
+            }
+        )
+        rule.insert(ignore_permissions=True)
+
+        # Create a test document with High priority
+        test_doc = frappe.get_doc(
+            {
+                "doctype": "ToDo",
+                "description": "Test document for user condition",
+                "priority": "High",
+            }
+        )
+        test_doc.insert(ignore_permissions=True)
+
+        # Trigger document review evaluation
+        from tweaks.utils.document_review import evaluate_document_reviews
+
+        evaluate_document_reviews(test_doc)
+
+        # Check that only user1 was assigned (condition matches)
+        assignments = frappe.get_all(
+            "ToDo",
+            filters={
+                "reference_type": test_doc.doctype,
+                "reference_name": test_doc.name,
+                "status": "Open",
+            },
+            fields=["allocated_to"],
+        )
+        assigned_users = [a.allocated_to for a in assignments]
+        self.assertIn(
+            self.test_user_1,
+            assigned_users,
+            "User 1 should be assigned (condition matches)",
+        )
+        self.assertNotIn(
+            self.test_user_2,
+            assigned_users,
+            "User 2 should NOT be assigned (condition doesn't match)",
+        )
+
+        # Update document to Low priority
+        test_doc.priority = "Low"
+        test_doc.save(ignore_permissions=True)
+        evaluate_document_reviews(test_doc)
+
+        # Check that now only user2 is assigned
+        assignments = frappe.get_all(
+            "ToDo",
+            filters={
+                "reference_type": test_doc.doctype,
+                "reference_name": test_doc.name,
+                "status": "Open",
+            },
+            fields=["allocated_to"],
+        )
+        assigned_users = [a.allocated_to for a in assignments]
+        self.assertNotIn(
+            self.test_user_1,
+            assigned_users,
+            "User 1 should NOT be assigned anymore (condition doesn't match)",
+        )
+        self.assertIn(
+            self.test_user_2,
+            assigned_users,
+            "User 2 should now be assigned (condition matches)",
+        )
+
+        # Clean up
+        review = frappe.get_all(
+            "Document Review",
+            filters={
+                "reference_doctype": test_doc.doctype,
+                "reference_name": test_doc.name,
+            },
+        )
+        for r in review:
+            frappe.delete_doc("Document Review", r.name, force=1)
+        frappe.delete_doc("ToDo", test_doc.name, force=1)
+        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+
+    def test_user_condition_no_condition_means_always_assign(self):
+        """Test that users without condition are always assigned"""
+        # Create a rule with mixed conditions (one user with condition, one without)
+        rule = frappe.get_doc(
+            {
+                "doctype": "Document Review Rule",
+                "title": "Test User No Condition",
+                "reference_doctype": "ToDo",
+                "script": 'result = {"message": "Review needed"}',
+                "mandatory": 0,
+                "assign_condition": "True",  # Always assign
+                "users": [
+                    {
+                        "user": self.test_user_1,
+                        "ignore_permissions": 1,
+                        "condition": "doc.priority == 'High'",  # Only assign if priority is High
+                    },
+                    {
+                        "user": self.test_user_2,
+                        "ignore_permissions": 1,
+                        # No condition, should always be assigned
+                    },
+                ],
+            }
+        )
+        rule.insert(ignore_permissions=True)
+
+        # Create a test document with Low priority
+        test_doc = frappe.get_doc(
+            {
+                "doctype": "ToDo",
+                "description": "Test document for no user condition",
+                "priority": "Low",
+            }
+        )
+        test_doc.insert(ignore_permissions=True)
+
+        # Trigger document review evaluation
+        from tweaks.utils.document_review import evaluate_document_reviews
+
+        evaluate_document_reviews(test_doc)
+
+        # Check that only user2 was assigned (user1 condition doesn't match, user2 has no condition)
+        assignments = frappe.get_all(
+            "ToDo",
+            filters={
+                "reference_type": test_doc.doctype,
+                "reference_name": test_doc.name,
+                "status": "Open",
+            },
+            fields=["allocated_to"],
+        )
+        assigned_users = [a.allocated_to for a in assignments]
+        self.assertNotIn(
+            self.test_user_1,
+            assigned_users,
+            "User 1 should NOT be assigned (condition doesn't match)",
+        )
+        self.assertIn(
+            self.test_user_2,
+            assigned_users,
+            "User 2 should be assigned (no condition means always assign)",
+        )
+
+        # Clean up
+        review = frappe.get_all(
+            "Document Review",
+            filters={
+                "reference_doctype": test_doc.doctype,
+                "reference_name": test_doc.name,
+            },
+        )
+        for r in review:
+            frappe.delete_doc("Document Review", r.name, force=1)
+        frappe.delete_doc("ToDo", test_doc.name, force=1)
+        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+
 
