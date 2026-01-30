@@ -80,6 +80,9 @@ bench --site test_site reinstall --yes
 bench --site test_site install-app erpnext
 bench --site test_site install-app tweaks
 
+# Enable server scripts for testing
+bench --site test_site set-config server_script_enabled true
+
 if [ "$TYPE" == "server" ]
 then
   wait $build_pid
