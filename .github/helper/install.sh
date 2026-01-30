@@ -36,8 +36,8 @@ then
   mariadb --host 127.0.0.1 --port 3306 -u root -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'";
 
   mariadb --host 127.0.0.1 --port 3306 -u root -e "CREATE DATABASE test_frappe";
-  mariadb --host 127.0.0.1 --port 3306 -u root -e "CREATE USER 'test_frappe'@'localhost' IDENTIFIED BY 'test_frappe'";
-  mariadb --host 127.0.0.1 --port 3306 -u root -e "GRANT ALL PRIVILEGES ON \`test_frappe\`.* TO 'test_frappe'@'localhost'";
+  mariadb --host 127.0.0.1 --port 3306 -u root -e "CREATE USER 'test_frappe'@'%' IDENTIFIED BY 'test_frappe'";
+  mariadb --host 127.0.0.1 --port 3306 -u root -e "GRANT ALL PRIVILEGES ON \`test_frappe\`.* TO 'test_frappe'@'%'";
   mariadb --host 127.0.0.1 --port 3306 -u root -e "FLUSH PRIVILEGES";
   unset MYSQL_PWD
 fi
