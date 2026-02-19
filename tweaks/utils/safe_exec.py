@@ -41,6 +41,8 @@ from tweaks.utils.document_review import (
     submit_all_document_reviews,
     submit_document_review,
 )
+from tweaks.utils.duckdb import load as duckdb_load
+from tweaks.utils.typst import make_pdf_file
 
 
 def admin_sql(query, *args, **kwargs):
@@ -159,6 +161,12 @@ def safe_exec_globals(out):
                 has_ac_permission=has_ac_permission,
                 has_resource_access=has_resource_access,
                 get_allowed_docs_query=get_allowed_docs_query,
+            ),
+            "typst": NamespaceDict(
+                make_pdf_file=make_pdf_file,
+            ),
+            "duckdb": NamespaceDict(
+                load=duckdb_load,
             ),
         }
     )
