@@ -453,3 +453,46 @@ def build(
         frappe.throw("Must provide one of: raw, doc, path, or files parameters")
 
     return builder
+
+
+@frappe.whitelist()
+def generate(
+    file: str,
+    format: Literal["pdf", "png", "svg"] = "pdf",
+    ppi: Optional[float] = None,
+    sys_inputs: Optional[dict[str, str]] = None,
+    download=None,
+):
+    """
+    Compile a Typst tar.gz archive File document to specified format and return as response.
+
+    Args:
+        file: File document name (e.g., "FILE-000123") containing a tar.gz archive
+        format: Output format - "pdf", "png", or "svg" (default: "pdf")
+        ppi: Pixels per inch for PNG output (default: None)
+        sys_inputs: Dictionary of values to pass to template
+                   Values should be JSON-serializable strings
+                   Example: {"name": "John", "items": json.dumps([...])}
+
+    Returns:
+        Compiled output with appropriate content-type header
+    """
+    # Parse sys_inputs from JSON string if provided as string
+    if isinstance(sys_inputs, str):
+        sys_inputs = json.loads(sys_inputs)
+
+    # Build and compile
+    builder = build(doc=file)
+    compiled_bytes = builder.compile(format=format, ppi=ppi, sys_inputs=sys_inputs)
+
+    # Set appropriate content-type header
+    content_types = {
+        "pdf": "application/pdf",
+        "png": "image/png",
+        "svg": "image/svg+xml",
+    }
+
+    frappe.response.filename = f"output.{format}"
+    frappe.response.filecontent = compiled_bytes
+    frappe.response.content_type = content_types.get(format, "application/octet-stream")
+    frappe.response.type = "download" if download else "asset"
