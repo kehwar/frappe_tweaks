@@ -109,19 +109,9 @@ def load(data, table_name="data"):
         conn = duckdb.connect(":memory:")
 
         # Load data into DuckDB
-        # DuckDB can automatically infer the schema from various data types
-        if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
-            # List of dictionaries
-            conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM data")
-        elif hasattr(data, "to_dict"):
-            # Pandas DataFrame or similar
-            conn.register(table_name, data)
-        elif isinstance(data, dict):
-            # Dictionary of lists
-            conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM data")
-        else:
-            # Try to register as-is
-            conn.register(table_name, data)
+        # First register the data, then create a table from it
+        conn.register("temp_data", data)
+        conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM temp_data")
 
         return DuckDBData(conn)
 
