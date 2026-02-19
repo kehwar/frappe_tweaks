@@ -197,3 +197,6 @@ cypress/videos
 billing/node_modules
 frappe/public/billing
 frappe/www/billing.html
+
+# Copied skills for agent sessions (not part of repo)
+.github/skills/
