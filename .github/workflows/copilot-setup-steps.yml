@@ -25,7 +25,7 @@ jobs:
           repository: kehwar/skills
           path: temp-skills-repo
       
-      - name: Copy skills folder to ~/.agents/
+      - name: Copy skills folder to project .github/skills
         run: |
-          mkdir -p ~/.agents/
-          cp -r temp-skills-repo/skills/* ~/.agents/
+          mkdir -p .github
+          cp -r temp-skills-repo/skills .github/skills
