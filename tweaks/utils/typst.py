@@ -396,6 +396,42 @@ class TypstBuilder:
         except Exception as e:
             frappe.throw(f"Typst query failed: {str(e)}")
 
+    def compile_response(
+        self,
+        format: Literal["pdf", "png", "svg"] = "pdf",
+        ppi: Optional[float] = None,
+        sys_inputs: Optional[dict[str, str]] = None,
+        filename: Optional[str] = None,
+        download: bool = False,
+    ) -> None:
+        """
+        Compile Typst files and set frappe.response for download/display.
+
+        Args:
+            format: Output format - "pdf", "png", or "svg" (default: "pdf")
+            ppi: Pixels per inch for PNG output (default: None)
+            sys_inputs: Dictionary of values to pass to template
+            filename: Output filename (default: "output.{format}")
+            download: If True, force download; if False, display inline (default: False)
+        """
+        # Compile
+        compiled_bytes = self.compile(format=format, ppi=ppi, sys_inputs=sys_inputs)
+
+        # Set appropriate content-type header
+        content_types = {
+            "pdf": "application/pdf",
+            "png": "image/png",
+            "svg": "image/svg+xml",
+        }
+
+        # Set response
+        frappe.response.filename = filename or f"output.{format}"
+        frappe.response.filecontent = compiled_bytes
+        frappe.response.content_type = content_types.get(
+            format, "application/octet-stream"
+        )
+        frappe.response.type = "download" if download else "asset"
+
 
 def build(
     raw: Optional[Union[str, bytes]] = None,
@@ -474,6 +510,7 @@ def generate(
         sys_inputs: Dictionary of values to pass to template
                    Values should be JSON-serializable strings
                    Example: {"name": "John", "items": json.dumps([...])}
+        download: If True, force download; if False, display inline
 
     Returns:
         Compiled output with appropriate content-type header
@@ -482,18 +519,11 @@ def generate(
     if isinstance(sys_inputs, str):
         sys_inputs = json.loads(sys_inputs)
 
-    # Build and compile
+    # Build and compile response
     builder = build(doc=file)
-    compiled_bytes = builder.compile(format=format, ppi=ppi, sys_inputs=sys_inputs)
-
-    # Set appropriate content-type header
-    content_types = {
-        "pdf": "application/pdf",
-        "png": "image/png",
-        "svg": "image/svg+xml",
-    }
-
-    frappe.response.filename = f"output.{format}"
-    frappe.response.filecontent = compiled_bytes
-    frappe.response.content_type = content_types.get(format, "application/octet-stream")
-    frappe.response.type = "download" if download else "asset"
+    builder.compile_response(
+        format=format,
+        ppi=ppi,
+        sys_inputs=sys_inputs,
+        download=bool(download),
+    )
