@@ -23,5 +23,5 @@ jobs:
         run: |
           git clone https://github.com/kehwar/skills.git /tmp/skills-repo
           mkdir -p ~/.agents/skills
-          cp -r /tmp/skills-repo/skills ~/.agents/
+          cp -r /tmp/skills-repo/skills/* ~/.agents/skills/
           rm -rf /tmp/skills-repo
