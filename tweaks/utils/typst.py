@@ -5,11 +5,7 @@ This module provides helper functions for working with Typst, a modern markup-ba
 typesetting system for creating PDFs.
 """
 
-import re
-import subprocess
-import tempfile
-from pathlib import Path
-
+import typst
 import frappe
 from frappe.utils.file_manager import save_file
 
@@ -52,43 +48,27 @@ def make_pdf_file(
     elif not filename.endswith(".pdf"):
         filename = f"{filename}.pdf"
 
-    # Create temporary files for input and output
-    with tempfile.TemporaryDirectory() as tmpdir:
-        typst_file = Path(tmpdir) / "input.typ"
-        pdf_file = Path(tmpdir) / "output.pdf"
+    try:
+        # Compile Typst to PDF using typst-py
+        # Convert string to bytes if needed
+        if isinstance(typst_content, str):
+            typst_content_bytes = typst_content.encode("utf-8")
+        else:
+            typst_content_bytes = typst_content
 
-        # Write Typst content to temporary file
-        typst_file.write_text(typst_content, encoding="utf-8")
+        # Compile and get PDF bytes directly
+        pdf_content = typst.compile(typst_content_bytes, format="pdf")
 
-        try:
-            # Compile Typst to PDF
-            subprocess.run(
-                ["typst", "compile", str(typst_file), str(pdf_file)],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                check=True,
-                timeout=30,
-            )
-        except subprocess.CalledProcessError as e:
-            frappe.throw(
-                f"Typst compilation failed: {e.stderr}",
-                title="Typst Compilation Error",
-            )
-        except subprocess.TimeoutExpired:
-            frappe.throw(
-                "Typst compilation timed out (30 seconds)",
-                title="Typst Compilation Timeout",
-            )
-        except FileNotFoundError:
-            frappe.throw(
-                "Typst executable not found. Please ensure Typst is installed.",
-                title="Typst Not Found",
-            )
-
-        # Read the generated PDF
-        with open(pdf_file, "rb") as f:
-            pdf_content = f.read()
+    except typst.TypstError as e:
+        frappe.throw(
+            f"Typst compilation failed: {str(e)}",
+            title="Typst Compilation Error",
+        )
+    except Exception as e:
+        frappe.throw(
+            f"Unexpected error during Typst compilation: {str(e)}",
+            title="Typst Error",
+        )
 
     # Save as Frappe File document
     file_doc = save_file(
