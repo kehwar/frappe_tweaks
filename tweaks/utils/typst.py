@@ -8,7 +8,11 @@ The TypstBuilder class allows you to:
 - Support multi-file projects with multiple files
 - Compile to PDF, PNG, or SVG formats
 - Save compiled output as Frappe File documents
+- Set frappe.response for direct HTTP responses
 - Pass dynamic values to templates
+
+Whitelisted API methods:
+- generate(): Compile tar.gz archive to PDF/PNG/SVG via HTTP endpoint
 """
 
 import base64
@@ -57,6 +61,13 @@ class TypstBuilder:
             "invoice.pdf",
             sys_inputs={"invoice_no": "INV-001", "amount": "1000"}
         )
+
+        # Direct HTTP response (in whitelisted method)
+        @frappe.whitelist()
+        def my_pdf_endpoint():
+            builder = TypstBuilder()
+            builder.read_string("= Invoice\\nTotal: $500")
+            builder.compile_response(format="pdf", download=True)
     """
 
     files: dict[str, bytes]  # Internal storage: filename -> bytes content
@@ -407,12 +418,27 @@ class TypstBuilder:
         """
         Compile Typst files and set frappe.response for download/display.
 
+        Use this method in whitelisted functions to return compiled output
+        directly to the HTTP client.
+
         Args:
             format: Output format - "pdf", "png", or "svg" (default: "pdf")
             ppi: Pixels per inch for PNG output (default: None)
             sys_inputs: Dictionary of values to pass to template
             filename: Output filename (default: "output.{format}")
             download: If True, force download; if False, display inline (default: False)
+
+        Example:
+            @frappe.whitelist()
+            def generate_invoice(invoice_no):
+                builder = TypstBuilder()
+                builder.read_file_doc("FILE-000123")
+                builder.compile_response(
+                    format="pdf",
+                    sys_inputs={"invoice_no": invoice_no},
+                    filename=f"invoice_{invoice_no}.pdf",
+                    download=True
+                )
         """
         # Compile
         compiled_bytes = self.compile(format=format, ppi=ppi, sys_inputs=sys_inputs)
@@ -456,24 +482,30 @@ def build(
     Example:
         # From string
         builder = build(raw="#set page(width: 10cm, height: auto)\\n= Invoice\\nTotal: $500")
-        file_doc = builder.save("invoice.pdf")
+        file_doc = builder.compile_and_save("invoice.pdf")
 
         # From Frappe File document
         builder = build(doc="FILE-000123")
-        file_doc = builder.save("output.pdf")
+        file_doc = builder.compile_and_save("output.pdf")
 
         # From filesystem path
         builder = build(path="template.typ")
-        file_doc = builder.save("output.pdf")
+        file_doc = builder.compile_and_save("output.pdf")
 
         # With dynamic values
         builder = build(raw="= Invoice #sys.inputs.invoice_no\\nAmount: $#sys.inputs.amount")
-        file_doc = builder.save(
+        file_doc = builder.compile_and_save(
             "invoice.pdf",
             sys_inputs={"invoice_no": "INV-001", "amount": "1000"},
             attached_to_doctype="Sales Invoice",
             attached_to_name="INV-001"
         )
+
+        # Direct HTTP response
+        @frappe.whitelist()
+        def my_endpoint():
+            builder = build(doc="FILE-000123")
+            builder.compile_response(format="pdf")
     """
     builder = TypstBuilder()
 
@@ -503,6 +535,8 @@ def generate(
     """
     Compile a Typst tar.gz archive File document to specified format and return as response.
 
+    This is a whitelisted API endpoint that can be called via HTTP.
+
     Args:
         file: File document name (e.g., "FILE-000123") containing a tar.gz archive
         format: Output format - "pdf", "png", or "svg" (default: "pdf")
@@ -510,10 +544,24 @@ def generate(
         sys_inputs: Dictionary of values to pass to template
                    Values should be JSON-serializable strings
                    Example: {"name": "John", "items": json.dumps([...])}
-        download: If True, force download; if False, display inline
+        download: If True, force download; if False, display inline (default: False)
 
     Returns:
         Compiled output with appropriate content-type header
+
+    Example:
+        # JavaScript API call
+        frappe.call({
+            method: 'tweaks.utils.typst.generate',
+            args: {
+                file: 'FILE-000123',
+                format: 'pdf',
+                sys_inputs: {name: 'John', total: '1000'}
+            }
+        })
+
+        # Direct URL
+        /api/method/tweaks.utils.typst.generate?file=FILE-000123&format=pdf&download=1
     """
     # Parse sys_inputs from JSON string if provided as string
     if isinstance(sys_inputs, str):
