@@ -11,8 +11,12 @@ The TypstBuilder class allows you to:
 - Pass dynamic values to templates
 """
 
+import base64
+import gzip
+import io
 import json
 import os
+import tarfile
 from pathlib import Path
 from typing import Any, Literal, Optional, Union
 
@@ -32,24 +36,24 @@ class TypstBuilder:
         # From file path
         builder = TypstBuilder()
         builder.read_file_path("template.typ")
-        builder.save("output.pdf")
+        builder.compile_and_save("output.pdf")
 
         # From Frappe File document
         builder = TypstBuilder()
         builder.read_file_doc("FILE-000123")
-        builder.save("output.pdf")
+        builder.compile_and_save("output.pdf")
 
         # From string
         markup = "#set page(width: 10cm, height: auto)\\n= Hello World!"
         builder = TypstBuilder()
         builder.read_string(markup)
-        builder.save("output.pdf")
+        builder.compile_and_save("output.pdf")
 
         # With dynamic values and custom template names
         builder = TypstBuilder()
         builder.read_file_path("invoice.typ", name="invoice")
         builder.read_file_path("lib.typ", name="lib")
-        builder.save(
+        builder.compile_and_save(
             "invoice.pdf",
             sys_inputs={"invoice_no": "INV-001", "amount": "1000"}
         )
@@ -91,11 +95,15 @@ class TypstBuilder:
         self, file_path: Union[str, Path], name: Optional[str] = None
     ) -> "TypstBuilder":
         """
-        Read a .typ file from filesystem path and add to files.
+        Read a .typ file or .tar.gz archive from filesystem path and add to files.
+
+        If the file is a tar.gz archive, all files will be extracted and added to files.
+        The archive must contain a main.typ entry point.
 
         Args:
-            file_path: Path to .typ file
-            name: File name (defaults to "main.typ"). Will be normalized to include extension if missing.
+            file_path: Path to .typ file or .tar.gz archive
+            name: File name (defaults to "main.typ"). Only used for .typ files.
+                  Will be normalized to include extension if missing.
 
         Returns:
             Self for method chaining
@@ -104,8 +112,27 @@ class TypstBuilder:
         if not file_path.exists():
             frappe.throw(f"File not found: {file_path}")
 
+        # Check if it's a tar.gz archive
+        if file_path.name.endswith(".tar.gz"):
+            with tarfile.open(file_path, "r:gz") as tar:
+                for member in tar.getmembers():
+                    if member.isfile():
+                        file_obj = tar.extractfile(member)
+                        if file_obj:
+                            self.files[member.name] = file_obj.read()
+
+            # Validate main.typ exists
+            if "main" not in self.files and "main.typ" not in self.files:
+                frappe.throw(
+                    "tar.gz archive must contain 'main' or 'main.typ' entry point"
+                )
+            return self
+
+        # Regular .typ file
         if not file_path.suffix == ".typ":
-            frappe.throw(f"File must have .typ extension: {file_path}")
+            frappe.throw(
+                f"File must have .typ extension or be a .tar.gz archive: {file_path}"
+            )
 
         with open(file_path, "rb") as f:
             content = f.read()
@@ -120,30 +147,26 @@ class TypstBuilder:
         """
         Read a Frappe File document and add to files.
 
+        If the file is a tar.gz archive, all files will be extracted and added to files.
+        The archive must contain a main.typ entry point.
+
         Args:
             file_name: Name of Frappe File document (e.g., "FILE-000123")
-            name: File name (defaults to "main.typ"). Will be normalized to include extension if missing.
+            name: File name (defaults to "main.typ"). Only used for .typ files.
+                  Will be normalized to include extension if missing.
 
         Returns:
             Self for method chaining
         """
-        if not frappe.db.exists("File", file_name):
-            frappe.throw(f"File not found: {file_name}")
+        if isinstance(file_name, str):
+            file_doc = frappe.get_doc("File", file_name)
+        else:
+            file_doc = file_name
 
-        file_doc = frappe.get_doc("File", file_name)
-
-        # Check if it's a .typ file
-        if not file_doc.file_name.endswith(".typ"):
-            frappe.throw(f"File must have .typ extension: {file_doc.file_name}")
-
-        # Get file content
         file_path = file_doc.get_full_path()
-        with open(file_path, "rb") as f:
-            content = f.read()
 
-        key = self._normalize_name(name)
-        self.files[key] = content
-        return self
+        # Delegate to read_file_path
+        return self.read_file_path(file_path, name=name)
 
     def read_string(
         self, markup: Union[str, bytes], name: Optional[str] = None
@@ -237,7 +260,7 @@ class TypstBuilder:
         except Exception as e:
             frappe.throw(f"Typst compilation failed: {str(e)}")
 
-    def save(
+    def compile_and_save(
         self,
         output_filename: str,
         format: Optional[Literal["pdf", "png", "svg"]] = None,
@@ -288,6 +311,61 @@ class TypstBuilder:
                 "folder": folder,
                 "is_private": is_private,
                 "content": compiled_bytes,
+            }
+        )
+        file_doc.save(ignore_permissions=True)
+
+        return file_doc
+
+    def save_files_as_tar(
+        self,
+        output_filename: str,
+        attached_to_doctype: Optional[str] = None,
+        attached_to_name: Optional[str] = None,
+        is_private: int = 1,
+        folder: str = "Home",
+    ) -> "frappe._dict":
+        """
+        Save the files dict as a tar.gz archive.
+
+        Args:
+            output_filename: Name for the output file (e.g., "templates.tar.gz")
+            attached_to_doctype: Attach file to this DocType
+            attached_to_name: Attach file to this document
+            is_private: 1 for private file, 0 for public (default: 1)
+            folder: Folder to save file in (default: "Home")
+
+        Returns:
+            Frappe File document
+        """
+        # Ensure .tar.gz extension
+        if not output_filename.endswith(".tar.gz"):
+            output_filename = f"{output_filename}.tar.gz"
+
+        # Create tar.gz archive in memory
+        tar_buffer = io.BytesIO()
+        with tarfile.open(fileobj=tar_buffer, mode="w:gz") as tar:
+            for filename, content in self.files.items():
+                # Create TarInfo object
+                tarinfo = tarfile.TarInfo(name=filename)
+                tarinfo.size = len(content)
+
+                # Add file to archive
+                tar.addfile(tarinfo, io.BytesIO(content))
+
+        # Get the tar.gz content
+        tar_content = tar_buffer.getvalue()
+
+        # Save as Frappe File
+        file_doc = frappe.get_doc(
+            {
+                "doctype": "File",
+                "file_name": output_filename,
+                "attached_to_doctype": attached_to_doctype,
+                "attached_to_name": attached_to_name,
+                "folder": folder,
+                "is_private": is_private,
+                "content": tar_content,
             }
         )
         file_doc.save(ignore_permissions=True)
