@@ -5,6 +5,10 @@
 
 Tweaks for Frappe
 
+#### Available Skills
+
+This project includes agent skills for expert guidance. See [docs/skills.md](docs/skills.md) for a full summary.
+
 #### License
 
 mit

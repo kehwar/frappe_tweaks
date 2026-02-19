@@ -1,0 +1,35 @@
+# Available Skills
+
+This project uses agent skills to provide specialized guidance across different areas of the codebase. Skills are loaded automatically when relevant tasks are detected.
+
+## Frappe Tweaks Skills
+
+These skills provide expert knowledge specific to this project and the Frappe framework.
+
+| Skill | Description |
+|-------|-------------|
+| **ac-rules-expert** | Expert guidance for creating, implementing, and troubleshooting AC (Access Control) Rules — an advanced rule-based permission system. Use when working with AC Rules, Query Filters, AC Resources, AC Actions, implementing fine-grained access control, debugging permission issues, creating principal/resource filters, integrating with DocTypes or Reports, or understanding rule evaluation and SQL generation. |
+| **api-reviewer** | Security review and analysis for Frappe API endpoints decorated with `@frappe.whitelist()`. Use when reviewing API security, checking for permission vulnerabilities, scanning for unprotected endpoints, validating role restrictions, or auditing API endpoints for security best practices. Helps identify missing `frappe.only_for()`, `frappe.has_permission()`, or `frappe.get_list()` usage. |
+| **bench-commands** | Comprehensive reference for Frappe bench CLI commands including site management, app installation, backup/restore, database operations, migrations, and development workflows. Use when users ask about bench commands, site setup, database operations, backup/restore procedures, MariaDB configuration, or common development workflows in Frappe. |
+| **doctype-schema-expert** | Expert guidance on Frappe DocType schemas including JSON structure, field types, properties, naming conventions, and best practices. Use when creating, modifying, or analyzing DocType JSON files, understanding DocType structure, working with field definitions, configuring DocType properties, or troubleshooting schema-related issues. |
+| **document-review-expert** | Expert guidance for creating, implementing, and troubleshooting Document Review Rules — a flexible document review/approval system. Use when working with Document Review Rules, Document Reviews, implementing review/approval workflows, creating validation scripts, debugging review issues, understanding review evaluation and lifecycle, or integrating reviews with workflows and submissions. |
+| **frappe-ci-expert** | Expert guidance for setting up CI/CD tests for Frappe apps. Use when users ask about GitHub Actions workflows, CI test setup, continuous integration for Frappe apps, running tests in CI environments, database setup for CI, bench configuration in CI, or automating tests for Frappe/ERPNext applications. |
+| **frappe-hooks-expert** | Expert guidance on the Frappe hooks system including application hooks, document events (`doc_events`), permission hooks, scheduler hooks, UI hooks, jinja filters, installation hooks, and other extension points. Use when implementing custom hooks, understanding hook execution order, registering hooks in `hooks.py`, troubleshooting hook issues, or extending Frappe framework functionality. |
+| **open-observe-api-expert** | Expert guidance for OpenObserve API integration. Use when creating, configuring, or troubleshooting the OpenObserve API DocType, implementing `send_logs()` or `search_logs()` functionality, integrating with Server Scripts/Business Logic/Client-side code, debugging connection issues, or implementing logging, monitoring, error tracking, performance metrics, or audit trail use cases. |
+| **permissions-expert** | Expert guidance on the Frappe permissions system including permission evaluation flow, extension hooks (`has_permission`, `permission_query_conditions`, `write_permission_query_conditions`, `has_website_permission`, `filter_workflow_transitions`, `has_workflow_action_permission`), role-based permissions, user permissions, share permissions, permission levels, and workflow permissions. Use when implementing custom permission logic, troubleshooting permission issues, understanding permission query conditions, working with child table permissions, virtual DocType permissions, workflow transition filtering, approval routing, or debugging access control problems. |
+| **power-query-expert** | Expert guidance for connecting Power Query (Power BI, Excel) to Frappe apps and reports. Use when building Power Query M code for Frappe data access, integrating Frappe reports with Power BI/Excel, implementing authentication for Power Query connections, handling heavy/long-running reports with the `report_long_polling` API to avoid timeouts, applying column types and transformations, or troubleshooting Power Query caching and connection issues. |
+| **report-expert** | Expert guidance on Frappe reports including report types, structure, creation workflow, and best practices. Use when creating standard script reports, query reports, understanding report structure, working with columns and filters, or troubleshooting report-related issues. |
+| **skill-creator** | Guide for creating effective skills. Use when users want to create a new skill (or update an existing skill) that extends capabilities with specialized knowledge, workflows, or tool integrations. |
+| **skill-importer** | Import and synchronize skills from remote GitHub repositories. Use when you need to copy skills from other repositories, maintain a list of remote skill sources, or update local skills with fresh copies from upstream sources. |
+| **sync-job-expert** | Expert guidance for creating, implementing, and troubleshooting Sync Jobs in the Frappe Tweaks framework. Use when working with Sync Job Types, Sync Job controllers, sync job enqueueing, debugging sync job issues, implementing sync logic, or understanding sync job lifecycle and hooks. |
+| **workflow-expert** | Expert guidance on the Frappe Workflow system including workflow structure, states and transitions, workflow actions, email notifications, permission hooks (`before_transition`, `after_transition`, `filter_workflow_transitions`, `has_workflow_action_permission`), and best practices. Use when creating workflows, implementing workflow logic, understanding state transitions, working with workflow actions, configuring email notifications, or troubleshooting workflow-related issues. |
+
+## General Skills
+
+These skills provide general-purpose guidance for JavaScript/TypeScript tooling and Vue.js development.
+
+| Skill | Description |
+|-------|-------------|
+| **antfu** | Anthony Fu's opinionated tooling and conventions for JavaScript/TypeScript projects. Use when setting up new projects, configuring ESLint/Prettier alternatives, monorepos, library publishing, or when following Anthony Fu's preferences. |
+| **find-skills** | Helps discover and install agent skills from the open agent skills ecosystem (`npx skills`). Use when looking for functionality that might exist as an installable skill, or when asking "how do I do X" for common tasks. |
+| **vueuse-functions** | Apply VueUse composables where appropriate to build concise, maintainable Vue.js / Nuxt features. |
