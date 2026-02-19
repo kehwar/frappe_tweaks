@@ -5,7 +5,7 @@ This module provides helper functions for working with Typst, a modern markup-ba
 typesetting system for creating PDFs.
 """
 
-import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -14,7 +14,9 @@ import frappe
 from frappe.utils.file_manager import save_file
 
 
-def make_pdf_file(typst_content, filename=None, doctype=None, docname=None, folder=None):
+def make_pdf_file(
+    typst_content, filename=None, doctype=None, docname=None, folder=None, is_private=1
+):
     """
     Convert Typst markup to PDF and save as a Frappe File document.
 
@@ -24,6 +26,7 @@ def make_pdf_file(typst_content, filename=None, doctype=None, docname=None, fold
         doctype (str, optional): DocType to attach the file to
         docname (str, optional): Document name to attach the file to
         folder (str, optional): Folder to save the file in
+        is_private (int, optional): Whether the file should be private (1) or public (0). Defaults to 1 (private)
 
     Returns:
         frappe.model.document.Document: The created File document
@@ -59,10 +62,11 @@ def make_pdf_file(typst_content, filename=None, doctype=None, docname=None, fold
 
         try:
             # Compile Typst to PDF
-            result = subprocess.run(
+            subprocess.run(
                 ["typst", "compile", str(typst_file), str(pdf_file)],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 check=True,
                 timeout=30,
             )
@@ -93,7 +97,7 @@ def make_pdf_file(typst_content, filename=None, doctype=None, docname=None, fold
         doctype,
         docname,
         folder=folder,
-        is_private=0,
+        is_private=is_private,
     )
 
     return frappe.get_doc("File", file_doc.name)
