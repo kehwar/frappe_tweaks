@@ -106,13 +106,13 @@ class TypstBuilder:
         self, file_path: Union[str, Path], name: Optional[str] = None
     ) -> "TypstBuilder":
         """
-        Read a .typ file or .tar.gz archive from filesystem path and add to files.
+        Read a .typ file or .tar.gz/.gz archive from filesystem path and add to files.
 
-        If the file is a tar.gz archive, all files will be extracted and added to files.
+        If the file is a gzipped tar archive, all files will be extracted and added to files.
         The archive must contain a main.typ entry point.
 
         Args:
-            file_path: Path to .typ file or .tar.gz archive
+            file_path: Path to .typ file or .tar.gz/.gz archive
             name: File name (defaults to "main.typ"). Only used for .typ files.
                   Will be normalized to include extension if missing.
 
@@ -123,8 +123,8 @@ class TypstBuilder:
         if not file_path.exists():
             frappe.throw(f"File not found: {file_path}")
 
-        # Check if it's a tar.gz archive
-        if file_path.name.endswith(".tar.gz"):
+        # Check if it's a gzipped tar archive (.tar.gz or .gz)
+        if file_path.name.endswith((".tar.gz", ".gz")):
             with tarfile.open(file_path, "r:gz") as tar:
                 for member in tar.getmembers():
                     if member.isfile():
@@ -135,14 +135,14 @@ class TypstBuilder:
             # Validate main.typ exists
             if "main" not in self.files and "main.typ" not in self.files:
                 frappe.throw(
-                    "tar.gz archive must contain 'main' or 'main.typ' entry point"
+                    "Gzipped tar archive must contain 'main' or 'main.typ' entry point"
                 )
             return self
 
         # Regular .typ file
         if not file_path.suffix == ".typ":
             frappe.throw(
-                f"File must have .typ extension or be a .tar.gz archive: {file_path}"
+                f"File must have .typ extension or be a gzipped tar archive (.tar.gz or .gz): {file_path}"
             )
 
         with open(file_path, "rb") as f:
@@ -158,7 +158,7 @@ class TypstBuilder:
         """
         Read a Frappe File document and add to files.
 
-        If the file is a tar.gz archive, all files will be extracted and added to files.
+        If the file is a gzipped tar archive (.tar.gz or .gz), all files will be extracted and added to files.
         The archive must contain a main.typ entry point.
 
         Args:
@@ -338,10 +338,10 @@ class TypstBuilder:
         folder: str = "Home",
     ) -> "frappe._dict":
         """
-        Save the files dict as a tar.gz archive.
+        Save the files dict as a gzipped tar archive.
 
         Args:
-            output_filename: Name for the output file (e.g., "templates.tar.gz")
+            output_filename: Name for the output file (e.g., "templates.tar.gz" or "templates.gz")
             attached_to_doctype: Attach file to this DocType
             attached_to_name: Attach file to this document
             is_private: 1 for private file, 0 for public (default: 1)
@@ -350,8 +350,8 @@ class TypstBuilder:
         Returns:
             Frappe File document
         """
-        # Ensure .tar.gz extension
-        if not output_filename.endswith(".tar.gz"):
+        # Ensure .tar.gz or .gz extension
+        if not output_filename.endswith((".tar.gz", ".gz")):
             output_filename = f"{output_filename}.tar.gz"
 
         # Create tar.gz archive in memory
@@ -533,12 +533,12 @@ def generate(
     download=None,
 ):
     """
-    Compile a Typst tar.gz archive File document to specified format and return as response.
+    Compile a Typst gzipped tar archive File document to specified format and return as response.
 
     This is a whitelisted API endpoint that can be called via HTTP.
 
     Args:
-        file: File document name (e.g., "FILE-000123") containing a tar.gz archive
+        file: File document name (e.g., "FILE-000123") containing a gzipped tar archive (.tar.gz or .gz)
         format: Output format - "pdf", "png", or "svg" (default: "pdf")
         ppi: Pixels per inch for PNG output (default: None)
         sys_inputs: Dictionary of values to pass to template
