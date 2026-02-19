@@ -231,6 +231,8 @@ Conclude this step when there is a clear sense of the functionality the skill sh
 
 ### Step 2: Planning the Reusable Skill Contents
 
+Before planning a new skill, check [references/skills-catalog.md](references/skills-catalog.md) to see if a similar skill already exists. This avoids duplication and helps identify if an existing skill should be extended instead.
+
 To turn concrete examples into an effective skill, analyze each example by:
 
 1. Considering how to execute on the example from scratch
