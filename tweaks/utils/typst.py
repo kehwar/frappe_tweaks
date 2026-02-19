@@ -162,6 +162,7 @@ class TypstBuilder:
             file_doc = frappe.get_doc("File", file_name)
         else:
             file_doc = file_name
+        file_doc.has_permission("read")
 
         file_path = file_doc.get_full_path()
 
