@@ -22,6 +22,6 @@ jobs:
       - name: Clone and copy skills to project root
         run: |
           git clone https://github.com/kehwar/skills.git /tmp/skills-repo
-          mkdir -p ~/.agents/
-          cp -r /tmp/skills-repo/skills/* ~/.agents/skills/
+          mkdir -p ~/.agents/skills
+          cp -r /tmp/skills-repo/skills ~/.agents/
           rm -rf /tmp/skills-repo
