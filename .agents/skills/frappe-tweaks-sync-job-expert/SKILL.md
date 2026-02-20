@@ -1,5 +1,5 @@
 ---
-name: sync-job-expert
+name: frappe-tweaks-sync-job-expert
 description: Expert guidance for creating, implementing, and troubleshooting Sync Jobs in the Frappe Tweaks framework. Use when working with Sync Job Types, Sync Job controllers, sync job enqueueing, debugging sync job issues, implementing sync logic, or understanding sync job lifecycle and hooks.
 ---
 

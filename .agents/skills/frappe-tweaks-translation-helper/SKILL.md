@@ -1,5 +1,5 @@
 ---
-name: translation-helper
+name: frappe-tweaks-translation-helper
 description: Helper utilities for finding, validating, and managing translations in Frappe apps. Includes commands for finding untranslated strings and translation file locations. Use when working with PO/POT files, finding untranslated strings, or validating translation completeness.
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: open-observe-api-expert
+name: frappe-tweaks-open-observe-api-expert
 description: Expert guidance for OpenObserve API integration in Frappe Tweaks. Use when creating, configuring, or troubleshooting OpenObserve API DocType, implementing send_logs() or search_logs() functionality, integrating with Server Scripts/Business Logic/Client-side code, debugging connection issues, or implementing logging, monitoring, error tracking, performance metrics, or audit trail use cases.
 ---
 

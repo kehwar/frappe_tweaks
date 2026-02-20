@@ -1,5 +1,5 @@
 ---
-name: document-review-expert
+name: frappe-tweaks-document-review-expert
 description: Expert guidance for creating, implementing, and troubleshooting Document Review Rules in Frappe Tweaks - a flexible document review/approval system. Use when working with Document Review Rules, Document Reviews, implementing review/approval workflows, creating validation scripts, debugging review issues, understanding review evaluation and lifecycle, or integrating reviews with workflows and submissions.
 ---
 

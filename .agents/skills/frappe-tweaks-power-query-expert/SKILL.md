@@ -1,5 +1,5 @@
 ---
-name: power-query-expert
+name: frappe-tweaks-power-query-expert
 description: Expert guidance for connecting Power Query (Power BI, Excel) to Frappe apps and reports. Use when building Power Query M code for Frappe data access, integrating Frappe reports with Power BI/Excel, implementing authentication for Power Query connections, handling heavy/long-running reports with report_long_polling API to avoid timeouts, applying column types and transformations, or troubleshooting Power Query caching and connection issues.
 ---
 

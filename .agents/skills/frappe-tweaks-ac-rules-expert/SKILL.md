@@ -1,5 +1,5 @@
 ---
-name: ac-rules-expert
+name: frappe-tweaks-ac-rules-expert
 description: Expert guidance for creating, implementing, and troubleshooting AC (Access Control) Rules in Frappe Tweaks - an advanced rule-based permission system. Use when working with AC Rules, Query Filters, AC Resources, AC Actions, implementing fine-grained access control, debugging permission issues, creating principal/resource filters, integrating with DocTypes or Reports, or understanding rule evaluation and SQL generation.
 ---
 
