@@ -19,9 +19,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Clone and copy skills to project root
+      - name: Clone and copy skills from kehwar/skills
         run: |
-          git clone https://github.com/kehwar/skills.git /tmp/skills-repo
+          git clone --depth=1 https://github.com/kehwar/skills.git /tmp/skills-repo
           mkdir -p ./.github/skills
           cp -r /tmp/skills-repo/skills/* ./.github/skills/
           rm -rf /tmp/skills-repo
+
+      - name: Clone frappe .agents/skills only (sparse checkout)
+        run: |
+          git clone --filter=blob:none --sparse --depth=1 https://github.com/kehwar/frappe.git /tmp/frappe-repo
+          cd /tmp/frappe-repo
+          git sparse-checkout set .agents/skills
+          cd $GITHUB_WORKSPACE
+          cp -r /tmp/frappe-repo/.agents/skills/* ./.github/skills/
+          rm -rf /tmp/frappe-repo
