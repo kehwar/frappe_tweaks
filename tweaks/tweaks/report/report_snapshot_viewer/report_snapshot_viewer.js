@@ -19,11 +19,18 @@ frappe.query_reports["Report Snapshot Viewer"] = {
 			}
 		},
 		{
+			"fieldname": "column_header_mode",
+			"label": __("Column Headers"),
+			"fieldtype": "Select",
+			"options": ["Fieldname", "Label"],
+			"default": "Fieldname"
+		},
+		{
 			"fieldname": "query",
 			"label": __("Query"),
 			"fieldtype": "Small Text",
 			"reqd": 0,
 			"description": __("DuckDB WHERE clause applied to table 'dataset' (example: qty > 10 AND status = 'Open')")
-		}
+		},
 	]
 };

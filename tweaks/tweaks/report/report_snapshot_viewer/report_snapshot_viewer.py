@@ -46,7 +46,36 @@ def execute(filters=None):
     if query:
         data = apply_where_query(columns, data, query)
 
+    columns = apply_column_header_mode(columns, filters.get("column_header_mode"))
+
     return columns, data
+
+
+def apply_column_header_mode(columns, mode):
+    if not isinstance(columns, list):
+        return columns
+
+    normalized_mode = (mode or "Label").strip().lower()
+    use_fieldname = normalized_mode == "fieldname"
+
+    rendered_columns = []
+    for column in columns:
+        if not isinstance(column, dict):
+            rendered_columns.append(column)
+            continue
+
+        rendered_column = dict(column)
+        fieldname = rendered_column.get("fieldname")
+        label = rendered_column.get("label")
+
+        if use_fieldname and fieldname:
+            rendered_column["label"] = fieldname
+        elif not label and fieldname:
+            rendered_column["label"] = fieldname
+
+        rendered_columns.append(rendered_column)
+
+    return rendered_columns
 
 
 def apply_where_query(columns, data, query):
@@ -54,12 +83,12 @@ def apply_where_query(columns, data, query):
         return data
 
     try:
-        with make_queryable({"dataset": table_data}) as db:
+        with make_queryable({"dataset": data}) as db:
             filtered = db.execute(
                 f"SELECT * FROM dataset WHERE {query}",
                 as_dict=True,
             )
-    except Exception:
+    except Exception as e:
         frappe.throw(_("Invalid DuckDB WHERE query."))
 
     return filtered
