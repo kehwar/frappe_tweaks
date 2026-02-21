@@ -36,11 +36,11 @@ class QueryFilter(Document):
         clear_ac_rule_cache()
 
     @frappe.whitelist()
-    def get_sql(self, user=None) -> str:
-        return get_sql(self, user=user)
+    def get_sql(self, user=None, **kwargs) -> str:
+        return get_sql(self, user=user, **kwargs)
 
 
-def get_sql(query_filter: str | QueryFilter | dict, user=None):
+def get_sql(query_filter: str | QueryFilter | dict, user=None, **kwargs):
 
     if isinstance(query_filter, str):
         query_filter = frappe.get_doc("Query Filter", query_filter).as_dict()
@@ -78,12 +78,16 @@ def get_sql(query_filter: str | QueryFilter | dict, user=None):
         return f"`tab{reference_doctype}`.`name` IN ({flat_sql})"
 
     if filters_type == "Python":
-        loc = {
-            "resource": query_filter,
-            "conditions": "",
-            "filters": None,
-            "user": user,
-        }
+        loc = {}
+        loc.update(kwargs)
+        loc.update(
+            {
+                "resource": query_filter,
+                "conditions": "",
+                "filters": None,
+                "user": user,
+            }
+        )
         safe_exec(
             filters,
             None,
