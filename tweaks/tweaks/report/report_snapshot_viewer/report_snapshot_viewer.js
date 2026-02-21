@@ -17,6 +17,13 @@ frappe.query_reports["Report Snapshot Viewer"] = {
 					}
 				};
 			}
+		},
+		{
+			"fieldname": "query",
+			"label": __("Query"),
+			"fieldtype": "Small Text",
+			"reqd": 0,
+			"description": __("DuckDB WHERE clause applied to table 'dataset' (example: qty > 10 AND status = 'Open')")
 		}
 	]
 };

@@ -7,6 +7,8 @@ import json
 import frappe
 from frappe import _
 
+from tweaks.utils.duckdb import make_queryable
+
 
 def execute(filters=None):
     filters = frappe._dict(filters or {})
@@ -40,4 +42,24 @@ def execute(filters=None):
             _("Selected file must contain 'columns' (list) and 'result'/'data' (list).")
         )
 
+    query = (filters.get("query") or "").strip()
+    if query:
+        data = apply_where_query(columns, data, query)
+
     return columns, data
+
+
+def apply_where_query(columns, data, query):
+    if not data:
+        return data
+
+    try:
+        with make_queryable({"dataset": table_data}) as db:
+            filtered = db.execute(
+                f"SELECT * FROM dataset WHERE {query}",
+                as_dict=True,
+            )
+    except Exception:
+        frappe.throw(_("Invalid DuckDB WHERE query."))
+
+    return filtered
