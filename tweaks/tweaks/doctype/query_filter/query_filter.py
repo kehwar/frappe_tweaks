@@ -78,16 +78,13 @@ def get_sql(query_filter: str | QueryFilter | dict, user=None, **kwargs):
         return f"`tab{reference_doctype}`.`name` IN ({flat_sql})"
 
     if filters_type == "Python":
-        loc = {}
-        loc.update(kwargs)
-        loc.update(
-            {
-                "resource": query_filter,
-                "conditions": "",
-                "filters": None,
-                "user": user,
-            }
-        )
+        loc = {
+            "resource": query_filter,
+            "conditions": "",
+            "filters": None,
+            "user": user,
+            "context": kwargs,
+        }
         safe_exec(
             filters,
             None,
