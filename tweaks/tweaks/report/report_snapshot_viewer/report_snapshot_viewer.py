@@ -16,7 +16,41 @@ def execute(filters=None):
     if not filters.get("snapshot_file"):
         return [], []
 
-    file_doc = frappe.get_doc("File", filters.get("snapshot_file"))
+    payload = load_report_file(filters.get("snapshot_file"))
+
+    columns = payload.get("columns") or []
+    data = payload.get("result")
+    if data is None:
+        data = payload.get("data") or []
+
+    if not isinstance(columns, list) or not isinstance(data, list):
+        frappe.throw(
+            _("Selected file must contain 'columns' (list) and 'result'/'data' (list).")
+        )
+
+    query = (filters.get("query") or "").strip()
+    if query:
+        data = apply_where_query(data, query)
+
+    if filters.get("column_header_mode", "fieldname").strip().lower() == "fieldname":
+        for column in columns:
+            if isinstance(column, dict) and "fieldname" in column:
+                column["label"] = column["fieldname"]
+
+    return columns, data
+
+
+def load_report_file(file_or_docname):
+    if isinstance(file_or_docname, str):
+        file_doc = find_file(file_or_docname)
+    else:
+        file_doc = file_or_docname
+
+    if not file_doc or getattr(file_doc, "doctype", None) != "File":
+        frappe.throw(
+            _("Please provide a valid File document, docname, file name, or file URL.")
+        )
+
     if file_doc.is_folder:
         frappe.throw(_("Please select a file, not a folder."))
 
@@ -32,53 +66,26 @@ def execute(filters=None):
     except Exception:
         frappe.throw(_("Selected file does not contain valid JSON report data."))
 
-    columns = payload.get("columns") or []
-    data = payload.get("result")
-    if data is None:
-        data = payload.get("data") or []
+    if not isinstance(payload, dict):
+        frappe.throw(_("Selected file must contain a valid report JSON object."))
 
-    if not isinstance(columns, list) or not isinstance(data, list):
-        frappe.throw(
-            _("Selected file must contain 'columns' (list) and 'result'/'data' (list).")
-        )
-
-    query = (filters.get("query") or "").strip()
-    if query:
-        data = apply_where_query(columns, data, query)
-
-    columns = apply_column_header_mode(columns, filters.get("column_header_mode"))
-
-    return columns, data
+    return payload
 
 
-def apply_column_header_mode(columns, mode):
-    if not isinstance(columns, list):
-        return columns
+def find_file(file_reference):
+    reference = (file_reference or "").strip()
+    if not reference:
+        return None
 
-    normalized_mode = (mode or "Label").strip().lower()
-    use_fieldname = normalized_mode == "fieldname"
+    for fieldname in ("name", "file_url", "file_name"):
+        file_docname = frappe.db.exists("File", {fieldname: reference})
+        if file_docname:
+            return frappe.get_doc("File", file_docname)
 
-    rendered_columns = []
-    for column in columns:
-        if not isinstance(column, dict):
-            rendered_columns.append(column)
-            continue
-
-        rendered_column = dict(column)
-        fieldname = rendered_column.get("fieldname")
-        label = rendered_column.get("label")
-
-        if use_fieldname and fieldname:
-            rendered_column["label"] = fieldname
-        elif not label and fieldname:
-            rendered_column["label"] = fieldname
-
-        rendered_columns.append(rendered_column)
-
-    return rendered_columns
+    return None
 
 
-def apply_where_query(columns, data, query):
+def apply_where_query(data, query):
     if not data:
         return data
 
