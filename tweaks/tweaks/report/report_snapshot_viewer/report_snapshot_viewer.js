@@ -8,7 +8,6 @@ frappe.query_reports["Report Snapshot Viewer"] = {
 			"label": __("Snapshot File"),
 			"fieldtype": "Link",
 			"options": "File",
-			"reqd": 1,
 			"get_query": function() {
 				return {
 					"filters": {
@@ -17,6 +16,11 @@ frappe.query_reports["Report Snapshot Viewer"] = {
 					}
 				};
 			}
+		},
+		{
+			"fieldname": "snapshot_file_path",
+			"label": __("Snapshot File Path"),
+			"fieldtype": "Data",
 		},
 		{
 			"fieldname": "column_header_mode",

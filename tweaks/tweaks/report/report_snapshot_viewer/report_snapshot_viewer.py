@@ -13,10 +13,14 @@ from tweaks.utils.duckdb import make_queryable
 def execute(filters=None):
     filters = frappe._dict(filters or {})
 
-    if not filters.get("snapshot_file"):
+    snapshot_file = (filters.get("snapshot_file") or "").strip()
+    snapshot_file_path = (filters.get("snapshot_file_path") or "").strip()
+    file_reference = snapshot_file or snapshot_file_path
+
+    if not file_reference:
         return [], []
 
-    payload = load_report_file(filters.get("snapshot_file"))
+    payload = load_report_file(file_reference)
 
     columns = payload.get("columns") or []
     data = payload.get("result")
