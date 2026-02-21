@@ -102,3 +102,35 @@ def get_sql(query_filter: str | QueryFilter | dict, user=None):
         return build_sql_from_filters(filters)
 
     return "1=1"
+
+
+def get_composite_sql(
+    match_all_filters: list[str] | list[QueryFilter] | list[dict],
+    except_match_all_filters: list[str] | list[QueryFilter] | list[dict],
+    match_any_filters: list[str] | list[QueryFilter] | list[dict],
+    except_match_any_filters: list[str] | list[QueryFilter] | list[dict],
+) -> str:
+
+    match_all_sql_parts = []
+    for qf in match_all_filters:
+        match_all_sql_parts.append(f"({get_sql(qf)})")
+    for qf in except_match_all_filters:
+        match_all_sql_parts.append(f"NOT ({get_sql(qf)})")
+
+    match_any_sql_parts = []
+    for qf in match_any_filters:
+        match_any_sql_parts.append(f"({get_sql(qf)})")
+    for qf in except_match_any_filters:
+        match_any_sql_parts.append(f"NOT ({get_sql(qf)})")
+
+    match_all_sql = " AND ".join(match_all_sql_parts) if match_all_sql_parts else ""
+    match_any_sql = " OR ".join(match_any_sql_parts) if match_any_sql_parts else ""
+
+    if match_all_sql and match_any_sql:
+        return f"({match_all_sql}) AND ({match_any_sql})"
+    elif match_all_sql:
+        return match_all_sql
+    elif match_any_sql:
+        return match_any_sql
+    else:
+        return "1=1"
