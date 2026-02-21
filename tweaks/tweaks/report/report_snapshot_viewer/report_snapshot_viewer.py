@@ -1,9 +1,43 @@
 # Copyright (c) 2026, Erick W.R. and contributors
 # For license information, please see license.txt
 
-# import frappe
+import gzip
+import json
+
+import frappe
+from frappe import _
 
 
 def execute(filters=None):
-	columns, data = [], []
-	return columns, data
+    filters = frappe._dict(filters or {})
+
+    if not filters.get("snapshot_file"):
+        return [], []
+
+    file_doc = frappe.get_doc("File", filters.get("snapshot_file"))
+    if file_doc.is_folder:
+        frappe.throw(_("Please select a file, not a folder."))
+
+    content = file_doc.get_content()
+
+    try:
+        content = gzip.decompress(content)
+    except OSError:
+        pass
+
+    try:
+        payload = json.loads(content)
+    except Exception:
+        frappe.throw(_("Selected file does not contain valid JSON report data."))
+
+    columns = payload.get("columns") or []
+    data = payload.get("result")
+    if data is None:
+        data = payload.get("data") or []
+
+    if not isinstance(columns, list) or not isinstance(data, list):
+        frappe.throw(
+            _("Selected file must contain 'columns' (list) and 'result'/'data' (list).")
+        )
+
+    return columns, data
