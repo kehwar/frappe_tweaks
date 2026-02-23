@@ -848,7 +848,40 @@ def execute_sync_job(sync_job_name):
     job = get_current_job()
 
     sync_job = frappe.get_doc("Sync Job", sync_job_name, for_update=1)
-    sync_job.execute(job_id=job.id if job else None)
+
+    serialize_execution = frappe.db.get_value(
+        "Sync Job Type", sync_job.sync_job_type, "serialize_execution"
+    )
+
+    if not serialize_execution:
+        sync_job.execute(job_id=job.id if job else None)
+        return
+
+    # Acquire a per-type Redis lock to ensure only one job of this type runs at a time.
+    # Lock TTL is set slightly longer than the job timeout as a crash-safety net:
+    # if the worker crashes before the finally block, the lock auto-expires.
+    lock_key = f"{frappe.local.site}:sync_job_type_lock:{sync_job.sync_job_type}"
+    lock_timeout = (sync_job.timeout or 300) + 60
+
+    acquired = frappe.cache().set(lock_key, sync_job_name, nx=True, ex=lock_timeout)
+
+    if not acquired:
+        # Another job of this type is already running — put this job back in the queue
+        # and let it retry naturally. It will keep re-queuing until the lock is free.
+        sync_job.db_set("status", "Queued", update_modified=False)
+        frappe.db.commit()
+        enqueue(
+            execute_sync_job,
+            queue=sync_job.queue or "default",
+            timeout=sync_job.timeout or 300,
+            sync_job_name=sync_job_name,
+        )
+        return
+
+    try:
+        sync_job.execute(job_id=job.id if job else None)
+    finally:
+        frappe.cache().delete(lock_key)
 
 
 def get_document_even_if_deleted(doctype, name):

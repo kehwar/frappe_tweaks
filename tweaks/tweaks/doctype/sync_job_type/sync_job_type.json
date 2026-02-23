@@ -19,7 +19,8 @@
   "column_break_2",
   "retry_delay",
   "max_retries",
-  "verbose_logging"
+  "verbose_logging",
+  "serialize_execution"
  ],
  "fields": [
   {
@@ -121,11 +122,18 @@
    "fieldname": "verbose_logging",
    "fieldtype": "Check",
    "label": "Verbose Logging"
+  },
+  {
+   "default": "0",
+   "description": "When enabled, only one sync job of this type will run at a time",
+   "fieldname": "serialize_execution",
+   "fieldtype": "Check",
+   "label": "Serialize Execution"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-17 00:33:20.693737",
+ "modified": "2025-12-18 01:50:19.202020",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Sync Job Type",
