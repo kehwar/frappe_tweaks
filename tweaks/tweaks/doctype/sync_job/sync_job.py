@@ -172,16 +172,11 @@ class SyncJob(Document, LogType):
         if not self.queue_on_insert:
             return
 
-        # Set status to Queued
-        self.db_set("status", "Queued", update_modified=False)
-
-        enqueue(
-            execute_sync_job,
-            queue=self.queue or "default",
-            timeout=self.timeout or 300,
-            sync_job_name=self.name,
-            enqueue_after_commit=True,
-        )
+        # Park as Waiting; _enqueue_next_waiting_job will promote it to Queued
+        # immediately if no other job is running, otherwise it will wait its turn.
+        self.db_set("status", "Waiting", update_modified=False)
+        frappe.db.commit()
+        _enqueue_next_waiting_job()
 
     def on_trash(self):
         """Cancel background job if queued or waiting"""
@@ -224,20 +219,14 @@ class SyncJob(Document, LogType):
         # Clear retry_after timestamp
         self.retry_after = None
 
-        # Reset status and error
-        self.status = "Queued"
+        # Park as Waiting; _enqueue_next_waiting_job will promote it when the slot is free
+        self.status = "Waiting"
         self.error_message = None
 
         self.flags.ignore_links = True
         self.save(ignore_permissions=True)
 
-        # Re-enqueue
-        enqueue(
-            execute_sync_job,
-            queue=self.queue or "default",
-            timeout=self.timeout or 300,
-            sync_job_name=self.name,
-        )
+        _enqueue_next_waiting_job()
 
     @frappe.whitelist()
     def start(self):
@@ -245,18 +234,12 @@ class SyncJob(Document, LogType):
         if self.status != "Pending":
             frappe.throw(_("Can only start jobs with status Pending"))
 
-        # Update status to Queued
-        self.status = "Queued"
+        # Park as Waiting; _enqueue_next_waiting_job will promote it when the slot is free
+        self.status = "Waiting"
         self.flags.ignore_links = True
         self.save(ignore_permissions=True)
 
-        # Enqueue the job
-        enqueue(
-            execute_sync_job,
-            queue=self.queue or "default",
-            timeout=self.timeout or 300,
-            sync_job_name=self.name,
-        )
+        _enqueue_next_waiting_job()
 
     @staticmethod
     def clear_old_logs(days: int = 30) -> None:
@@ -842,9 +825,9 @@ def execute_sync_job(sync_job_name):
     """
     Execute sync job (runs in background)
 
-    Sync jobs are serialized globally: only one job runs at a time across all
-    types. If another job is already running, this job is parked as "Waiting"
-    and will be re-enqueued by the running job when it finishes.
+    The global lock is held by _enqueue_next_waiting_job before this function
+    is enqueued. This function just executes the job and, in the finally block,
+    releases the lock and wakes the next waiting job.
 
     Args:
         sync_job_name: Name of Sync Job document
@@ -855,20 +838,7 @@ def execute_sync_job(sync_job_name):
 
     sync_job = frappe.get_doc("Sync Job", sync_job_name, for_update=1)
 
-    # Single global lock — only one sync job runs at a time across all types.
-    # Lock TTL is set slightly longer than the job timeout as a crash-safety net:
-    # if the worker crashes before the finally block, the lock auto-expires.
     lock_key = f"{frappe.local.site}:sync_job_lock"
-    lock_timeout = (sync_job.timeout or 300) + 60
-
-    acquired = frappe.cache().set(lock_key, sync_job_name, nx=True, ex=lock_timeout)
-
-    if not acquired:
-        # Another sync job is already running — park this one as "Waiting".
-        # The running job will enqueue this one when it finishes.
-        sync_job.db_set("status", "Waiting", update_modified=False)
-        frappe.db.commit()
-        return
 
     try:
         sync_job.execute(job_id=job.id if job else None)
@@ -881,8 +851,15 @@ def _enqueue_next_waiting_job():
     """
     Find the oldest waiting sync job (across all types) and enqueue it.
 
-    Called after a sync job finishes so the next waiting job can run.
+    Tries to acquire the global sync job lock. If the lock is already held
+    (another job is running), returns early — the running job will call this
+    function again when it finishes.
+
+    If the lock is acquired but there are no waiting jobs, releases the lock
+    immediately.
     """
+    lock_key = f"{frappe.local.site}:sync_job_lock"
+
     SyncJob = frappe.qb.DocType("Sync Job")
     waiting_jobs = (
         frappe.qb.from_(SyncJob)
@@ -897,6 +874,13 @@ def _enqueue_next_waiting_job():
         return
 
     next_job = waiting_jobs[0]
+    lock_timeout = (next_job.timeout or 300) + 60
+
+    acquired = frappe.cache().set(lock_key, next_job.name, nx=True, ex=lock_timeout)
+    if not acquired:
+        # Another job is already running; it will wake the next waiter when done.
+        return
+
     frappe.db.set_value("Sync Job", next_job.name, "status", "Queued", update_modified=False)
 
     enqueue(
