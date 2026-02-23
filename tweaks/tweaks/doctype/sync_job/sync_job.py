@@ -842,6 +842,10 @@ def execute_sync_job(sync_job_name):
     """
     Execute sync job (runs in background)
 
+    Sync jobs are serialized globally: only one job runs at a time across all
+    types. If another job is already running, this job is parked as "Waiting"
+    and will be re-enqueued by the running job when it finishes.
+
     Args:
         sync_job_name: Name of Sync Job document
     """
@@ -851,24 +855,16 @@ def execute_sync_job(sync_job_name):
 
     sync_job = frappe.get_doc("Sync Job", sync_job_name, for_update=1)
 
-    serialize_execution = frappe.db.get_value(
-        "Sync Job Type", sync_job.sync_job_type, "serialize_execution"
-    )
-
-    if not serialize_execution:
-        sync_job.execute(job_id=job.id if job else None)
-        return
-
-    # Acquire a per-type Redis lock to ensure only one job of this type runs at a time.
+    # Single global lock — only one sync job runs at a time across all types.
     # Lock TTL is set slightly longer than the job timeout as a crash-safety net:
     # if the worker crashes before the finally block, the lock auto-expires.
-    lock_key = f"{frappe.local.site}:sync_job_type_lock:{sync_job.sync_job_type}"
+    lock_key = f"{frappe.local.site}:sync_job_lock"
     lock_timeout = (sync_job.timeout or 300) + 60
 
     acquired = frappe.cache().set(lock_key, sync_job_name, nx=True, ex=lock_timeout)
 
     if not acquired:
-        # Another job of this type is already running — park this job as "Waiting".
+        # Another sync job is already running — park this one as "Waiting".
         # The running job will enqueue this one when it finishes.
         sync_job.db_set("status", "Waiting", update_modified=False)
         frappe.db.commit()
@@ -878,27 +874,19 @@ def execute_sync_job(sync_job_name):
         sync_job.execute(job_id=job.id if job else None)
     finally:
         frappe.cache().delete(lock_key)
-        _enqueue_next_waiting_job(
-            sync_job.sync_job_type, sync_job.queue or "default", sync_job.timeout or 300
-        )
+        _enqueue_next_waiting_job()
 
 
-def _enqueue_next_waiting_job(sync_job_type, queue, timeout):
+def _enqueue_next_waiting_job():
     """
-    Find the oldest waiting job for this sync job type and enqueue it.
+    Find the oldest waiting sync job (across all types) and enqueue it.
 
-    Called after a serialized sync job finishes so the next waiting job can run.
-
-    Args:
-        sync_job_type: Sync Job Type name
-        queue: RQ queue name
-        timeout: Job timeout in seconds
+    Called after a sync job finishes so the next waiting job can run.
     """
     SyncJob = frappe.qb.DocType("Sync Job")
     waiting_jobs = (
         frappe.qb.from_(SyncJob)
-        .select(SyncJob.name)
-        .where(SyncJob.sync_job_type == sync_job_type)
+        .select(SyncJob.name, SyncJob.queue, SyncJob.timeout)
         .where(SyncJob.status == "Waiting")
         .orderby(SyncJob.creation, order=Order.asc)
         .limit(1)
@@ -908,14 +896,14 @@ def _enqueue_next_waiting_job(sync_job_type, queue, timeout):
     if not waiting_jobs:
         return
 
-    next_job_name = waiting_jobs[0].name
-    frappe.db.set_value("Sync Job", next_job_name, "status", "Queued", update_modified=False)
+    next_job = waiting_jobs[0]
+    frappe.db.set_value("Sync Job", next_job.name, "status", "Queued", update_modified=False)
 
     enqueue(
         execute_sync_job,
-        queue=queue,
-        timeout=timeout,
-        sync_job_name=next_job_name,
+        queue=next_job.queue or "default",
+        timeout=next_job.timeout or 300,
+        sync_job_name=next_job.name,
         enqueue_after_commit=True,
     )
 
