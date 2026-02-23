@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.core.doctype.log_settings.log_settings import LogType
 from frappe.model.document import Document
-from frappe.query_builder import Interval
+from frappe.query_builder import Interval, Order
 from frappe.query_builder.functions import Now
 from frappe.utils import add_to_date, create_batch, now, time_diff_in_seconds
 from frappe.utils.background_jobs import enqueue
@@ -20,6 +20,7 @@ VALID_SYNC_OPERATIONS = ("insert", "update", "delete")
 SyncJobStatus = Literal[
     "Pending",
     "Queued",
+    "Waiting",
     "Started",
     "Finished",
     "Failed",
@@ -67,6 +68,7 @@ class SyncJob(Document, LogType):
         status: DF.Literal[
             "Pending",
             "Queued",
+            "Waiting",
             "Started",
             "Finished",
             "Failed",
@@ -182,19 +184,19 @@ class SyncJob(Document, LogType):
         )
 
     def on_trash(self):
-        """Cancel background job if queued"""
-        if self.status == "Queued":
+        """Cancel background job if queued or waiting"""
+        if self.status in ["Queued", "Waiting"]:
             self.cancel_sync()
 
     @frappe.whitelist()
     def cancel_sync(self, reason=None):
         """
-        Cancel sync job (only Pending, Queued or Failed)
+        Cancel sync job (only Pending, Queued, Waiting or Failed)
 
         Args:
             reason: Optional cancellation reason
         """
-        if self.status not in ["Pending", "Queued", "Failed"]:
+        if self.status not in ["Pending", "Queued", "Waiting", "Failed"]:
             frappe.throw(_("Cannot cancel job with status {0}").format(self.status))
 
         # Stop RQ job if exists
@@ -866,22 +868,58 @@ def execute_sync_job(sync_job_name):
     acquired = frappe.cache().set(lock_key, sync_job_name, nx=True, ex=lock_timeout)
 
     if not acquired:
-        # Another job of this type is already running — put this job back in the queue
-        # and let it retry naturally. It will keep re-queuing until the lock is free.
-        sync_job.db_set("status", "Queued", update_modified=False)
+        # Another job of this type is already running — park this job as "Waiting".
+        # The running job will enqueue this one when it finishes.
+        sync_job.db_set("status", "Waiting", update_modified=False)
         frappe.db.commit()
-        enqueue(
-            execute_sync_job,
-            queue=sync_job.queue or "default",
-            timeout=sync_job.timeout or 300,
-            sync_job_name=sync_job_name,
-        )
         return
 
     try:
         sync_job.execute(job_id=job.id if job else None)
     finally:
         frappe.cache().delete(lock_key)
+        _enqueue_next_waiting_job(
+            sync_job.sync_job_type, sync_job.queue or "default", sync_job.timeout or 300
+        )
+
+
+def _enqueue_next_waiting_job(sync_job_type, queue, timeout):
+    """
+    Find the oldest waiting job for this sync job type and enqueue it.
+
+    Called after a serialized sync job finishes so the next waiting job can run.
+
+    Args:
+        sync_job_type: Sync Job Type name
+        queue: RQ queue name
+        timeout: Job timeout in seconds
+    """
+    SyncJob = frappe.qb.DocType("Sync Job")
+    waiting_jobs = (
+        frappe.qb.from_(SyncJob)
+        .select(SyncJob.name)
+        .where(SyncJob.sync_job_type == sync_job_type)
+        .where(SyncJob.status == "Waiting")
+        .orderby(SyncJob.creation, order=Order.asc)
+        .limit(1)
+        .run(as_dict=True)
+    )
+
+    if not waiting_jobs:
+        return
+
+    next_job_name = waiting_jobs[0].name
+    frappe.db.set_value("Sync Job", next_job_name, "status", "Queued", update_modified=False)
+
+    enqueue(
+        execute_sync_job,
+        queue=queue,
+        timeout=timeout,
+        sync_job_name=next_job_name,
+        enqueue_after_commit=True,
+    )
+
+    frappe.db.commit()
 
 
 def get_document_even_if_deleted(doctype, name):
