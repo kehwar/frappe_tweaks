@@ -100,6 +100,6 @@ def apply_where_query(data, query):
                 as_dict=True,
             )
     except Exception as e:
-        frappe.throw(_("Invalid DuckDB WHERE query."))
+        frappe.throw(_("Invalid DuckDB WHERE query: {0}").format(str(e)))
 
     return filtered
