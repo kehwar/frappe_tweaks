@@ -84,13 +84,18 @@ scheduler_events = {
             "tweaks.tweaks.doctype.peru_api_com.peru_api_com.autoupdate_currency_exchange"
         ]
     },
-    "all": ["tweaks.utils.sync_job.auto_retry_failed_jobs"],
+    "all": [
+        "tweaks.utils.sync_job.auto_retry_failed_jobs",
+        "tweaks.utils.async_task.dispatch_async_tasks",
+    ],
 }
 
 ignore_links_on_delete = [
     "Sync Job",
     "Sync Job Type",
     "Document Review",
+    "Async Task",
+    "Async Task Queue",
 ]
 
 
