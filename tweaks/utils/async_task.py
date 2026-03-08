@@ -33,15 +33,16 @@ Usage::
     )
 """
 
-import fcntl
 import json
 
 import frappe
 from frappe.query_builder import Order
 from frappe.utils import now, time_diff_in_seconds
 from frappe.utils.background_jobs import enqueue
+from frappe.utils.file_lock import LockTimeoutError
+from frappe.utils.synchronization import filelock
 
-_LOCK_FILE = ".async_task_dispatch.lock"
+_DISPATCH_LOCK = "async_task_dispatch"
 
 
 def enqueue_async_task(method, kwargs=None, queue="default", at_front=False, timeout=300):
@@ -91,27 +92,17 @@ def dispatch_async_tasks():
     """
     Promote pending tasks to Queued and enqueue them respecting method limits.
 
-    Protected by a non-blocking filelock: if another dispatcher is already
-    running, this call exits immediately to avoid duplicate promotions.
+    Protected by a non-blocking filelock (timeout=0): if another dispatcher is
+    already running, this call exits immediately to avoid duplicate promotions.
 
     Called by the scheduler (all event) to recover from any missed triggers,
     and via enqueue_dispatch_async_tasks after task creation/completion.
     """
-    lock_path = frappe.get_site_path("private", _LOCK_FILE)
-    lock_file = None
     try:
-        lock_file = open(lock_path, "a")
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except (BlockingIOError, OSError):
-        if lock_file:
-            lock_file.close()
+        with filelock(_DISPATCH_LOCK, timeout=0):
+            _run_dispatch()
+    except LockTimeoutError:
         return
-
-    try:
-        _run_dispatch()
-    finally:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
-        lock_file.close()
 
 
 def _run_dispatch():

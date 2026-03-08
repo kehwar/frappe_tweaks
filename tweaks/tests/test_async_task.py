@@ -2,7 +2,7 @@
 # See license.txt
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -12,7 +12,6 @@ from tweaks.utils.async_task import (
     _run_dispatch,
     dispatch_async_tasks,
     enqueue_async_task,
-    enqueue_dispatch_async_tasks,
 )
 
 
@@ -151,14 +150,12 @@ class TestDispatcher(FrappeTestCase):
 
     def test_dispatch_exits_when_locked(self):
         """dispatch_async_tasks should exit immediately if the filelock is held."""
-        import fcntl
+        from frappe.utils.file_lock import LockTimeoutError
 
-        with patch("tweaks.utils.async_task.fcntl") as mock_fcntl:
-            mock_fcntl.LOCK_EX = fcntl.LOCK_EX
-            mock_fcntl.LOCK_NB = fcntl.LOCK_NB
-            mock_fcntl.LOCK_UN = fcntl.LOCK_UN
-            mock_fcntl.flock.side_effect = BlockingIOError
-
+        with patch(
+            "tweaks.utils.async_task.filelock",
+            side_effect=LockTimeoutError,
+        ):
             with patch("tweaks.utils.async_task._run_dispatch") as mock_run:
                 dispatch_async_tasks()
                 mock_run.assert_not_called()
