@@ -24,6 +24,7 @@ class AsyncTask(Document):
         from frappe.types import DF
 
         at_front: DF.Check
+        debug_log: DF.LongText | None
         ended_at: DF.Datetime | None
         error_message: DF.LongText | None
         job_id: DF.Data | None

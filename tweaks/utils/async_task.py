@@ -33,7 +33,9 @@ Usage::
     )
 """
 
+import io
 import json
+import sys
 
 import frappe
 from frappe.query_builder import Order
@@ -43,6 +45,7 @@ from frappe.utils.file_lock import LockTimeoutError
 from frappe.utils.synchronization import filelock
 
 _DISPATCH_LOCK = "async_task_dispatch"
+_LOG_LIMIT = 5000
 
 
 def enqueue_async_task(method, kwargs=None, queue="default", at_front=False, timeout=300):
@@ -222,6 +225,8 @@ def execute_async_task(task_name):
     task = frappe.get_doc("Async Task", task_name, for_update=True)
 
     started = None
+    _buf = io.StringIO()
+    _old_stdout = sys.stdout
     try:
         started = now()
         task.db_set(
@@ -237,6 +242,7 @@ def execute_async_task(task_name):
 
         kwargs = json.loads(task.kwargs or "{}")
         method = frappe.get_attr(task.method)
+        sys.stdout = _buf
         method(**kwargs)
 
         ended = now()
@@ -245,6 +251,7 @@ def execute_async_task(task_name):
                 "status": "Finished",
                 "ended_at": ended,
                 "time_taken": time_diff_in_seconds(ended, started),
+                "debug_log": _buf.getvalue()[:_LOG_LIMIT] or None,
             },
             update_modified=False,
             notify=True,
@@ -260,6 +267,7 @@ def execute_async_task(task_name):
                 "time_taken": time_diff_in_seconds(ended, started)
                 if started
                 else None,
+                "debug_log": _buf.getvalue()[:_LOG_LIMIT] or None,
                 "error_message": frappe.get_traceback(with_context=True),
             },
             update_modified=False,
@@ -268,4 +276,5 @@ def execute_async_task(task_name):
         )
 
     finally:
+        sys.stdout = _old_stdout
         enqueue_dispatch_async_tasks()

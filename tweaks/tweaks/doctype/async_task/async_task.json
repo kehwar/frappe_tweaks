@@ -20,6 +20,7 @@
   "column_break_2",
   "time_taken",
   "section_break_results",
+  "debug_log",
   "error_message"
  ],
  "fields": [
@@ -122,6 +123,13 @@
    "fieldname": "section_break_results",
    "fieldtype": "Section Break",
    "label": "Results"
+  },
+  {
+   "fieldname": "debug_log",
+   "fieldtype": "Long Text",
+   "label": "Debug Log",
+   "no_copy": 1,
+   "read_only": 1
   },
   {
    "fieldname": "error_message",
