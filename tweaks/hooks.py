@@ -95,7 +95,7 @@ ignore_links_on_delete = [
     "Sync Job Type",
     "Document Review",
     "Async Task",
-    "Async Task Queue",
+    "Async Task Type",
 ]
 
 

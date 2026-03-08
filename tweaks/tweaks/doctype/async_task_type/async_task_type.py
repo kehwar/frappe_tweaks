@@ -5,7 +5,7 @@ import frappe
 from frappe.model.document import Document
 
 
-class AsyncTaskQueue(Document):
+class AsyncTaskType(Document):
     # begin: auto-generated types
     # This code is auto-generated. Do not modify anything in this block.
 
@@ -16,6 +16,6 @@ class AsyncTaskQueue(Document):
 
         is_standard: DF.Check
         limit: DF.Int
+        method: DF.Data
         priority: DF.Int
-        queue_name: DF.Data
     # end: auto-generated types

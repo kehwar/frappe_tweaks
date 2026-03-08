@@ -29,7 +29,7 @@ class AsyncTask(Document):
         job_id: DF.Data | None
         kwargs: DF.Code | None
         method: DF.Data
-        queue: DF.Link
+        queue: DF.Data | None
         started_at: DF.Datetime | None
         status: DF.Literal["Pending", "Queued", "Started", "Finished", "Failed", "Canceled"]
         time_taken: DF.Duration | None

@@ -1,12 +1,12 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:queue_name",
+ "autoname": "field:method",
  "creation": "2026-03-04 00:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "queue_name",
+  "method",
   "is_standard",
   "column_break_1",
   "priority",
@@ -14,10 +14,10 @@
  ],
  "fields": [
   {
-   "fieldname": "queue_name",
+   "fieldname": "method",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Queue Name",
+   "label": "Method",
    "reqd": 1,
    "unique": 1
   },
@@ -41,8 +41,8 @@
    "label": "Priority"
   },
   {
-   "default": "1",
-   "description": "Maximum number of concurrently running tasks in this queue",
+   "default": "0",
+   "description": "Maximum number of concurrently running tasks for this method. 0 means unlimited.",
    "fieldname": "limit",
    "fieldtype": "Int",
    "in_list_view": 1,
@@ -54,7 +54,7 @@
  "modified": "2026-03-04 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Tweaks",
- "name": "Async Task Queue",
+ "name": "Async Task Type",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [

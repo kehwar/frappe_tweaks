@@ -4,26 +4,31 @@
 """
 Dispatcher and execution utilities for the Async Task system.
 
-Async Task Queue defines named queues with a priority and a concurrency limit.
-Async Task stores a Python dotted-path method + JSON kwargs to run as a
-background job.
+Async Task Type (optional) defines per-method configuration: priority and a
+concurrency limit. Async Task stores a Python dotted-path method + JSON kwargs
+to run as a background job.
 
 Dispatch algorithm:
-- Queues are processed in descending priority order.
-- For each queue, count tasks currently in Queued or Started state.
-- If running < limit, promote Pending tasks to Queued (up to limit - running).
-- Within a queue, tasks with at_front=1 run first; ties broken by oldest creation.
+- Collect all distinct methods that have Pending tasks.
+- For each method, look up its Async Task Type (if any) to read priority and
+  concurrency limit. Methods without an Async Task Type get priority=0 and no
+  concurrency limit.
+- Process methods in descending priority order.
+- For each method: count active tasks (Queued or Started); if active < limit
+  (or no limit), promote Pending tasks up to the available slots.
+- Within a method, tasks with at_front=1 run first; ties broken by oldest creation.
 
 Usage::
 
-    import frappe
     from tweaks.utils.async_task import enqueue_async_task
 
     # Create and immediately dispatch a task
     task = enqueue_async_task(
+        method="myapp.utils.process_something",
+        kwargs={"doc_name": "INV-0001"},
         queue="default",
-        method="myapp.utils.my_function",
-        kwargs={"arg1": "value1"},
+        at_front=True,
+        timeout=120,
     )
 """
 
@@ -34,16 +39,19 @@ from frappe.query_builder import Order
 from frappe.utils import now, time_diff_in_seconds
 from frappe.utils.background_jobs import enqueue
 
+# Sentinel value meaning "no concurrency limit"
+_UNLIMITED = float("inf")
 
-def enqueue_async_task(queue, method, kwargs=None, at_front=False, timeout=300):
+
+def enqueue_async_task(method, kwargs=None, queue="default", at_front=False, timeout=300):
     """
     Create an Async Task document and trigger dispatch.
 
     Args:
-        queue: Name of Async Task Queue
         method: Python dotted path of the function to call
         kwargs: Dict of keyword arguments to pass to the method
-        at_front: Whether to run before other pending tasks in the queue
+        queue: RQ queue name (default: "default")
+        at_front: Whether to run before other pending tasks with the same method
         timeout: Job timeout in seconds (default 300)
 
     Returns:
@@ -52,7 +60,7 @@ def enqueue_async_task(queue, method, kwargs=None, at_front=False, timeout=300):
     task = frappe.get_doc(
         {
             "doctype": "Async Task",
-            "queue": queue,
+            "queue": queue or "default",
             "method": method,
             "kwargs": json.dumps(kwargs or {}),
             "at_front": 1 if at_front else 0,
@@ -66,54 +74,91 @@ def enqueue_async_task(queue, method, kwargs=None, at_front=False, timeout=300):
 
 def dispatch_async_tasks():
     """
-    Promote pending tasks to Queued and enqueue them respecting queue limits.
+    Promote pending tasks to Queued and enqueue them respecting method limits.
 
     Called after a task is created or after a task finishes/fails.
     Also called by the scheduled job to recover from any missed triggers.
     """
-    AsyncTaskQueue = frappe.qb.DocType("Async Task Queue")
-    queues = (
-        frappe.qb.from_(AsyncTaskQueue)
-        .select(AsyncTaskQueue.name, AsyncTaskQueue.priority, AsyncTaskQueue.limit)
-        .orderby(AsyncTaskQueue.priority, order=Order.desc)
-        .run(as_dict=True)
-    )
-
-    for queue in queues:
-        _dispatch_queue(queue)
-
-
-def _dispatch_queue(queue):
-    """Promote Pending tasks in *queue* up to the concurrency limit."""
-    limit = queue.limit or 1
-    queue_name = queue.name
-
     AsyncTask = frappe.qb.DocType("Async Task")
 
-    # Count active tasks (Queued or Started)
+    # Collect distinct methods that have pending tasks
+    pending_methods = (
+        frappe.qb.from_(AsyncTask)
+        .select(AsyncTask.method)
+        .where(AsyncTask.status == "Pending")
+        .distinct()
+        .run(as_list=True)
+    )
+
+    if not pending_methods:
+        return
+
+    method_names = [row[0] for row in pending_methods]
+
+    # Load Async Task Type configs for all relevant methods in one query
+    task_type_configs = {}
+    if method_names:
+        AsyncTaskType = frappe.qb.DocType("Async Task Type")
+        rows = (
+            frappe.qb.from_(AsyncTaskType)
+            .select(AsyncTaskType.method, AsyncTaskType.priority, AsyncTaskType.limit)
+            .where(AsyncTaskType.method.isin(method_names))
+            .run(as_dict=True)
+        )
+        task_type_configs = {r.method: r for r in rows}
+
+    # Build list of (priority, method) and sort by priority DESC
+    method_list = []
+    for method in method_names:
+        cfg = task_type_configs.get(method)
+        priority = cfg.priority if cfg else 0
+        method_list.append((priority, method))
+
+    method_list.sort(key=lambda x: x[0], reverse=True)
+
+    for _priority, method in method_list:
+        cfg = task_type_configs.get(method)
+        limit = (cfg.limit or 0) if cfg else 0
+        _dispatch_method(method, limit)
+
+
+def _dispatch_method(method, limit):
+    """
+    Promote Pending tasks for *method* up to the concurrency limit.
+
+    Args:
+        method: Python dotted path identifying the method
+        limit: Maximum concurrent tasks (0 = unlimited)
+    """
+    AsyncTask = frappe.qb.DocType("Async Task")
+
+    # Count active tasks (Queued or Started) for this method
     active_count = (
         frappe.qb.from_(AsyncTask)
         .select(frappe.qb.functions.Count("*"))
-        .where(AsyncTask.queue == queue_name)
+        .where(AsyncTask.method == method)
         .where(AsyncTask.status.isin(["Queued", "Started"]))
         .run()[0][0]
     )
 
-    slots = limit - active_count
-    if slots <= 0:
+    if limit > 0 and active_count >= limit:
         return
 
-    # Find pending tasks: at_front first, then oldest creation
-    pending = (
+    slots = (limit - active_count) if limit > 0 else None  # None = unlimited
+
+    # Build pending query: at_front first, then oldest creation
+    query = (
         frappe.qb.from_(AsyncTask)
-        .select(AsyncTask.name, AsyncTask.timeout)
-        .where(AsyncTask.queue == queue_name)
+        .select(AsyncTask.name, AsyncTask.queue, AsyncTask.timeout)
+        .where(AsyncTask.method == method)
         .where(AsyncTask.status == "Pending")
         .orderby(AsyncTask.at_front, order=Order.desc)
         .orderby(AsyncTask.creation, order=Order.asc)
-        .limit(slots)
-        .run(as_dict=True)
     )
+    if slots is not None:
+        query = query.limit(slots)
+
+    pending = query.run(as_dict=True)
 
     for task_row in pending:
         _enqueue_task(task_row)
@@ -127,7 +172,7 @@ def _enqueue_task(task_row):
 
     enqueue(
         execute_async_task,
-        queue="default",
+        queue=task_row.queue or "default",
         timeout=task_row.timeout or 300,
         task_name=task_row.name,
         enqueue_after_commit=True,
