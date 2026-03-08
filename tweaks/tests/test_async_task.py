@@ -2,15 +2,17 @@
 # See license.txt
 
 import json
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from tweaks.utils.async_task import (
     _dispatch_method,
+    _run_dispatch,
     dispatch_async_tasks,
     enqueue_async_task,
+    enqueue_dispatch_async_tasks,
 )
 
 
@@ -141,11 +143,25 @@ class TestDispatcher(FrappeTestCase):
             dispatched.append(method)
 
         with patch("tweaks.utils.async_task._dispatch_method", side_effect=fake_dispatch):
-            dispatch_async_tasks()
+            _run_dispatch()
 
         hi_idx = dispatched.index(method_hi)
         lo_idx = dispatched.index(method_lo)
         self.assertLess(hi_idx, lo_idx)
+
+    def test_dispatch_exits_when_locked(self):
+        """dispatch_async_tasks should exit immediately if the filelock is held."""
+        import fcntl
+
+        with patch("tweaks.utils.async_task.fcntl") as mock_fcntl:
+            mock_fcntl.LOCK_EX = fcntl.LOCK_EX
+            mock_fcntl.LOCK_NB = fcntl.LOCK_NB
+            mock_fcntl.LOCK_UN = fcntl.LOCK_UN
+            mock_fcntl.flock.side_effect = BlockingIOError
+
+            with patch("tweaks.utils.async_task._run_dispatch") as mock_run:
+                dispatch_async_tasks()
+                mock_run.assert_not_called()
 
 
 class TestEnqueueAsyncTask(FrappeTestCase):
@@ -168,3 +184,15 @@ class TestEnqueueAsyncTask(FrappeTestCase):
         self.assertEqual(task.queue, "default")
         loaded = frappe.get_doc("Async Task", task.name)
         self.assertEqual(json.loads(loaded.kwargs), {"foo": "bar"})
+
+    def test_after_insert_enqueues_dispatch(self):
+        """Inserting an Async Task should enqueue dispatch, not call it directly."""
+        with patch("tweaks.utils.async_task.enqueue") as mock_enqueue:
+            task = enqueue_async_task(
+                method="frappe.utils.now",
+                queue="default",
+            )
+
+        mock_enqueue.assert_called_once_with(
+            dispatch_async_tasks, queue="default", enqueue_after_commit=True
+        )

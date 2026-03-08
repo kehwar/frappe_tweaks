@@ -9,7 +9,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder import Interval
 from frappe.query_builder.functions import Now
-from frappe.utils import now, time_diff_in_seconds
+from frappe.utils import now
 
 AsyncTaskStatus = Literal["Pending", "Queued", "Started", "Finished", "Failed", "Canceled"]
 
@@ -50,11 +50,10 @@ class AsyncTask(Document):
         if self.flags.get("skip_dispatch"):
             return
 
-        from tweaks.utils.async_task import dispatch_async_tasks
+        from tweaks.utils.async_task import enqueue_dispatch_async_tasks
 
         self.db_set("status", "Pending", update_modified=False)
-        frappe.db.commit()
-        dispatch_async_tasks()
+        enqueue_dispatch_async_tasks()
 
     def on_trash(self):
         if self.status in ("Pending", "Queued"):

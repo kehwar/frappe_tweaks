@@ -9,6 +9,7 @@ concurrency limit. Async Task stores a Python dotted-path method + JSON kwargs
 to run as a background job.
 
 Dispatch algorithm:
+- A filelock prevents concurrent dispatcher runs; a second call exits immediately.
 - Collect all distinct methods that have Pending tasks.
 - For each method, look up its Async Task Type (if any) to read priority and
   concurrency limit. Methods without an Async Task Type get priority=0 and no
@@ -32,6 +33,7 @@ Usage::
     )
 """
 
+import fcntl
 import json
 
 import frappe
@@ -39,8 +41,7 @@ from frappe.query_builder import Order
 from frappe.utils import now, time_diff_in_seconds
 from frappe.utils.background_jobs import enqueue
 
-# Sentinel value meaning "no concurrency limit"
-_UNLIMITED = float("inf")
+_LOCK_FILE = ".async_task_dispatch.lock"
 
 
 def enqueue_async_task(method, kwargs=None, queue="default", at_front=False, timeout=300):
@@ -68,17 +69,53 @@ def enqueue_async_task(method, kwargs=None, queue="default", at_front=False, tim
         }
     )
     task.insert(ignore_permissions=True)
-    # Dispatching is triggered by the after_insert hook on AsyncTask
+    # Dispatching is enqueued by the after_insert hook on AsyncTask
     return task
+
+
+def enqueue_dispatch_async_tasks():
+    """
+    Enqueue dispatch_async_tasks as a background job.
+
+    Used by after_insert and execute_async_task so the dispatcher always runs
+    in a worker process rather than in the calling thread.
+    """
+    enqueue(
+        dispatch_async_tasks,
+        queue="default",
+        enqueue_after_commit=True,
+    )
 
 
 def dispatch_async_tasks():
     """
     Promote pending tasks to Queued and enqueue them respecting method limits.
 
-    Called after a task is created or after a task finishes/fails.
-    Also called by the scheduled job to recover from any missed triggers.
+    Protected by a non-blocking filelock: if another dispatcher is already
+    running, this call exits immediately to avoid duplicate promotions.
+
+    Called by the scheduler (all event) to recover from any missed triggers,
+    and via enqueue_dispatch_async_tasks after task creation/completion.
     """
+    lock_path = frappe.get_site_path("private", _LOCK_FILE)
+    lock_file = None
+    try:
+        lock_file = open(lock_path, "a")
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except (BlockingIOError, OSError):
+        if lock_file:
+            lock_file.close()
+        return
+
+    try:
+        _run_dispatch()
+    finally:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        lock_file.close()
+
+
+def _run_dispatch():
+    """Execute the dispatch algorithm inside the filelock."""
     AsyncTask = frappe.qb.DocType("Async Task")
 
     # Collect distinct methods that have pending tasks
@@ -240,4 +277,4 @@ def execute_async_task(task_name):
         )
 
     finally:
-        dispatch_async_tasks()
+        enqueue_dispatch_async_tasks()
