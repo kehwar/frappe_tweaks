@@ -33,18 +33,19 @@ import frappe
 from frappe import _
 from frappe.core.doctype.rq_job.rq_job import RQJob
 from frappe.database.utils import dangerously_reconnect_on_connection_abort
+from frappe.handler import run_doc_method
 from frappe.model.document import Document
 from frappe.query_builder import Interval
 from frappe.query_builder.functions import Now
 from frappe.utils import now, time_diff_in_seconds
 from frappe.utils.background_jobs import enqueue
+from frappe.utils.safe_exec import call_whitelisted_function
 from rq import get_current_job
 
 from tweaks.tweaks.doctype.async_task_log.async_task_log_dispatch import (
     _set_dispatcher_state,
     can_dispatch_now,
     enqueue_dispatch_async_tasks,
-    toggle_dispatcher,
 )
 
 AsyncTaskStatus = Literal[
@@ -181,7 +182,19 @@ class AsyncTaskLog(Document):
         Actual execution logic, separated from status updates and error handling in execute().
         """
         kwargs = json.loads(self.kwargs or "{}")
-        if self.document_type and self.document_name and self.document_action:
+        if (
+            self.document_type
+            and self.document_name
+            and self.document_action
+            and self.call_whitelisted_function
+        ):
+            run_doc_method(
+                method=self.document_action,
+                dt=self.document_type,
+                dn=self.document_name,
+                args=kwargs,
+            )
+        elif self.document_type and self.document_name and self.document_action:
             doc = frappe.get_doc(self.document_type, self.document_name)
             doc.unlock()
             action = self.document_action
@@ -189,8 +202,6 @@ class AsyncTaskLog(Document):
                 action = f"_{action}"
             getattr(doc, action)(**kwargs)
         elif self.call_whitelisted_function:
-            from frappe.utils.safe_exec import call_whitelisted_function
-
             call_whitelisted_function(self.method, **kwargs)
         else:
             method = frappe.get_attr(self.method)
