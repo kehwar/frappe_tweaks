@@ -81,7 +81,7 @@
    "in_standard_filter": 1,
    "label": "Status",
    "no_copy": 1,
-   "options": "Pending\nQueued\nStarted\nFinished\nFailed\nCanceled",
+   "options": "Pending\nPaused\nQueued\nStarted\nFinished\nFailed\nCanceled",
    "read_only": 1
   },
   {
@@ -195,7 +195,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 11:44:42.473696",
+ "modified": "2026-03-12 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Async Task Log",
@@ -223,6 +223,10 @@
   {
    "color": "Yellow",
    "title": "Pending"
+  },
+  {
+   "color": "Purple",
+   "title": "Paused"
   },
   {
    "color": "Blue",

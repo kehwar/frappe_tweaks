@@ -15,7 +15,14 @@ frappe.ui.form.on("Async Task Log", {
 			});
 		}
 
-		if (["Pending", "Queued", "Started"].includes(frm.doc.status)) {
+		if (["Pending", "Paused"].includes(frm.doc.status)) {
+			const label = frm.doc.status === "Pending" ? __("Pause") : __("Resume");
+			frm.add_custom_button(label, () => {
+				frm.call("toggle_pause").then(() => frm.reload_doc());
+			});
+		}
+
+		if (["Pending", "Paused", "Queued", "Started"].includes(frm.doc.status)) {
 			frm.add_custom_button(__("Cancel"), () => {
 				const d = new frappe.ui.Dialog({
 					title: __("Cancel Task"),

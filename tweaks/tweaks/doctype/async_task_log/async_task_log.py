@@ -49,7 +49,7 @@ from tweaks.tweaks.doctype.async_task_log.async_task_log_dispatch import (
 )
 
 AsyncTaskStatus = Literal[
-    "Pending", "Queued", "Started", "Finished", "Failed", "Canceled"
+    "Pending", "Paused", "Queued", "Started", "Finished", "Failed", "Canceled"
 ]
 
 
@@ -78,7 +78,7 @@ class AsyncTaskLog(Document):
         started_at: DF.Datetime | None
         call_whitelisted_function: DF.Check
         status: DF.Literal[
-            "Pending", "Queued", "Started", "Finished", "Failed", "Canceled"
+            "Pending", "Paused", "Queued", "Started", "Finished", "Failed", "Canceled"
         ]
         time_taken: DF.Duration | None
         timeout: DF.Duration | None
@@ -110,7 +110,7 @@ class AsyncTaskLog(Document):
             )
 
     def after_insert(self):
-        if self.flags.get("skip_dispatch"):
+        if self.flags.get("skip_dispatch") or self.status == "Paused":
             return
 
         enqueue_dispatch_async_tasks()
@@ -120,15 +120,15 @@ class AsyncTaskLog(Document):
         On Trash event handler
         Based on: frappe.core.doctype.prepared_report.prepared_report.PreparedReport.on_trash
         """
-        if self.status in ("Pending", "Queued", "Started"):
+        if self.status in ("Pending", "Paused", "Queued", "Started"):
             self.cancel_job()
 
     @frappe.whitelist()
     def cancel(self, message=None):
         """
-        Cancel a task: if it's Pending it becomes Canceled; if Queued or Started, the RQ job is stopped/deleted and then the task is marked Canceled.
+        Cancel a task: if it's Pending or Paused it becomes Canceled; if Queued or Started, the RQ job is stopped/deleted and then the task is marked Canceled.
         """
-        if self.status not in ("Pending", "Queued", "Started"):
+        if self.status not in ("Pending", "Paused", "Queued", "Started"):
             frappe.throw(_("Cannot cancel task with status {0}").format(self.status))
 
         self.cancel_job()
@@ -137,6 +137,25 @@ class AsyncTaskLog(Document):
             frappe.debug_log.extend(["", _("Task canceled with message:"), message])
 
         self.update_status("Canceled", message=message)
+
+    @frappe.whitelist()
+    def toggle_pause(self):
+        """
+        Toggle a task between Pending and Paused states.
+
+        Pending → Paused: prevents the dispatcher from promoting the task.
+        Paused  → Pending: re-queues the task for dispatch.
+        """
+        if not self.status in ("Pending", "Paused"):
+            frappe.throw(
+                _(
+                    "Only Pending or Paused tasks can be toggled. Current status: {0}"
+                ).format(self.status)
+            )
+
+        new_status = "Paused" if self.status == "Pending" else "Pending"
+
+        self.update_status(new_status)
 
     def cancel_job(self):
         """
@@ -350,6 +369,7 @@ def enqueue_async_task(
     batch_id: str | None = None,
     batch_order: int | None = None,
     arguments: dict | None = None,
+    paused: bool = False,
     **kwargs,
 ) -> "AsyncTaskLog":
     """
@@ -373,6 +393,8 @@ def enqueue_async_task(
     :param arguments: Explicit keyword arguments forwarded to *method*. Takes precedence over
         ``**kwargs`` for keys that collide with the task API parameters (``queue``, ``method``,
         ``timeout``, etc.).
+    :param paused: When ``True``, the task is created with status ``"Paused"`` and will not be
+        dispatched until :meth:`toggle_pause` is called.
     :param kwargs: Additional keyword arguments forwarded to *method* or the document action
     """
     if callable(method):
@@ -386,22 +408,24 @@ def enqueue_async_task(
 
     stored_kwargs = {**kwargs, **(arguments or {})}
 
-    task = frappe.get_doc(
-        {
-            "doctype": "Async Task Log",
-            "queue": queue or "default",
-            "method": method,
-            "document_type": document_type,
-            "document_name": document_name,
-            "document_action": document_action,
-            "kwargs": json.dumps(stored_kwargs),
-            "at_front": 1 if at_front else 0,
-            "timeout": timeout or 300,
-            "call_whitelisted_function": 1 if call_whitelisted_function else 0,
-            "batch_id": batch_id,
-            "batch_order": batch_order,
-        }
-    )
+    task_data = {
+        "doctype": "Async Task Log",
+        "queue": queue or "default",
+        "method": method,
+        "document_type": document_type,
+        "document_name": document_name,
+        "document_action": document_action,
+        "kwargs": json.dumps(stored_kwargs),
+        "at_front": 1 if at_front else 0,
+        "timeout": timeout or 300,
+        "call_whitelisted_function": 1 if call_whitelisted_function else 0,
+        "batch_id": batch_id,
+        "batch_order": batch_order,
+    }
+    if paused:
+        task_data["status"] = "Paused"
+
+    task = frappe.get_doc(task_data)
     task.insert(ignore_permissions=True)
     # Dispatching is enqueued by the after_insert hook on AsyncTaskLog
     return task
@@ -453,6 +477,7 @@ def enqueue_safe_async_task(
     batch_id: str | None = None,
     batch_order: int | None = None,
     arguments: dict | None = None,
+    paused: bool = False,
     **kwargs,
 ) -> "AsyncTaskLog":
     """
@@ -471,6 +496,7 @@ def enqueue_safe_async_task(
         batch_id=batch_id,
         batch_order=batch_order,
         arguments=arguments,
+        paused=paused,
         **kwargs,
     )
 
