@@ -41,6 +41,7 @@ from frappe.utils.background_jobs import enqueue
 from rq import get_current_job
 
 from tweaks.tweaks.doctype.async_task_log.async_task_log_dispatch import (
+    _set_dispatcher_state,
     can_dispatch_now,
     enqueue_dispatch_async_tasks,
     toggle_dispatcher,
@@ -292,7 +293,9 @@ def enqueue_async_task(
     return task
 
 
-def bulk_enqueue_async_task(tasks: list[dict], batch_id: str = None, **kwargs) -> "AsyncTaskLog":
+def bulk_enqueue_async_task(
+    tasks: list[dict], batch_id: str = None, **kwargs
+) -> "AsyncTaskLog":
     """
     Create multiple Async Task Log documents and trigger dispatch.
 
@@ -309,7 +312,7 @@ def bulk_enqueue_async_task(tasks: list[dict], batch_id: str = None, **kwargs) -
 
     dispatch_paused = False
     if can_dispatch_now():
-        toggle_dispatcher(enable=False)
+        _set_dispatcher_state(False)  # suspend dispatch while inserting
         dispatch_paused = True
 
     for task in tasks:
@@ -321,7 +324,7 @@ def bulk_enqueue_async_task(tasks: list[dict], batch_id: str = None, **kwargs) -
         enqueue_async_task(**task)
 
     if dispatch_paused:
-        toggle_dispatcher(enable=True)
+        _set_dispatcher_state(True)  # resume dispatch
         enqueue_dispatch_async_tasks()
 
 

@@ -1,6 +1,6 @@
 ---
 name: frappe-tweaks-async-tasks
-description: Expert guidance for enqueueing and managing Async Tasks in Frappe Tweaks. Use when working with enqueue_async_task, enqueue_safe_async_task, Async Task Log, Async Task Type, implementing concurrency limits, per-method priority ordering, task cancellation, or choosing between Async Tasks and standard frappe.enqueue background jobs.
+description: Expert guidance for enqueueing and managing Async Tasks in Frappe Tweaks. Use when working with enqueue_async_task, enqueue_safe_async_task, bulk_enqueue_async_task, bulk_enqueue_safe_async_task, toggle_dispatcher, Async Task Log, Async Task Type, implementing concurrency limits, per-method priority ordering, task cancellation, batch/bulk task submission, dispatcher control, or choosing between Async Tasks and standard frappe.enqueue background jobs.
 ---
 
 # Async Tasks Expert
@@ -35,6 +35,12 @@ Expert guidance for the Frappe Tweaks Async Task system — a managed, observabl
 from tweaks.tweaks.doctype.async_task_log.async_task_log import (
     enqueue_async_task,
     enqueue_safe_async_task,
+    bulk_enqueue_async_task,
+    bulk_enqueue_safe_async_task,
+)
+from tweaks.tweaks.doctype.async_task_log.async_task_log_dispatch import (
+    toggle_dispatcher,
+    can_dispatch_now,
 )
 ```
 
@@ -63,6 +69,47 @@ task = enqueue_safe_async_task(
     "myapp.api.sync_customer",
     queue="short",
     customer_id="CUST-0001",
+)
+```
+
+### `bulk_enqueue_async_task`
+
+Create **multiple** `Async Task Log` documents in one call and dispatch them together as a single ordered batch.
+
+```python
+tasks = bulk_enqueue_async_task(
+    tasks=[                             # list of per-task dicts (same keys as enqueue_async_task)
+        {"method": "myapp.utils.process_invoice", "invoice_name": "INV-001"},
+        {"method": "myapp.utils.process_invoice", "invoice_name": "INV-002", "at_front": True},
+    ],
+    batch_id="my-import-run-abc",       # optional; auto-generated uuid4 when omitted
+    queue="short",                      # kwargs here overwrite matching keys in every task dict
+)
+```
+
+**How it works:**
+
+1. If `batch_id` is not given, a random UUID is assigned so all tasks share the same batch.
+2. Each task's `batch_order` is set sequentially (0, 1, 2 …) in insertion order.
+3. The dispatcher is internally suspended while inserting to prevent partial dispatches, then resumed atomically once all documents are committed.
+4. A single `dispatch_async_tasks` job is enqueued at the end, respecting concurrency limits for all inserted tasks.
+
+**Key behaviour:**
+- Extra `**kwargs` are merged into **every** task dict (useful for shared fields like `queue` or `timeout`).
+- Individual task dicts can still override merged values before calling `enqueue_async_task`.
+- Returns `None`; use the `batch_id` (or query `Async Task Log` by `batch_id`) to track completion.
+
+### `bulk_enqueue_safe_async_task`
+
+Shorthand for `bulk_enqueue_async_task(..., call_whitelisted_function=True)`. Use when each method is a whitelisted function or Server Script name.
+
+```python
+bulk_enqueue_safe_async_task(
+    tasks=[
+        {"method": "myapp.api.sync_customer", "customer_id": "CUST-0001"},
+        {"method": "myapp.api.sync_customer", "customer_id": "CUST-0002"},
+    ],
+    queue="short",
 )
 ```
 
@@ -113,8 +160,8 @@ Pending → Queued → Started → Finished
 
 A realtime event `async_task_status` is published to the creating user on **every status transition** (Queued, Started, Finished, Failed, Canceled). Listen for this event to react to any stage, not just completion.
 
-```python
-# Payload: {"name": task_name, "status": new_status, "message": optional_message}
+```javascript
+// Payload: {"name": task_name, "status": new_status, "message": optional_message}
 frappe.realtime.on("async_task_status", (data) => { ... })
 ```
 
@@ -152,6 +199,41 @@ Each `Async Task Log` document stores:
 - `error_message` with full traceback on failure
 - `debug_log` if `frappe.debug_log` is populated
 - `job_id` linking to the underlying RQ Job
+
+## Dispatcher Control
+
+The dispatcher can be suspended site-wide, which prevents any new tasks from being promoted to `Queued`. Already-`Queued` workers continue running.
+
+### `toggle_dispatcher` (whitelisted)
+
+Requires **System Manager** role. Persists the suspended/running state as a site default so it survives process restarts.
+
+```python
+from tweaks.tweaks.doctype.async_task_log.async_task_log_dispatch import toggle_dispatcher
+
+toggle_dispatcher(enable=False)  # suspend — no new tasks will be dispatched
+toggle_dispatcher(enable=True)   # resume  — dispatcher runs normally again
+```
+
+Can also be called via the HTTP API (it is `@frappe.whitelist()`):
+
+```
+POST /api/method/tweaks.tweaks.doctype.async_task_log.async_task_log_dispatch.toggle_dispatcher
+{ "enable": 1 }   // or 0
+```
+
+### `can_dispatch_now`
+
+Returns `True` when the dispatcher is running (not suspended). Use this guard before triggering dispatch manually:
+
+```python
+from tweaks.tweaks.doctype.async_task_log.async_task_log_dispatch import can_dispatch_now
+
+if can_dispatch_now():
+    enqueue_dispatch_async_tasks()
+```
+
+> **Note:** `bulk_enqueue_async_task` internally suspends the dispatcher while inserting tasks and calls `_set_dispatcher_state` directly (bypassing the `System Manager` permission check that wraps the public `toggle_dispatcher`). Never call `toggle_dispatcher` from inside a background worker for internal use — use `_set_dispatcher_state` instead.
 
 ## Dispatch & Recovery
 

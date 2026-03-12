@@ -162,11 +162,27 @@ def can_dispatch_now():
     return True
 
 
+def _set_dispatcher_state(enabled: bool):
+    """
+    Persist the dispatcher suspension flag without permission checks.
+
+    Internal helper used by :func:`toggle_dispatcher` (public, permission-gated)
+    and :func:`bulk_enqueue_async_task` (may run in a worker context).
+    """
+    frappe.db.set_default("suspend_async_task_dispatch", 0 if enabled else 1)
+
+
 @frappe.whitelist()
 def toggle_dispatcher(enable):
     """
-    Toggle dispatcher
+    Enable or disable the async task dispatcher.
+
+    Requires System Manager role. Persists the state as a site default so it
+    survives process restarts.
+
+    :param enable: Truthy → resume dispatching; falsy → suspend dispatching.
+
     Based on: frappe.email.doctype.email_queue.email_queue.toggle_sending
     """
     frappe.only_for("System Manager")
-    frappe.db.set_default("suspend_async_task_dispatch", 0 if sbool(enable) else 1)
+    _set_dispatcher_state(sbool(enable))
