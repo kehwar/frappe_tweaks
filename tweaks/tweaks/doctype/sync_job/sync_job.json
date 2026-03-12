@@ -25,12 +25,8 @@
   "column_break_5",
   "updated_data",
   "section_break_results",
-  "error_message",
   "multiple_target_documents",
-  "cancel_reason",
   "section_break_config",
-  "queue",
-  "timeout",
   "dry_run",
   "column_break_ewsh",
   "insert_enabled",
@@ -170,24 +166,6 @@
    "label": "Job Configuration"
   },
   {
-   "description": "RQ queue name",
-   "fetch_from": "sync_job_type.queue",
-   "fetch_if_empty": 1,
-   "fieldname": "queue",
-   "fieldtype": "Data",
-   "label": "Queue",
-   "read_only": 1
-  },
-  {
-   "description": "Job timeout in seconds",
-   "fetch_from": "sync_job_type.timeout",
-   "fetch_if_empty": 1,
-   "fieldname": "timeout",
-   "fieldtype": "Int",
-   "label": "Timeout",
-   "set_only_once": 1
-  },
-  {
    "default": "1",
    "description": "If uncheked, Insert operations will be skipped",
    "fieldname": "insert_enabled",
@@ -319,20 +297,6 @@
    "fieldname": "section_break_results",
    "fieldtype": "Section Break",
    "label": "Results"
-  },
-  {
-   "fieldname": "error_message",
-   "fieldtype": "Long Text",
-   "label": "Error Message",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "cancel_reason",
-   "fieldtype": "Long Text",
-   "label": "Cancel Reason",
-   "no_copy": 1,
-   "read_only": 1
   },
   {
    "fieldname": "column_break_yndn",

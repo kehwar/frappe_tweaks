@@ -38,11 +38,9 @@ class SyncJob(Document, LogType):
     if TYPE_CHECKING:
         from frappe.types import DF
 
-        cancel_reason: DF.LongText | None
         context: DF.Code | None
         current_data: DF.Code | None
         diff_summary: DF.Code | None
-        error_message: DF.LongText | None
         insert_enabled: DF.Check
         update_enabled: DF.Check
         delete_enabled: DF.Check
@@ -52,7 +50,6 @@ class SyncJob(Document, LogType):
         multiple_target_documents: DF.Code | None
         operation: DF.Literal["", "Insert", "Update", "Delete"]
         parent_sync_job: DF.Link | None
-        queue: DF.Data | None
         source_document_type: DF.Link | None
         source_document_name: DF.DynamicLink | None
         status: DF.Literal[
@@ -71,7 +68,6 @@ class SyncJob(Document, LogType):
         target_document_type: DF.Link | None
         target_document_name: DF.DynamicLink | None
         task_id: DF.Link | None
-        timeout: DF.Int
         title: DF.Data | None
         trigger_type: DF.Literal[
             "Manual", "Scheduler", "Webhook", "API", "Document Hook"
@@ -121,10 +117,6 @@ class SyncJob(Document, LogType):
                 self.target_document_type = job_type.target_document_type
 
             # Allow override, otherwise use defaults from type
-            if self.queue is None:
-                self.queue = job_type.queue or "default"
-            if self.timeout is None:
-                self.timeout = job_type.timeout or 300
             if self.verbose_logging is None:
                 self.verbose_logging = job_type.verbose_logging or 0
 
@@ -171,15 +163,10 @@ class SyncJob(Document, LogType):
         Cancel sync job (only Pending, Queued, Waiting or Failed)
 
         Args:
-            reason: Optional cancellation reason
+            reason: Optional cancellation reason (passed to the linked async task)
         """
         if self.status not in ["Pending", "Queued", "Waiting", "Failed"]:
             frappe.throw(_("Cannot cancel job with status {0}").format(self.status))
-
-        # Set cancel reason before canceling the task so the fresh doc
-        # fetched by on_async_task_status_update sees it
-        if reason:
-            self.db_set("cancel_reason", reason, update_modified=False)
 
         # Cancel async task if one is linked — its status update will call
         # on_async_task_status_update("Canceled") which calls _finish_job
@@ -224,9 +211,7 @@ class SyncJob(Document, LogType):
         """
         if task.status == "Pending" and (task.retry_count or 0) > 0:
             # Auto-retry: the dispatcher has reset the task to Pending for another attempt
-            self.db_set(
-                {"status": "Waiting", "error_message": None}, update_modified=False
-            )
+            self.db_set({"status": "Waiting"}, update_modified=False)
         elif task.status == "Queued":
             self.db_set(
                 {"status": "Queued", "task_id": task.name}, update_modified=False
@@ -236,13 +221,7 @@ class SyncJob(Document, LogType):
                 {"status": "Started", "task_id": task.name}, update_modified=False
             )
         elif task.status == "Failed":
-            self.db_set(
-                {
-                    "status": "Failed",
-                    "error_message": task.error_message,
-                },
-                update_modified=False,
-            )
+            self.db_set({"status": "Failed"}, update_modified=False)
         elif task.status == "Canceled":
             self._finish_job(status="Canceled")
         # "Finished" — execute() already set the correct business status
@@ -269,8 +248,8 @@ class SyncJob(Document, LogType):
             "tweaks.tweaks.doctype.sync_job.sync_job.execute_sync_job",
             document_type="Sync Job",
             document_name=self.name,
-            queue=self.queue or job_type.queue or "default",
-            timeout=self.timeout or job_type.timeout or 300,
+            queue=job_type.queue or "default",
+            timeout=job_type.timeout or 300,
             max_retries=job_type.max_retries or 0,
             retry_delay=(job_type.retry_delay or 0) * 60,  # convert minutes -> seconds
             sync_job_name=self.name,
@@ -366,10 +345,9 @@ class SyncJob(Document, LogType):
         # Validate module structure (hard validation)
         try:
             validate_sync_job_module(module, soft=False)
-        except Exception as e:
+        except Exception:
             # Module validation error — set Failed and re-raise (no retry for config errors)
             self.status = "Failed"
-            self.error_message = _("Module validation failed: {0}").format(str(e))
             self.flags.ignore_links = True
             self.save(ignore_permissions=True)
             frappe.db.commit()
@@ -570,8 +548,6 @@ class SyncJob(Document, LogType):
                 target_document_type=target_info["target_document_type"],
                 target_document_name=target_info.get("target_document_name"),
                 parent_sync_job=self.name,
-                queue=self.queue,
-                timeout=self.timeout,
                 trigger_type=self.trigger_type,
                 triggered_by_document_name=self.triggered_by_document_name,
                 triggered_by_document_type=self.triggered_by_document_type,
@@ -805,7 +781,6 @@ class SyncJob(Document, LogType):
             return
 
         self.status = "Failed"
-        self.error_message = frappe.get_traceback(with_context=True)
 
         self.flags.ignore_links = True
         self.save(ignore_permissions=True)
