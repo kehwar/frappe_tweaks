@@ -5,6 +5,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "job_name",
   "method",
   "document_type",
   "document_name",
@@ -34,6 +35,13 @@
   "debug_log"
  ],
  "fields": [
+  {
+   "fieldname": "job_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Job Name",
+   "read_only": 1
+  },
   {
    "default": "default",
    "fieldname": "queue",
@@ -267,6 +275,6 @@
    "title": "Canceled"
   }
  ],
- "title_field": "method",
+ "title_field": "job_name",
  "track_changes": 1
 }

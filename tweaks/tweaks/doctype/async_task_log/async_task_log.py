@@ -71,6 +71,7 @@ class AsyncTaskLog(Document):
         ended_at: DF.Datetime | None
         error_message: DF.LongText | None
         job_id: DF.Data | None
+        job_name: DF.Data | None
         kwargs: DF.Code | None
         max_retries: DF.Int
         method: DF.Data | None
@@ -110,6 +111,9 @@ class AsyncTaskLog(Document):
                     "and 'document_action' must be provided."
                 )
             )
+
+        if not self.job_name:
+            self.job_name = self.method
 
     def after_insert(self):
         if self.flags.get("skip_dispatch") or self.status == "Paused":
@@ -368,7 +372,7 @@ class AsyncTaskLog(Document):
             queue=self.queue or "default",
             timeout=self.timeout or 300,
             at_front=bool(self.at_front),
-            job_name=self.method,
+            job_name=self.job_name or self.method,
             enqueue_after_commit=True,
             task_name=self.name,
         )
@@ -408,6 +412,7 @@ def enqueue_async_task(
     queue: str = "default",
     timeout: int | None = None,
     *,
+    job_name: str | None = None,
     document_type: str | None = None,
     document_name: str | None = None,
     document_action: str | None = None,
@@ -430,6 +435,7 @@ def enqueue_async_task(
         *document_type*, *document_name*, and *document_action* are all provided;
         in that case *method* is derived automatically as the doctype controller
         path + ``".{action}"``.
+    :param job_name: Human-readable label for the task (used as title). Defaults to *method* when not provided.
     :param document_type: DocType name of the document to act on
     :param document_name: Name of the document to act on
     :param document_action: Method name to call on the document (e.g. ``"submit"``)
@@ -463,6 +469,7 @@ def enqueue_async_task(
         "doctype": "Async Task Log",
         "queue": queue or "default",
         "method": method,
+        "job_name": job_name,
         "document_type": document_type,
         "document_name": document_name,
         "document_action": document_action,
@@ -519,6 +526,7 @@ def enqueue_safe_async_task(
     queue: str = "default",
     timeout: int | None = None,
     *,
+    job_name: str | None = None,
     at_front: bool = False,
     batch_id: str | None = None,
     batch_order: int | None = None,
@@ -539,6 +547,7 @@ def enqueue_safe_async_task(
         method,
         queue=queue,
         timeout=timeout,
+        job_name=job_name,
         at_front=at_front,
         call_whitelisted_function=True,
         batch_id=batch_id,
