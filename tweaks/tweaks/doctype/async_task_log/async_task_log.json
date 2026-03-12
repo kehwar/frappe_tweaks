@@ -203,12 +203,14 @@
    "default": "0",
    "fieldname": "max_retries",
    "fieldtype": "Int",
-   "label": "Max Retries"
+   "label": "Max Retries",
+   "read_only": 1
   },
   {
    "fieldname": "retry_delay",
    "fieldtype": "Duration",
-   "label": "Retry Delay"
+   "label": "Retry Delay",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_hsrf",
@@ -217,7 +219,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 21:01:08.000000",
+ "modified": "2026-03-12 16:36:25.924819",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Async Task Log",
