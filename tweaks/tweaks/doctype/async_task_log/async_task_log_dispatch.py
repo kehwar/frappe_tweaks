@@ -72,6 +72,8 @@ def dispatch_async_tasks():
 
 def _run_dispatch():
     """Execute the dispatch algorithm inside the filelock."""
+    retry_failed_tasks()
+
     AsyncTask = frappe.qb.DocType("Async Task Log")
     AsyncTaskType = frappe.qb.DocType("Async Task Type")
 
@@ -151,6 +153,44 @@ def expire_stalled_tasks():
         },
         update_modified=False,
     )
+
+
+def retry_failed_tasks():
+    """
+    Automatically retry failed tasks that have remaining retry attempts and whose
+    retry delay has elapsed since the last failure.
+
+    Queries all Failed tasks where ``retry_count < max_retries``, then retries
+    those whose ``retry_delay`` (stored in seconds as a Duration field) has passed
+    since ``modified`` (the timestamp of the last failure).
+    """
+    AsyncTask = frappe.qb.DocType("Async Task Log")
+
+    tasks = (
+        frappe.qb.from_(AsyncTask)
+        .select(AsyncTask.name, AsyncTask.retry_delay, AsyncTask.modified)
+        .where(AsyncTask.status == "Failed")
+        .where(AsyncTask.max_retries > 0)
+        .where(AsyncTask.retry_count < AsyncTask.max_retries)
+        .run(as_dict=True)
+    )
+
+    current_time = now()
+    for task_row in tasks:
+        retry_delay = cint(task_row.retry_delay or 0)
+        if retry_delay > 0 and task_row.modified:
+            retry_after = add_to_date(task_row.modified, seconds=retry_delay)
+            if retry_after > current_time:
+                continue
+
+        try:
+            task = frappe.get_doc("Async Task Log", task_row.name)
+            task.retry()
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"Auto-retry failed for Async Task Log {task_row.name}",
+            )
 
 
 def can_dispatch_now():

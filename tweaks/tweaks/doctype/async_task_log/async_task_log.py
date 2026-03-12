@@ -72,8 +72,11 @@ class AsyncTaskLog(Document):
         error_message: DF.LongText | None
         job_id: DF.Data | None
         kwargs: DF.Code | None
+        max_retries: DF.Int
         method: DF.Data | None
         queue: DF.Literal["default", "short", "long"]
+        retry_count: DF.Int
+        retry_delay: DF.Duration | None
         started_at: DF.Datetime | None
         call_whitelisted_function: DF.Check
         status: DF.Literal[
@@ -319,6 +322,7 @@ class AsyncTaskLog(Document):
         self.db_set(
             {
                 "status": "Pending",
+                "retry_count": (self.retry_count or 0) + 1,
                 "error_message": None,
                 "debug_log": None,
                 "job_id": None,
@@ -401,6 +405,8 @@ def enqueue_async_task(
     batch_order: int | None = None,
     arguments: dict | None = None,
     paused: bool = False,
+    max_retries: int = 0,
+    retry_delay: int | None = None,
     **kwargs,
 ) -> "AsyncTaskLog":
     """
@@ -426,6 +432,8 @@ def enqueue_async_task(
         ``timeout``, etc.).
     :param paused: When ``True``, the task is created with status ``"Paused"`` and will not be
         dispatched until :meth:`toggle_pause` is called.
+    :param max_retries: Maximum number of automatic retry attempts on failure (default: 0 = no retries).
+    :param retry_delay: Delay in seconds before retrying after a failure (Duration field; default: None = retry immediately).
     :param kwargs: Additional keyword arguments forwarded to *method* or the document action
     """
     if callable(method):
@@ -452,6 +460,8 @@ def enqueue_async_task(
         "call_whitelisted_function": 1 if call_whitelisted_function else 0,
         "batch_id": batch_id,
         "batch_order": batch_order,
+        "max_retries": max_retries,
+        "retry_delay": retry_delay,
     }
     if paused:
         task_data["status"] = "Paused"
@@ -502,6 +512,8 @@ def enqueue_safe_async_task(
     batch_order: int | None = None,
     arguments: dict | None = None,
     paused: bool = False,
+    max_retries: int = 0,
+    retry_delay: int | None = None,
     **kwargs,
 ) -> "AsyncTaskLog":
     """
@@ -521,6 +533,8 @@ def enqueue_safe_async_task(
         batch_order=batch_order,
         arguments=arguments,
         paused=paused,
+        max_retries=max_retries,
+        retry_delay=retry_delay,
         **kwargs,
     )
 
