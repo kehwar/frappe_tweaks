@@ -100,7 +100,7 @@ class AsyncTaskLog(Document):
             self.cancel_job()
 
     @frappe.whitelist()
-    def cancel(self):
+    def cancel(self, message=None):
         """
         Cancel a task: if it's Pending it becomes Canceled; if Queued or Started, the RQ job is stopped/deleted and then the task is marked Canceled.
         """
@@ -109,7 +109,10 @@ class AsyncTaskLog(Document):
 
         self.cancel_job()
 
-        self.update_status("Canceled")
+        if message:
+            frappe.debug_log.extend(["", _("Task canceled with message:"), message])
+
+        self.update_status("Canceled", message=message)
 
     def cancel_job(self):
         """
@@ -163,7 +166,7 @@ class AsyncTaskLog(Document):
             method = frappe.get_attr(self.method)
             method(**kwargs)
 
-    def update_status(self, status):
+    def update_status(self, status, message=None):
         """
         Persist task status to the database and update in-memory state.
 
@@ -195,7 +198,7 @@ class AsyncTaskLog(Document):
 
         self.db_set(payload, update_modified=True, notify=True, commit=True)
 
-        self.notify_status()
+        self.notify_status(message=message)
 
     def notify_status(self, message=None):
         """

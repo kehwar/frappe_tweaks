@@ -15,11 +15,27 @@ frappe.ui.form.on("Async Task Log", {
 			});
 		}
 
-		if (["Queued", "Started"].includes(frm.doc.status)) {
+		if (["Pending", "Queued", "Started"].includes(frm.doc.status)) {
 			frm.add_custom_button(__("Cancel"), () => {
-				frappe.confirm(__("Are you sure you want to cancel this task?"), () => {
-					frm.call("cancel").then(() => frm.reload_doc());
+				const d = new frappe.ui.Dialog({
+					title: __("Cancel Task"),
+					fields: [
+						{
+							fieldtype: "Data",
+							fieldname: "message",
+							label: __("Message"),
+							description: __("Optional reason or note for canceling this task"),
+						},
+					],
+					primary_action_label: __("Cancel Task"),
+					primary_action({ message }) {
+						d.hide();
+						frm.call("cancel", { message: message || null }).then(() =>
+							frm.reload_doc()
+						);
+					},
 				});
+				d.show();
 			});
 		}
 	},
