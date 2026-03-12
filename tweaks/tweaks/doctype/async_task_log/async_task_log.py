@@ -109,12 +109,7 @@ class AsyncTaskLog(Document):
 
         self.cancel_job()
 
-        self.db_set(
-            {"status": "Canceled", "ended_at": now()},
-            update_modified=True,
-            notify=True,
-            commit=True,
-        )
+        self.update_status("Canceled")
 
     def cancel_job(self):
         """
@@ -194,7 +189,7 @@ class AsyncTaskLog(Document):
             job = get_current_job()
             payload["job_id"] = job.id if job else None
             payload["started_at"] = now()
-        if status == "Finished":
+        if status in ("Finished", "Failed", "Canceled"):
             payload["ended_at"] = now()
             if self.started_at:
                 payload["time_taken"] = time_diff_in_seconds(
@@ -204,7 +199,7 @@ class AsyncTaskLog(Document):
                 resource.RUSAGE_SELF
             ).ru_maxrss
 
-        self.db_set(payload, update_modified=False, notify=True, commit=True)
+        self.db_set(payload, update_modified=True, notify=True, commit=True)
 
     @frappe.whitelist()
     def enqueue_execution(self):
