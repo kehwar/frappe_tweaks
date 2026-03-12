@@ -49,13 +49,10 @@ class SyncJob(Document, LogType):
         update_without_changes_enabled: DF.Check
         verbose_logging: DF.Check
         dry_run: DF.Check
-        max_retries: DF.Int
         multiple_target_documents: DF.Code | None
         operation: DF.Literal["", "Insert", "Update", "Delete"]
         parent_sync_job: DF.Link | None
         queue: DF.Data | None
-        queue_on_insert: DF.Check
-        retry_delay: DF.Int
         source_document_type: DF.Link | None
         source_document_name: DF.DynamicLink | None
         status: DF.Literal[
@@ -128,10 +125,6 @@ class SyncJob(Document, LogType):
                 self.queue = job_type.queue or "default"
             if self.timeout is None:
                 self.timeout = job_type.timeout or 300
-            if self.retry_delay is None:
-                self.retry_delay = job_type.retry_delay or 5
-            if self.max_retries is None:
-                self.max_retries = job_type.max_retries or 3
             if self.verbose_logging is None:
                 self.verbose_logging = job_type.verbose_logging or 0
 
@@ -160,13 +153,8 @@ class SyncJob(Document, LogType):
             return self.source_document_type[:140]
 
     def after_insert(self):
-        """Enqueue sync job after insert via the Async Task system.
-
-        When queue_on_insert is True the task starts as Pending and will be
-        dispatched automatically. When False the task starts as Paused and will
-        not run until start() is called.
-        """
-        self._enqueue_async_task(paused=not self.queue_on_insert)
+        """Enqueue sync job after insert via the Async Task system."""
+        self._enqueue_async_task()
 
     def on_trash(self):
         """Cancel the linked async task's RQ job on delete."""
@@ -215,21 +203,6 @@ class SyncJob(Document, LogType):
         task = frappe.get_doc("Async Task Log", self.task_id)
         task.retry(now=True)
 
-    @frappe.whitelist()
-    def start(self):
-        """Manually start a pending (paused) sync job."""
-        if self.status != "Pending":
-            frappe.throw(_("Can only start jobs with status Pending"))
-
-        if not self.task_id:
-            frappe.throw(_("No async task linked"))
-
-        task = frappe.get_doc("Async Task Log", self.task_id)
-        if task.status != "Paused":
-            frappe.throw(_("Cannot start: linked async task is not paused"))
-
-        task.toggle_pause()
-
     @staticmethod
     def clear_old_logs(days: int = 30) -> None:
         """Delete old sync jobs (called by Frappe's log cleanup)"""
@@ -275,31 +248,31 @@ class SyncJob(Document, LogType):
         # "Finished" — execute() already set the correct business status
         # (Finished / Skipped / No Target / Relayed) via _finish_job()
 
-    def _enqueue_async_task(self, paused=False):
+    def _enqueue_async_task(self):
         """
         Create an Async Task Log for this sync job and store the link.
 
-        The task is created with `paused=True` when `queue_on_insert` is disabled
-        so it sits idle until start() is called. The Async Task Type for
-        execute_sync_job has concurrency_limit=1, ensuring only one sync job runs
-        at a time.
+        The Async Task Type for execute_sync_job has concurrency_limit=1, ensuring
+        only one sync job runs at a time.
 
-        The async task stores queue, timeout, and retry settings so the dispatcher
-        and retry mechanism handle scheduling without extra logic here.
+        Queue, timeout, and retry settings are read from the linked Sync Job Type
+        and stored on the async task so the dispatcher and retry mechanism handle
+        scheduling without extra logic here.
         """
         from tweaks.tweaks.doctype.async_task_log.async_task_log import (
             enqueue_async_task,
         )
 
+        job_type = frappe.get_doc("Sync Job Type", self.sync_job_type)
+
         task = enqueue_async_task(
             "tweaks.tweaks.doctype.sync_job.sync_job.execute_sync_job",
             document_type="Sync Job",
             document_name=self.name,
-            queue=self.queue or "default",
-            timeout=self.timeout or 300,
-            max_retries=self.max_retries or 0,
-            retry_delay=(self.retry_delay or 0) * 60,  # convert minutes -> seconds
-            paused=paused,
+            queue=self.queue or job_type.queue or "default",
+            timeout=self.timeout or job_type.timeout or 300,
+            max_retries=job_type.max_retries or 0,
+            retry_delay=(job_type.retry_delay or 0) * 60,  # convert minutes -> seconds
             sync_job_name=self.name,
         )
         self.db_set("task_id", task.name, update_modified=False)
@@ -599,13 +572,10 @@ class SyncJob(Document, LogType):
                 parent_sync_job=self.name,
                 queue=self.queue,
                 timeout=self.timeout,
-                retry_delay=self.retry_delay,
-                max_retries=self.max_retries,
                 trigger_type=self.trigger_type,
                 triggered_by_document_name=self.triggered_by_document_name,
                 triggered_by_document_type=self.triggered_by_document_type,
                 trigger_document_timestamp=self.trigger_document_timestamp,
-                queue_on_insert=self.queue_on_insert,
                 dry_run=self.dry_run,
             )
 

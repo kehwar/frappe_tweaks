@@ -31,11 +31,7 @@
   "section_break_config",
   "queue",
   "timeout",
-  "queue_on_insert",
   "dry_run",
-  "column_break_3",
-  "retry_delay",
-  "max_retries",
   "column_break_ewsh",
   "insert_enabled",
   "update_enabled",
@@ -169,13 +165,6 @@
    "read_only": 1
   },
   {
-   "default": "1",
-   "fieldname": "queue_on_insert",
-   "fieldtype": "Check",
-   "label": "Auto Queue",
-   "set_only_once": 1
-  },
-  {
    "fieldname": "section_break_config",
    "fieldtype": "Section Break",
    "label": "Job Configuration"
@@ -196,28 +185,6 @@
    "fieldname": "timeout",
    "fieldtype": "Int",
    "label": "Timeout",
-   "set_only_once": 1
-  },
-  {
-   "fieldname": "column_break_3",
-   "fieldtype": "Column Break"
-  },
-  {
-   "description": "Delay between retries in minutes",
-   "fetch_from": "sync_job_type.retry_delay",
-   "fetch_if_empty": 1,
-   "fieldname": "retry_delay",
-   "fieldtype": "Int",
-   "label": "Retry Delay",
-   "set_only_once": 1
-  },
-  {
-   "description": "Maximum retry attempts",
-   "fetch_from": "sync_job_type.max_retries",
-   "fetch_if_empty": 1,
-   "fieldname": "max_retries",
-   "fieldtype": "Int",
-   "label": "Max Retries",
    "set_only_once": 1
   },
   {
