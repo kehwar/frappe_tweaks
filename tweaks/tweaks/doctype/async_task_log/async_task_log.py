@@ -294,6 +294,16 @@ class AsyncTaskLog(Document):
 
         self.notify_status(message=message)
 
+    def notify_target_document(self, message=None):
+        """
+        Publish a realtime message to the owner of the document this task is acting on, if any.
+
+        :param message: Message payload (dict)
+        """
+        if self.document_type and self.document_name:
+            doc = frappe.get_doc(self.document_type, self.document_name)
+            doc.run_method("on_async_task_status_update", task=self, message=message)
+
     def notify_status(self, message=None):
         """
         Publish a realtime message to the user who enqueued the task.
