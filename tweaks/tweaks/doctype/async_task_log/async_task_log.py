@@ -148,12 +148,6 @@ class AsyncTaskLog(Document):
             frappe.db.rollback()
             _save_error(self, error=frappe.get_traceback(with_context=True))
 
-        frappe.publish_realtime(
-            "async_task_complete",
-            {"name": self.name, "status": self.status},
-            user=frappe.session.user,
-        )
-
         enqueue_dispatch_async_tasks()
 
     def _execute(self):
@@ -200,6 +194,21 @@ class AsyncTaskLog(Document):
             ).ru_maxrss
 
         self.db_set(payload, update_modified=True, notify=True, commit=True)
+
+        self.notify_status()
+
+    def notify_status(self, message=None):
+        """
+        Publish a realtime message to the user who enqueued the task.
+
+        :param event: Realtime event name
+        :param message: Message payload (dict)
+        """
+        frappe.publish_realtime(
+            "async_task_status",
+            {"name": self.name, "status": self.status, "message": message},
+            user=frappe.session.user,
+        )
 
     @frappe.whitelist()
     def enqueue_execution(self):
