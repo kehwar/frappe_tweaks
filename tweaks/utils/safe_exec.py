@@ -1,5 +1,6 @@
 import re
 import traceback
+from time import sleep
 
 import frappe
 import yaml
@@ -24,7 +25,7 @@ from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import (
     has_ac_permission,
     has_resource_access,
 )
-from tweaks.tweaks.doctype.async_task.async_task import enqueue_safe_async_task
+from tweaks.tweaks.doctype.async_task_log.async_task_log import enqueue_safe_async_task
 from tweaks.tweaks.doctype.open_observe_api.open_observe_api import (
     search_logs,
     send_logs,
@@ -136,6 +137,7 @@ def safe_exec_globals(out):
             "re": get_re_module(),
             "safe_exec": safe_exec.safe_exec,
             "traceback": NamespaceDict(format_stack=traceback.format_stack),
+            "time": NamespaceDict(sleep=sleep),
             "xlsxutils": NamespaceDict(
                 read_xlsx_file_from_attached_file=read_xlsx_file_from_attached_file,
                 read_xls_file_from_attached_file=read_xls_file_from_attached_file,

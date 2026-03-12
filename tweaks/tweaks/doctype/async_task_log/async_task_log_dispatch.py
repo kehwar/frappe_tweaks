@@ -2,7 +2,7 @@
 # See license.txt
 
 """
-Dispatch logic for the Async Task system.
+Dispatch logic for the Async Task Log system.
 
 Dispatch algorithm:
 - A filelock prevents concurrent dispatcher runs; a second call exits immediately.
@@ -39,8 +39,8 @@ def enqueue_dispatch_async_tasks():
         dispatch_async_tasks,
         queue="default",
         enqueue_after_commit=True,
-        job_name="async_task_dispatch",
-        job_id="async_task_dispatch",
+        job_name="dispatch_async_tasks",
+        job_id="dispatch_async_tasks",
         deduplicate=True,
     )
 
@@ -64,7 +64,7 @@ def dispatch_async_tasks():
 
 def _run_dispatch():
     """Execute the dispatch algorithm inside the filelock."""
-    AsyncTask = frappe.qb.DocType("Async Task")
+    AsyncTask = frappe.qb.DocType("Async Task Log")
     AsyncTaskType = frappe.qb.DocType("Async Task Type")
 
     # All pending tasks joined with their type config, ordered for execution
@@ -117,7 +117,7 @@ def _run_dispatch():
 def _enqueue_task(task_row):
     """Set a task to Queued and enqueue it in RQ."""
 
-    task = frappe.get_doc("Async Task", task_row.name)
+    task = frappe.get_doc("Async Task Log", task_row.name)
     task.enqueue_execution()
 
 
@@ -127,7 +127,7 @@ def expire_stalled_tasks():
     Based on: frappe.core.doctype.prepared_report.prepared_report.expire_stalled_reports
     """
     frappe.db.set_value(
-        "Async Task",
+        "Async Task Log",
         {
             "status": "Started",
             "modified": (

@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestAsyncTask(FrappeTestCase):
-	pass
+class TestAsyncTaskLog(FrappeTestCase):
+    pass

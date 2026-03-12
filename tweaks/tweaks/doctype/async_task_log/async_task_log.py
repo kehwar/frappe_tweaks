@@ -2,15 +2,15 @@
 # See license.txt
 
 """
-Async Task document controller and public API.
+Async Task Log document controller and public API.
 
 Async Task Type (optional) defines per-method configuration: priority and a
-concurrency limit. Async Task stores a Python dotted-path method + JSON kwargs
+concurrency limit. Async Task Log stores a Python dotted-path method + JSON kwargs
 to run as a background job.
 
 Usage::
 
-    from tweaks.tweaks.doctype.async_task.async_task import enqueue_async_task
+    from tweaks.tweaks.doctype.async_task_log.async_task_log import enqueue_async_task
 
     # Create and immediately dispatch a task
     task = enqueue_async_task(
@@ -39,7 +39,7 @@ from frappe.utils import now, time_diff_in_seconds
 from frappe.utils.background_jobs import enqueue
 from rq import get_current_job
 
-from tweaks.tweaks.doctype.async_task.async_task_dispatch import (
+from tweaks.tweaks.doctype.async_task_log.async_task_log_dispatch import (
     enqueue_dispatch_async_tasks,
 )
 
@@ -48,7 +48,7 @@ AsyncTaskStatus = Literal[
 ]
 
 
-class AsyncTask(Document):
+class AsyncTaskLog(Document):
     # begin: auto-generated types
     # This code is auto-generated. Do not modify anything in this block.
 
@@ -128,10 +128,10 @@ class AsyncTask(Document):
     @staticmethod
     def clear_old_logs(days=90):
         """
-        Clear Async Tasks that ended more than `days` ago.
+        Clear Async Task Logs that ended more than `days` ago.
         Based on: frappe.core.doctype.scheduled_job_log.scheduled_job_log.ScheduledJobLog.clear_old_logs
         """
-        table = frappe.qb.DocType("Async Task")
+        table = frappe.qb.DocType("Async Task Log")
         frappe.db.delete(
             table, filters=(table.modified < (Now() - Interval(days=days)))
         )
@@ -229,7 +229,7 @@ def execute_task(task_name):
     """
     Execute a task by name. To be called by the RQ worker process.
     """
-    task = frappe.get_doc("Async Task", task_name)
+    task = frappe.get_doc("Async Task Log", task_name)
     task.unlock()
     task.execute()
 
@@ -242,9 +242,9 @@ def enqueue_async_task(
     at_front: bool = False,
     call_whitelisted_function: bool = False,
     **kwargs,
-) -> "AsyncTask":
+) -> "AsyncTaskLog":
     """
-    Create an Async Task document and trigger dispatch.
+    Create an Async Task Log document and trigger dispatch.
 
     Signature mirrors :func:`frappe.utils.background_jobs.enqueue`.
 
@@ -260,7 +260,7 @@ def enqueue_async_task(
 
     task = frappe.get_doc(
         {
-            "doctype": "Async Task",
+            "doctype": "Async Task Log",
             "queue": queue or "default",
             "method": method,
             "kwargs": json.dumps(kwargs),
@@ -270,7 +270,7 @@ def enqueue_async_task(
         }
     )
     task.insert(ignore_permissions=True)
-    # Dispatching is enqueued by the after_insert hook on AsyncTask
+    # Dispatching is enqueued by the after_insert hook on AsyncTaskLog
     return task
 
 
@@ -281,7 +281,7 @@ def enqueue_safe_async_task(
     *,
     at_front: bool = False,
     **kwargs,
-) -> "AsyncTask":
+) -> "AsyncTaskLog":
     """
     Shorthand for :func:`enqueue_async_task` with ``call_whitelisted_function=True``.
 
