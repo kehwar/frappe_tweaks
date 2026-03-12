@@ -1,6 +1,6 @@
 ---
 name: frappe-tweaks-async-tasks
-description: Expert guidance for enqueueing and managing Async Tasks in Frappe Tweaks. Use when working with enqueue_async_task, enqueue_safe_async_task, bulk_enqueue_async_task, bulk_enqueue_safe_async_task, toggle_dispatcher, Async Task Log, Async Task Type, implementing concurrency limits, per-method priority ordering, task cancellation, batch/bulk task submission, document action tasks (document_type/document_name/document_action), dispatcher control, or choosing between Async Tasks and standard frappe.enqueue background jobs.
+description: Expert guidance for enqueueing and managing Async Tasks in Frappe Tweaks. Use when working with enqueue_async_task, enqueue_safe_async_task, bulk_enqueue_async_task, bulk_enqueue_safe_async_task, toggle_dispatcher, Async Task Log, Async Task Type, implementing concurrency limits, per-method priority ordering, task cancellation, batch/bulk task submission, document action tasks (document_type/document_name/document_action), dispatcher control, auto-retry on failure (max_retries, retry_delay, retry_count), or choosing between Async Tasks and standard frappe.enqueue background jobs.
 ---
 
 # Async Tasks Expert
@@ -17,6 +17,7 @@ Expert guidance for the Frappe Tweaks Async Task system — a managed, observabl
 | Cancellation | Cannot cancel | Cancel from UI or code |
 | Server Script support | No | Yes (`call_whitelisted_function=True`) |
 | Deduplication | Optional (`job_id`) | Via dispatcher deduplication |
+| Auto-retry on failure | No | Yes (`max_retries` + `retry_delay`) |
 
 **Use Async Tasks when any of the following apply:**
 - You need to see task status, errors, or execution time in the UI
@@ -24,6 +25,7 @@ Expert guidance for the Frappe Tweaks Async Task system — a managed, observabl
 - You want tasks to queue up and respect a priority order rather than flood workers
 - The method is a whitelisted function or Server Script
 - You need to be able to cancel tasks programmatically
+- You want failed tasks to be automatically retried after a configurable delay
 
 **Stick with `frappe.enqueue` when:**
 - The job is fire-and-forget with no UI visibility required
@@ -55,6 +57,9 @@ task = enqueue_async_task(
     document_type=None,             # DocType name  ┐ all three must be provided
     document_name=None,             # document name ┤ together; method is then auto-derived
     document_action=None,           # method to call on the document (e.g. "submit") ┘
+    # --- retry options ---
+    max_retries=0,                  # max automatic retry attempts on failure; 0 = no retries
+    retry_delay=None,               # seconds to wait after failure before retrying; None = retry immediately
     # --- other options ---
     at_front=False,                 # jump ahead of other Pending tasks for this method
     call_whitelisted_function=False,# execute via call_whitelisted_function (Server Scripts)
@@ -71,10 +76,12 @@ task = enqueue_async_task(
 - When the document fields are used, `method` is automatically derived as the doctype controller dotted path + `".{action}"` (e.g. `"erpnext.accounts.doctype.sales_invoice.sales_invoice.submit"`).
 - Inner function resolution is applied at execution time: if the document controller defines `_submit`, it is called instead of `submit` (mirroring `Document.queue_action`).
 - Use `arguments={"queue": "short"}` (not `queue=` in `**kwargs`) whenever a method argument name collides with an `enqueue_async_task` API parameter — `arguments` takes priority over `**kwargs` and its keys are never intercepted by the function signature.
+- `max_retries=0` (the default) disables automatic retries. Set to a positive integer to enable them.
+- `retry_delay` is the number of seconds to wait (measured from the task's `modified` timestamp on failure) before the next retry attempt. `None` or `0` means retry on the next dispatch cycle.
 
 ### `enqueue_safe_async_task`
 
-Shorthand for `enqueue_async_task(..., call_whitelisted_function=True)`. Use when calling whitelisted functions or Server Scripts by name.
+Shorthand for `enqueue_async_task(..., call_whitelisted_function=True)`. Use when calling whitelisted functions or Server Scripts by name. Accepts the same `max_retries` and `retry_delay` parameters.
 
 ```python
 task = enqueue_safe_async_task(
@@ -190,7 +197,7 @@ frappe.get_doc({
 
 ```
 Pending → Queued → Started → Finished
-                           ↘ Failed
+                           ↘ Failed ──(auto-retry)──→ Pending
           ↘ Canceled  (from Pending, Queued, or Started)
 ```
 
@@ -199,6 +206,7 @@ Pending → Queued → Started → Finished
 - **Started**: Worker picked it up.
 - **Finished / Failed**: Terminal states. `error_message` populated on failure.
 - **Canceled**: Manually canceled; RQ job stopped if already Queued/Started.
+- **Auto-retry**: When a task has `max_retries > 0` and `retry_count < max_retries`, the dispatcher automatically resets it to `Pending` after the `retry_delay` has elapsed since the last failure. `retry_count` is incremented each time a retry is triggered.
 
 A realtime event `async_task_status` is published to the creating user on **every status transition** (Queued, Started, Finished, Failed, Canceled). Listen for this event to react to any stage, not just completion.
 
@@ -233,6 +241,40 @@ task = frappe.get_doc("Async Task Log", task_name)
 task.cancel()  # works from Pending, Queued, or Started
 ```
 
+## Retry
+
+Failed tasks can be retried manually or automatically.
+
+### Manual retry
+
+```python
+task = frappe.get_doc("Async Task Log", task_name)
+task.retry()        # reset to Pending and trigger dispatch
+task.retry(now=True)  # enqueue for immediate execution (skip dispatcher)
+```
+
+`retry()` raises if called on a non-Failed/non-Canceled task.
+
+### Automatic retry
+
+Set `max_retries` (and optionally `retry_delay`) when creating the task:
+
+```python
+task = enqueue_async_task(
+    "myapp.utils.sync_customer",
+    max_retries=3,
+    retry_delay=60,   # wait 60 seconds after failure before retrying
+    customer_id="CUST-001",
+)
+```
+
+The dispatcher calls `retry_failed_tasks()` at the start of every dispatch pass. It queries all `Failed` tasks where `max_retries > 0` and `retry_count < max_retries`, then resets those whose `retry_delay` has elapsed since their `modified` timestamp. Each retry increments `retry_count`. When `retry_count` reaches `max_retries` the task stays `Failed` and is no longer picked up automatically.
+
+**Key points:**
+- `retry_count` tracks how many automatic (or manual) retries have been triggered, not how many failures occurred.
+- `retry_delay=None` (or `0`) means retry on the very next dispatch cycle.
+- Per-task errors in `retry_failed_tasks` are logged and do not block retries of other tasks.
+
 ## Observability
 
 Each `Async Task Log` document stores:
@@ -242,6 +284,7 @@ Each `Async Task Log` document stores:
 - `debug_log` if `frappe.debug_log` is populated
 - `job_id` linking to the underlying RQ Job
 - `document_type`, `document_name`, `document_action` — persisted when created via the document action shorthand; used at execution time to re-fetch the document and call the action
+- `max_retries`, `retry_delay`, `retry_count` — retry configuration and current retry counter
 
 ## Dispatcher Control
 

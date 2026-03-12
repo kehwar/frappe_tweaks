@@ -12,6 +12,7 @@ enqueue_async_task()
                 └─ dispatch_async_tasks()        ← runs in worker
                     └─ _run_dispatch()
                         ├─ filelock (non-blocking)
+                        ├─ retry_failed_tasks()  ← auto-retry eligible Failed tasks
                         ├─ fetch all Pending tasks + their AsyncTaskType config
                         ├─ fetch active counts per method
                         └─ for each task:
@@ -60,6 +61,15 @@ with filelock(_DISPATCH_LOCK, timeout=0):
 ### Dispatcher Recovery
 
 The dispatcher is also registered as a scheduled job (`all` event). Even if an `after_insert` trigger is missed (e.g., during a migration or crash), the scheduler will re-trigger dispatch within the next cycle.
+
+## Auto-Retry (`retry_failed_tasks`)
+
+`retry_failed_tasks()` is called at the start of every `_run_dispatch()` pass (inside the filelock). It:
+
+1. Queries all `Failed` tasks where `max_retries > 0` and `retry_count < max_retries`.
+2. For each candidate, checks whether `retry_delay` seconds have elapsed since `modified` (the timestamp of the last failure). If not, skips the task.
+3. Calls `task.retry()` on eligible tasks, which increments `retry_count` and resets the task to `Pending` so it is dispatched in the same pass.
+4. Wraps each retry in a try/except: per-task failures are logged to the Error Log without interrupting the rest.
 
 ## Task Execution (`execute`)
 
@@ -223,6 +233,9 @@ Both `enqueue_dispatch_async_tasks()` and `enqueue_execution()` use `enqueue_aft
 | `peak_memory_usage` | Int | RSS in KB |
 | `error_message` | Code | Traceback on failure |
 | `debug_log` | Code | `frappe.debug_log` captured during execution |
+| `max_retries` | Int | Max automatic retry attempts; `0` = disabled (default) |
+| `retry_delay` | Duration | Seconds to wait after failure before retrying; `None`/`0` = immediate |
+| `retry_count` | Int | System-managed; incremented each time `retry()` is called |
 
 ### Async Task Type
 
