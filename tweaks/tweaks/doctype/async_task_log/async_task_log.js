@@ -41,7 +41,7 @@ frappe.ui.form.on("Async Task Log", {
 
 		if (["Failed", "Canceled"].includes(frm.doc.status)) {
 			frm.add_custom_button(__("Retry"), () => {
-				frm.call("retry").then(() => frm.reload_doc());
+				frm.call("retry", {"now": 1}).then(() => frm.reload_doc());
 			});
 		}
 	},

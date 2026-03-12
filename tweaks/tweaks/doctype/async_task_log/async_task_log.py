@@ -255,7 +255,7 @@ class AsyncTaskLog(Document):
         )
 
     @frappe.whitelist()
-    def retry(self):
+    def retry(self, now=False):
         """
         Retry a failed or canceled task: reset it to Pending and trigger dispatch.
         """
@@ -283,7 +283,11 @@ class AsyncTaskLog(Document):
         )
 
         self.notify_status()
-        enqueue_dispatch_async_tasks()
+
+        if now:
+            self.enqueue_execution()
+        else:
+            enqueue_dispatch_async_tasks()
 
     @frappe.whitelist()
     def enqueue_execution(self):
