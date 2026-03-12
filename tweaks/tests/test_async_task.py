@@ -7,7 +7,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from tweaks.utils.async_task import (
+from tweaks.tweaks.doctype.async_task.async_task import (
     _dispatch_method,
     _run_dispatch,
     dispatch_async_tasks,
@@ -54,7 +54,7 @@ class TestAsyncTaskType(FrappeTestCase):
         frappe.db.rollback()
 
     def test_task_type_created_with_fields(self):
-        t = _make_task_type("tweaks.utils.async_task.execute_async_task", priority=5, limit=3)
+        t = _make_task_type("tweaks.tweaks.doctype.async_task.async_task.execute_async_task", priority=5, limit=3)
         self.assertEqual(t.priority, 5)
         self.assertEqual(t.limit, 3)
 
@@ -70,7 +70,7 @@ class TestDispatcher(FrappeTestCase):
         method = "tweaks.test.method.single"
         task = _make_task(method=method)
 
-        with patch("tweaks.utils.async_task.enqueue"):
+        with patch("tweaks.tweaks.doctype.async_task.async_task.enqueue"):
             _dispatch_method(method, limit=0)
 
         status = frappe.db.get_value("Async Task", task.name, "status")
@@ -81,7 +81,7 @@ class TestDispatcher(FrappeTestCase):
         method = "tweaks.test.method.limit"
         [_make_task(method=method) for _ in range(4)]
 
-        with patch("tweaks.utils.async_task.enqueue"):
+        with patch("tweaks.tweaks.doctype.async_task.async_task.enqueue"):
             _dispatch_method(method, limit=2)
 
         queued = frappe.db.count("Async Task", {"method": method, "status": "Queued"})
@@ -95,7 +95,7 @@ class TestDispatcher(FrappeTestCase):
         normal_task = _make_task(method=method, at_front=False)
         front_task = _make_task(method=method, at_front=True)
 
-        with patch("tweaks.utils.async_task.enqueue"):
+        with patch("tweaks.tweaks.doctype.async_task.async_task.enqueue"):
             _dispatch_method(method, limit=1)
 
         self.assertEqual(frappe.db.get_value("Async Task", front_task.name, "status"), "Queued")
@@ -109,7 +109,7 @@ class TestDispatcher(FrappeTestCase):
 
         pending = _make_task(method=method)
 
-        with patch("tweaks.utils.async_task.enqueue") as mock_enqueue:
+        with patch("tweaks.tweaks.doctype.async_task.async_task.enqueue") as mock_enqueue:
             _dispatch_method(method, limit=1)
             mock_enqueue.assert_not_called()
 
@@ -120,7 +120,7 @@ class TestDispatcher(FrappeTestCase):
         method = "tweaks.test.method.unlimited"
         tasks = [_make_task(method=method) for _ in range(5)]
 
-        with patch("tweaks.utils.async_task.enqueue"):
+        with patch("tweaks.tweaks.doctype.async_task.async_task.enqueue"):
             _dispatch_method(method, limit=0)
 
         for t in tasks:
@@ -141,7 +141,7 @@ class TestDispatcher(FrappeTestCase):
         def fake_dispatch(method, limit):
             dispatched.append(method)
 
-        with patch("tweaks.utils.async_task._dispatch_method", side_effect=fake_dispatch):
+        with patch("tweaks.tweaks.doctype.async_task.async_task._dispatch_method", side_effect=fake_dispatch):
             _run_dispatch()
 
         hi_idx = dispatched.index(method_hi)
@@ -153,10 +153,10 @@ class TestDispatcher(FrappeTestCase):
         from frappe.utils.file_lock import LockTimeoutError
 
         with patch(
-            "tweaks.utils.async_task.filelock",
+            "tweaks.tweaks.doctype.async_task.async_task.filelock",
             side_effect=LockTimeoutError,
         ):
-            with patch("tweaks.utils.async_task._run_dispatch") as mock_run:
+            with patch("tweaks.tweaks.doctype.async_task.async_task._run_dispatch") as mock_run:
                 dispatch_async_tasks()
                 mock_run.assert_not_called()
 
@@ -168,7 +168,7 @@ class TestEnqueueAsyncTask(FrappeTestCase):
         frappe.db.rollback()
 
     def test_creates_task_document(self):
-        with patch("tweaks.utils.async_task.enqueue"):
+        with patch("tweaks.tweaks.doctype.async_task.async_task.enqueue"):
             task = enqueue_async_task(
                 method="frappe.utils.now",
                 kwargs={"foo": "bar"},
@@ -184,7 +184,7 @@ class TestEnqueueAsyncTask(FrappeTestCase):
 
     def test_after_insert_enqueues_dispatch(self):
         """Inserting an Async Task should enqueue dispatch, not call it directly."""
-        with patch("tweaks.utils.async_task.enqueue") as mock_enqueue:
+        with patch("tweaks.tweaks.doctype.async_task.async_task.enqueue") as mock_enqueue:
             task = enqueue_async_task(
                 method="frappe.utils.now",
                 queue="default",

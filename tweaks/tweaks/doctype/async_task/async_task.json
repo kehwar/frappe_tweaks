@@ -19,19 +19,20 @@
   "ended_at",
   "column_break_2",
   "time_taken",
-  "section_break_results",
-  "debug_log",
-  "error_message"
+  "peak_memory_usage",
+  "section_break_output",
+  "error_message",
+  "debug_log"
  ],
  "fields": [
   {
+   "default": "default",
    "fieldname": "queue",
-   "fieldtype": "Data",
+   "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Queue",
-   "default": "default",
-   "description": "RQ queue name (e.g. default, long, short)"
+   "options": "default\nshort\nlong"
   },
   {
    "fieldname": "method",
@@ -64,10 +65,8 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "300",
-   "description": "Job timeout in seconds",
    "fieldname": "timeout",
-   "fieldtype": "Int",
+   "fieldtype": "Duration",
    "label": "Timeout"
   },
   {
@@ -120,21 +119,28 @@
    "read_only": 1
   },
   {
-   "fieldname": "section_break_results",
+   "fieldname": "section_break_output",
    "fieldtype": "Section Break",
-   "label": "Results"
-  },
-  {
-   "fieldname": "debug_log",
-   "fieldtype": "Long Text",
-   "label": "Debug Log",
-   "no_copy": 1,
-   "read_only": 1
+   "label": "Output"
   },
   {
    "fieldname": "error_message",
    "fieldtype": "Long Text",
    "label": "Error Message",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "peak_memory_usage",
+   "fieldtype": "Int",
+   "label": "Peak Memory Usage (KB)",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "debug_log",
+   "fieldtype": "Code",
+   "label": "Debug Log",
    "no_copy": 1,
    "read_only": 1
   }

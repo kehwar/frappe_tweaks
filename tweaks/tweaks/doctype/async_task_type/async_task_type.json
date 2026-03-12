@@ -10,7 +10,7 @@
   "is_standard",
   "column_break_1",
   "priority",
-  "limit"
+  "concurrency_limit"
  ],
  "fields": [
   {
@@ -43,7 +43,7 @@
   {
    "default": "0",
    "description": "Maximum number of concurrently running tasks for this method. 0 means unlimited.",
-   "fieldname": "limit",
+   "fieldname": "concurrency_limit",
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Concurrent Limit"

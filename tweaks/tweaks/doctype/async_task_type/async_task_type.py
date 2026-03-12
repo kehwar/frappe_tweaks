@@ -16,7 +16,7 @@ class AsyncTaskType(Document):
         from frappe.types import DF
 
         is_standard: DF.Check
-        limit: DF.Int
+        concurrency_limit: DF.Int
         method: DF.Data
         priority: DF.Int
     # end: auto-generated types
@@ -28,9 +28,13 @@ class AsyncTaskType(Document):
             and not (frappe.flags.in_migrate or frappe.flags.in_patch)
         ):
             if self.is_new():
-                frappe.throw(_("You are not allowed to create standard Async Task Type"))
+                frappe.throw(
+                    _("You are not allowed to create standard Async Task Type")
+                )
             elif self.has_value_changed("method"):
-                frappe.throw(_("Method cannot be changed for a standard Async Task Type"))
+                frappe.throw(
+                    _("Method cannot be changed for a standard Async Task Type")
+                )
 
     def on_trash(self):
         if (
