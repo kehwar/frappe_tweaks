@@ -208,7 +208,12 @@ class AsyncTaskLog(Document):
             dispatch_paused = True
 
         tasks = frappe.get_all(
-            "Async Task Log", filters={"batch_id": self.batch_id}, pluck="name"
+            "Async Task Log",
+            filters={
+                "batch_id": self.batch_id,
+                "status": ["in", ["Pending", "Queued", "Started"]],
+            },
+            pluck="name",
         )
         for task in tasks:
             task = frappe.get_doc("Async Task Log", task)
