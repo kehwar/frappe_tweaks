@@ -402,35 +402,3 @@ def check_sync_job_module_exists(module, name):
     except ImportError:
         return False
 
-
-def auto_retry_failed_jobs():
-    """
-    Auto-retry failed jobs that are due for retry
-
-    Called by scheduler
-    """
-    from frappe.query_builder import Order
-    from frappe.query_builder.functions import Now
-
-    # Query failed jobs due for retry
-    SyncJob = frappe.qb.DocType("Sync Job")
-
-    failed_jobs = (
-        frappe.qb.from_(SyncJob)
-        .select(SyncJob.name, SyncJob.retry_count, SyncJob.max_retries)
-        .where(SyncJob.status == "Failed")
-        .where(SyncJob.retry_count < SyncJob.max_retries)
-        .where(SyncJob.retry_after <= Now())
-        .orderby(SyncJob.retry_after, order=Order.asc)
-        .run(as_dict=True)
-    )
-
-    # Retry each job
-    for job_data in failed_jobs:
-        try:
-            job = frappe.get_doc("Sync Job", job_data.name)
-            job.retry()
-        except Exception:
-            frappe.log_error(
-                f"Failed to auto-retry Sync Job {job_data.name}", "Auto Retry Sync Job"
-            )

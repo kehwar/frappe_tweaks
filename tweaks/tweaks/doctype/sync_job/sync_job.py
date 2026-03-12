@@ -10,7 +10,6 @@ from frappe.core.doctype.log_settings.log_settings import LogType
 from frappe.model.document import Document
 from frappe.query_builder import Interval
 from frappe.query_builder.functions import Now
-from frappe.utils import add_to_date, now
 
 # Valid sync job operations (immutable)
 VALID_SYNC_OPERATIONS = ("insert", "update", "delete")
@@ -56,8 +55,6 @@ class SyncJob(Document, LogType):
         parent_sync_job: DF.Link | None
         queue: DF.Data | None
         queue_on_insert: DF.Check
-        retry_after: DF.Datetime | None
-        retry_count: DF.Int
         retry_delay: DF.Int
         source_document_type: DF.Link | None
         source_document_name: DF.DynamicLink | None
@@ -163,16 +160,17 @@ class SyncJob(Document, LogType):
             return self.source_document_type[:140]
 
     def after_insert(self):
-        """Enqueue sync job after insert if queue_on_insert is enabled"""
-        # Only queue if queue_on_insert is True
-        if not self.queue_on_insert:
-            return
+        """Enqueue sync job after insert via the Async Task system.
 
-        self._enqueue_async_task()
+        When queue_on_insert is True the task starts as Pending and will be
+        dispatched automatically. When False the task starts as Paused and will
+        not run until start() is called.
+        """
+        self._enqueue_async_task(paused=not self.queue_on_insert)
 
     def on_trash(self):
-        """Cancel background task if queued or waiting"""
-        if self.status in ["Queued", "Waiting"] and self.task_id:
+        """Cancel the linked async task's RQ job on delete."""
+        if self.task_id:
             try:
                 task = frappe.get_doc("Async Task Log", self.task_id)
                 task.cancel_job()
@@ -210,26 +208,27 @@ class SyncJob(Document, LogType):
 
     @frappe.whitelist()
     def retry(self):
-        """Retry failed sync job"""
-        # Increment retry count
-        self.retry_count = (self.retry_count or 0) + 1
+        """Retry failed sync job by retrying the linked async task."""
+        if not self.task_id:
+            frappe.throw(_("No async task linked to retry"))
 
-        # Clear retry_after timestamp and error
-        self.retry_after = None
-        self.error_message = None
-
-        self.flags.ignore_links = True
-        self.save(ignore_permissions=True)
-
-        self._enqueue_async_task()
+        task = frappe.get_doc("Async Task Log", self.task_id)
+        task.retry(now=True)
 
     @frappe.whitelist()
     def start(self):
-        """Manually start a pending sync job"""
+        """Manually start a pending (paused) sync job."""
         if self.status != "Pending":
             frappe.throw(_("Can only start jobs with status Pending"))
 
-        self._enqueue_async_task()
+        if not self.task_id:
+            frappe.throw(_("No async task linked"))
+
+        task = frappe.get_doc("Async Task Log", self.task_id)
+        if task.status != "Paused":
+            frappe.throw(_("Cannot start: linked async task is not paused"))
+
+        task.toggle_pause()
 
     @staticmethod
     def clear_old_logs(days: int = 30) -> None:
@@ -250,7 +249,12 @@ class SyncJob(Document, LogType):
             task: AsyncTaskLog document with the new status
             message: Optional status message
         """
-        if task.status == "Queued":
+        if task.status == "Pending" and (task.retry_count or 0) > 0:
+            # Auto-retry: the dispatcher has reset the task to Pending for another attempt
+            self.db_set(
+                {"status": "Waiting", "error_message": None}, update_modified=False
+            )
+        elif task.status == "Queued":
             self.db_set(
                 {"status": "Queued", "task_id": task.name}, update_modified=False
             )
@@ -259,26 +263,29 @@ class SyncJob(Document, LogType):
                 {"status": "Started", "task_id": task.name}, update_modified=False
             )
         elif task.status == "Failed":
-            update = {
-                "status": "Failed",
-                "error_message": task.error_message,
-            }
-            if (self.retry_count or 0) < self.max_retries:
-                update["retry_after"] = add_to_date(now(), minutes=self.retry_delay or 5)
-            self.db_set(update, update_modified=False)
+            self.db_set(
+                {
+                    "status": "Failed",
+                    "error_message": task.error_message,
+                },
+                update_modified=False,
+            )
         elif task.status == "Canceled":
             self._finish_job(status="Canceled")
         # "Finished" — execute() already set the correct business status
         # (Finished / Skipped / No Target / Relayed) via _finish_job()
 
-    def _enqueue_async_task(self):
+    def _enqueue_async_task(self, paused=False):
         """
-        Enqueue this sync job for execution via the Async Task system.
+        Create an Async Task Log for this sync job and store the link.
 
-        Creates an Async Task Log document linked to this sync job so that
-        status transitions are propagated back through on_async_task_status_update.
-        The Async Task Type for execute_sync_job has concurrency_limit=1, ensuring
-        only one sync job runs at a time.
+        The task is created with `paused=True` when `queue_on_insert` is disabled
+        so it sits idle until start() is called. The Async Task Type for
+        execute_sync_job has concurrency_limit=1, ensuring only one sync job runs
+        at a time.
+
+        The async task stores queue, timeout, and retry settings so the dispatcher
+        and retry mechanism handle scheduling without extra logic here.
         """
         from tweaks.tweaks.doctype.async_task_log.async_task_log import (
             enqueue_async_task,
@@ -290,6 +297,9 @@ class SyncJob(Document, LogType):
             document_name=self.name,
             queue=self.queue or "default",
             timeout=self.timeout or 300,
+            max_retries=self.max_retries or 0,
+            retry_delay=(self.retry_delay or 0) * 60,  # convert minutes -> seconds
+            paused=paused,
             sync_job_name=self.name,
         )
         self.db_set("task_id", task.name, update_modified=False)
@@ -384,7 +394,7 @@ class SyncJob(Document, LogType):
         try:
             validate_sync_job_module(module, soft=False)
         except Exception as e:
-            # Module validation error - don't increment retry_count
+            # Module validation error — set Failed and re-raise (no retry for config errors)
             self.status = "Failed"
             self.error_message = _("Module validation failed: {0}").format(str(e))
             self.flags.ignore_links = True
@@ -827,13 +837,11 @@ class SyncJob(Document, LogType):
         self.status = "Failed"
         self.error_message = frappe.get_traceback(with_context=True)
 
-        # Set retry_after timestamp
-        if (self.retry_count or 0) < self.max_retries:
-            self.retry_after = add_to_date(now(), minutes=self.retry_delay or 5)
-
         self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
+
+        raise  # re-raise so the async task records failure and handles auto-retry
 
 
 @frappe.whitelist()
