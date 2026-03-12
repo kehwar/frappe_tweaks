@@ -26,6 +26,9 @@
   "column_break_hsrf",
   "batch_id",
   "batch_order",
+  "retry_count",
+  "max_retries",
+  "retry_delay",
   "section_break_output",
   "error_message",
   "debug_log"
@@ -189,13 +192,32 @@
    "read_only": 1
   },
   {
+   "default": "0",
+   "fieldname": "retry_count",
+   "fieldtype": "Int",
+   "label": "Retry Count",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "max_retries",
+   "fieldtype": "Int",
+   "label": "Max Retries"
+  },
+  {
+   "fieldname": "retry_delay",
+   "fieldtype": "Duration",
+   "label": "Retry Delay"
+  },
+  {
    "fieldname": "column_break_hsrf",
    "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 15:27:10.806079",
+ "modified": "2026-03-12 21:01:08.000000",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Async Task Log",
