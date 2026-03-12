@@ -162,7 +162,7 @@ def can_dispatch_now():
     return True
 
 
-def _set_dispatcher_state(enabled: bool):
+def _set_dispatcher_state(enabled):
     """
     Persist the dispatcher suspension flag without permission checks.
 
@@ -170,6 +170,7 @@ def _set_dispatcher_state(enabled: bool):
     and :func:`bulk_enqueue_async_task` (may run in a worker context).
     """
     frappe.db.set_default("suspend_async_task_dispatch", 0 if enabled else 1)
+    frappe.db.commit()
 
 
 @frappe.whitelist()
