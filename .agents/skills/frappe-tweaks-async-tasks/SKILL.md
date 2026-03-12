@@ -107,7 +107,7 @@ tasks = bulk_enqueue_async_task(
 **Key behaviour:**
 - Extra `**kwargs` are merged into **every** task dict (useful for shared fields like `queue` or `timeout`).
 - Individual task dicts can still override merged values before calling `enqueue_async_task`.
-- Returns `None`; use the `batch_id` (or query `Async Task Log` by `batch_id`) to track completion.
+- Returns the `batch_id` string (auto-generated if not provided); use it to query `Async Task Log` by `batch_id` to track completion.
 
 ### `bulk_enqueue_safe_async_task`
 
@@ -239,6 +239,7 @@ Each `Async Task Log` document stores:
 - `error_message` with full traceback on failure
 - `debug_log` if `frappe.debug_log` is populated
 - `job_id` linking to the underlying RQ Job
+- `document_type`, `document_name`, `document_action` — persisted when created via the document action shorthand; used at execution time to re-fetch the document and call the action
 
 ## Dispatcher Control
 

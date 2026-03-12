@@ -30,7 +30,8 @@
 | Field | Async Task Log | Prepared Report |
 |---|---|---|
 | **Naming** | `autoname: hash` | `autoname: hash` |
-| `method` / `report_name` | `method` (Data) — dotted Python path or Server Script name | `report_name` (Data) — Frappe Report docname |
+| `method` / `report_name` | `method` (Data, optional when document fields are set) — dotted Python path or Server Script name | `report_name` (Data) — Frappe Report docname |
+| `document_type` / `document_name` / `document_action` | `document_type` (Link), `document_name` (DynamicLink), `document_action` (Data) — document action shorthand; stored on the log, used at execution time | — not supported |
 | `status` | `Select`: Pending / Queued / Started / Finished / Failed / Canceled | `Select`: Queued / Started / Completed / Error |
 | `queue` | `Select` (default / short / long) | hardcoded `"long"` in `after_insert` |
 | `timeout` | `Duration` (stored, forwarded to RQ) | fetched live from `Report.timeout`; fallback 25 min |

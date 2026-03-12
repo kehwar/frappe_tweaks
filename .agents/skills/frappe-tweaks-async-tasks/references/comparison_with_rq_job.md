@@ -30,7 +30,8 @@
 | Field | Async Task Log | RQ Job |
 |---|---|---|
 | **Naming** | `autoname: hash` (random UUID) | `autoname: By fieldname` (`job_id`) |
-| Method / callable | `method` (Data) — dotted Python path or Server Script name | `job_name` (Data) — raw callable string stored by RQ |
+| Method / callable | `method` (Data, optional when document fields are set) — dotted Python path or Server Script name | `job_name` (Data) — raw callable string stored by RQ |
+| Document action | `document_type` (Link), `document_name` (DynamicLink), `document_action` (Data) — stored fields for the document action shorthand; execution fetches the doc and calls the action in the worker | — not supported |
 | Status | `Select`: **Pending / Queued / Started / Finished / Failed / Canceled** (Title Case) | `Select`: **queued / started / finished / failed / deferred / scheduled / canceled** (lowercase) |
 | Queue | `queue` (Select: default / short / long) | `queue` (Select: default / short / long) |
 | Timeout | `timeout` (Duration) — stored at enqueue time | `timeout` (Duration) — read from RQ job |

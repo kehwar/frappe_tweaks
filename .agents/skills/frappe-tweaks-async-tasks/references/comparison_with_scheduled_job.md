@@ -65,7 +65,10 @@ of "run without configuration".
 
 | Field | Type | Notes |
 |---|---|---|
-| `method` | Data | Python dotted path |
+| `method` | Data (optional when document fields are provided) | Python dotted path; auto-derived when using document action shorthand |
+| `document_type` | Link → DocType | DocType to act on (document action shorthand) |
+| `document_name` | DynamicLink | Name of the document to act on |
+| `document_action` | Data | Method name to call on the document (e.g. `submit`) |
 | `queue` | Select (`default` / `short` / `long`) | RQ queue |
 | `timeout` | Duration | Job timeout (seconds) |
 | `at_front` | Check | Jump ahead of other Pending tasks for same method |
