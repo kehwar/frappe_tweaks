@@ -3,6 +3,8 @@
 
 frappe.ui.form.on("Async Task Log", {
 	refresh(frm) {
+		frm.disable_save();
+
 		if (frm.doc.job_id) {
 			frm.add_custom_button(__("View Job"), () => {
 				frappe.set_route("Form", "RQ Job", frm.doc.job_id);

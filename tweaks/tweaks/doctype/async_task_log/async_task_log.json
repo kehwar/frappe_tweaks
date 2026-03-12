@@ -195,7 +195,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 14:00:00.000000",
+ "modified": "2026-03-12 15:27:10.806079",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Async Task Log",
@@ -203,7 +203,6 @@
  "owner": "Administrator",
  "permissions": [
   {
-   "create": 1,
    "delete": 1,
    "email": 1,
    "export": 1,
@@ -211,8 +210,7 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
-   "share": 1,
-   "write": 1
+   "share": 1
   }
  ],
  "row_format": "Dynamic",
@@ -223,10 +221,6 @@
   {
    "color": "Yellow",
    "title": "Pending"
-  },
-  {
-   "color": "Purple",
-   "title": "Paused"
   },
   {
    "color": "Blue",
