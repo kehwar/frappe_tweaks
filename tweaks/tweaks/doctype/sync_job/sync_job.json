@@ -45,15 +45,11 @@
   "update_without_changes_enabled",
   "verbose_logging",
   "section_break_execution",
-  "job_id",
+  "task_id",
   "trigger_type",
   "triggered_by_document_type",
   "triggered_by_document_name",
-  "trigger_document_timestamp",
-  "column_break_6",
-  "started_at",
-  "ended_at",
-  "time_taken"
+  "trigger_document_timestamp"
  ],
  "fields": [
   {
@@ -351,36 +347,12 @@
    "label": "Execution Tracking"
   },
   {
-   "description": "RQ job ID",
-   "fieldname": "job_id",
-   "fieldtype": "Data",
-   "label": "Job ID",
+   "description": "Async task that executed this sync job",
+   "fieldname": "task_id",
+   "fieldtype": "Link",
+   "label": "Task",
    "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "started_at",
-   "fieldtype": "Datetime",
-   "label": "Started At",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "ended_at",
-   "fieldtype": "Datetime",
-   "label": "Ended At",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_6",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "time_taken",
-   "fieldtype": "Duration",
-   "label": "Time Taken",
-   "no_copy": 1,
+   "options": "Async Task Log",
    "read_only": 1
   },
   {
