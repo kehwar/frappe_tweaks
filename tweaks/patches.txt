@@ -13,3 +13,4 @@ tweaks.patches.2025.2025_09_25__remove_server_performance_log
 tweaks.patches.2025.2025_10_15__apiperucom
 tweaks.patches.2025.2025_10_31__sunat_tipo_documento_identidad
 tweaks.patches.2025.2025_12_16__add_sync_job_log_settings
+tweaks.patches.2026.2026_03_12__add_async_task_log_settings
