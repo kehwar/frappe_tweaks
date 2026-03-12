@@ -194,6 +194,23 @@ class AsyncTask(Document):
 
         self.db_set(payload, update_modified=False, notify=True, commit=True)
 
+    @frappe.whitelist()
+    def enqueue_execution(self, queue=None, timeout=None, at_front=False):
+
+        if self.status != "Pending":
+            frappe.throw(_("Only Pending tasks can be enqueued."))
+
+        self.update_status("Queued")
+
+        self.queue_action(
+            "execute",
+            queue=queue or self.queue or "default",
+            timeout=timeout or self.timeout or 300,
+            at_front=at_front or bool(self.at_front),
+            job_name=self.method,
+            enqueue_after_commit=True,
+        )
+
 
 def enqueue_async_task(
     method: str | Callable,

@@ -115,31 +115,10 @@ def _run_dispatch():
 
 def _enqueue_task(task_row):
     """Set a task to Queued and enqueue it in RQ."""
-    frappe.db.set_value(
-        "Async Task", task_row.name, "status", "Queued", update_modified=False
-    )
 
-    enqueue(
-        execute_async_task,
-        queue=task_row.queue or "default",
-        timeout=task_row.timeout or 300,
+    task = frappe.get_doc("Async Task", task_row.name)
+    task.enqueue_execution(
+        queue=task_row.queue,
+        timeout=task_row.timeout,
         at_front=bool(task_row.at_front),
-        task_name=task_row.name,
-        enqueue_after_commit=True,
     )
-
-    frappe.db.commit()
-
-
-def execute_async_task(task_name):
-    """
-    Convenience function to execute an Async Task by name.
-
-    Loads the Async Task document and calls its execute() method.
-    Intended to be enqueued as an RQ background job by the dispatcher.
-
-    Args:
-        task_name: Name of the Async Task document to execute
-    """
-    task = frappe.get_doc("Async Task", task_name)
-    task.execute()
