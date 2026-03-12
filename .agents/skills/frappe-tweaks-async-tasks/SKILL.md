@@ -1,6 +1,6 @@
 ---
 name: frappe-tweaks-async-tasks
-description: Expert guidance for enqueueing and managing Async Tasks in Frappe Tweaks. Use when working with enqueue_async_task, enqueue_safe_async_task, bulk_enqueue_async_task, bulk_enqueue_safe_async_task, toggle_dispatcher, Async Task Log, Async Task Type, implementing concurrency limits, per-method priority ordering, task cancellation, batch/bulk task submission, dispatcher control, or choosing between Async Tasks and standard frappe.enqueue background jobs.
+description: Expert guidance for enqueueing and managing Async Tasks in Frappe Tweaks. Use when working with enqueue_async_task, enqueue_safe_async_task, bulk_enqueue_async_task, bulk_enqueue_safe_async_task, toggle_dispatcher, Async Task Log, Async Task Type, implementing concurrency limits, per-method priority ordering, task cancellation, batch/bulk task submission, document action tasks (document_type/document_name/document_action), dispatcher control, or choosing between Async Tasks and standard frappe.enqueue background jobs.
 ---
 
 # Async Tasks Expert
@@ -48,17 +48,27 @@ from tweaks.tweaks.doctype.async_task_log.async_task_log_dispatch import (
 
 ```python
 task = enqueue_async_task(
-    method,                         # dotted path str OR callable
+    method=None,                    # dotted path str OR callable; optional when document_* fields are set
     queue="default",                # "default" | "short" | "long"
     timeout=300,                    # seconds; default 300
+    # --- document action shorthand (alternative to method) ---
+    document_type=None,             # DocType name  ┐ all three must be provided
+    document_name=None,             # document name ┤ together; method is then auto-derived
+    document_action=None,           # method to call on the document (e.g. "submit") ┘
+    # --- other options ---
     at_front=False,                 # jump ahead of other Pending tasks for this method
     call_whitelisted_function=False,# execute via call_whitelisted_function (Server Scripts)
     batch_id=None,                  # optional batch group label; tasks sharing a batch_id are ordered together
     batch_order=None,               # position within the batch; lower values dispatch first
-    **kwargs,                       # forwarded to method as keyword arguments
+    **kwargs,                       # forwarded to method / document action as keyword arguments
 )
 # task.name  → Async Task Log document name
 ```
+
+**Rules:**
+- Pass either `method` **or** all three of `document_type` + `document_name` + `document_action`. Passing neither raises `ValueError`.
+- When the document fields are used, `method` is automatically derived as the doctype controller dotted path + `".{action}"` (e.g. `"erpnext.accounts.doctype.sales_invoice.sales_invoice.submit"`).
+- Inner function resolution is applied at execution time: if the document controller defines `_submit`, it is called instead of `submit` (mirroring `Document.queue_action`).
 
 ### `enqueue_safe_async_task`
 
@@ -121,6 +131,36 @@ from myapp.utils import process_invoice
 task = enqueue_async_task(process_invoice, invoice_name="INV-001")
 # Internally resolves to "myapp.utils.process_invoice"
 ```
+
+### Document Action Shorthand
+
+Use `document_type` + `document_name` + `document_action` instead of `method` when you want to call a method on a specific document in the background. This is the async-task equivalent of `doc.queue_action()`.
+
+```python
+# Submit a Sales Invoice in the background
+task = enqueue_async_task(
+    document_type="Sales Invoice",
+    document_name="SINV-0042",
+    document_action="submit",
+    queue="long",
+)
+
+# Call a custom document method with kwargs
+task = enqueue_async_task(
+    document_type="My Doctype",
+    document_name="MY-001",
+    document_action="my_custom_method",
+    some_arg="value",
+)
+```
+
+**Execution behaviour:**
+1. `frappe.get_doc(document_type, document_name)` is called inside the worker.
+2. `doc.unlock()` is called to release any file lock left from the caller.
+3. Inner function resolution: if `doc._submit` exists and `document_action="submit"`, `_submit` is called instead.
+4. `getattr(doc, action)(**kwargs)` is invoked with any extra kwargs.
+
+**`Async Task Type` concurrency** is keyed on the derived `method` string, so you can set `concurrency_limit` on `"erpnext.accounts.doctype.sales_invoice.sales_invoice.submit"` as usual.
 
 ## Async Task Type (optional configuration)
 
