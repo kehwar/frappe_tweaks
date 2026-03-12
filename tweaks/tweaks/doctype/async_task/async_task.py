@@ -148,6 +148,65 @@ class AsyncTask(Document):
             table, filters=(table.modified < (Now() - Interval(days=days)))
         )
 
+    def execute(self):
+        """
+        Execute this task. Runs inside the RQ worker process.
+
+        Based on:
+            frappe.core.doctype.scheduled_job_type.scheduled_job_type.ScheduledJobType.execute
+            frappe.core.doctype.prepared_report.prepared_report.generate_report
+        """
+        try:
+            self.update_status("Started")
+            kwargs = json.loads(self.kwargs or "{}")
+            method = frappe.get_attr(self.method)
+            method(**kwargs)
+            frappe.db.commit()
+            self.update_status("Finished")
+        except Exception:
+            frappe.db.rollback()
+            _save_error(self, error=frappe.get_traceback(with_context=True))
+
+        frappe.publish_realtime(
+            "async_task_complete",
+            {"name": self.name, "status": self.status},
+            user=frappe.session.user,
+        )
+
+        enqueue_dispatch_async_tasks()
+
+    def update_status(self, status):
+        """
+        Persist task status to the database and update in-memory state.
+
+        Based on: frappe.core.doctype.scheduled_job_type.scheduled_job_type.ScheduledJobType.update_scheduler_log
+        """
+        frappe.logger("async_task").info(
+            f"Async Task {status}: {self.method} for {frappe.local.site}"
+        )
+
+        payload = {"status": status}
+
+        if frappe.debug_log:
+            payload["debug_log"] = "\n".join(frappe.debug_log)
+        if status == "Failed":
+            payload["error_message"] = frappe.get_traceback(with_context=True)
+        if status == "Started":
+            job = get_current_job()
+            payload["job_id"] = job.id if job else None
+            payload["started_at"] = now()
+        if status == "Finished":
+            payload["ended_at"] = now()
+            if self.started_at:
+                payload["time_taken"] = time_diff_in_seconds(
+                    payload["ended_at"], self.started_at
+                )
+            payload["peak_memory_usage"] = resource.getrusage(
+                resource.RUSAGE_SELF
+            ).ru_maxrss
+
+        self.db_set(payload, update_modified=False, notify=True, commit=True)
+
 
 def enqueue_async_task(
     method, kwargs=None, queue="default", at_front=False, timeout=300
@@ -317,69 +376,16 @@ def _enqueue_task(task_row):
 
 def execute_async_task(task_name):
     """
-    Execute an Async Task by name. Runs inside the RQ worker process.
+    Convenience function to execute an Async Task by name.
 
-    Mirrors the Prepared Report execution pattern:
-    - update_job_id() commits the Started state before any user code runs.
-    - error_message and debug_log are written directly on the Async Task document.
-    - _save_error() handles DB reconnection on connection abort and saves Failed state.
+    Loads the Async Task document and calls its execute() method.
+    Intended to be enqueued as an RQ background job by the dispatcher.
 
     Args:
         task_name: Name of the Async Task document to execute
     """
-    update_job_id(task_name)
-
     task = frappe.get_doc("Async Task", task_name)
-    frappe.db.commit()
-
-    error = None
-    try:
-        kwargs = json.loads(task.kwargs or "{}")
-        method = frappe.get_attr(task.method)
-        method(**kwargs)
-        frappe.db.commit()
-        task.status = "Finished"
-    except Exception:
-        error = frappe.get_traceback(with_context=True)
-        _save_error(task, error=error)
-
-    task.ended_at = now()
-    if task.started_at:
-        task.time_taken = time_diff_in_seconds(task.ended_at, task.started_at)
-    task.peak_memory_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    if frappe.debug_log:
-        task.debug_log = "\n".join(frappe.debug_log)
-    if error:
-        task.error_message = error
-    task.save(ignore_permissions=True)
-    frappe.db.commit()
-
-    frappe.publish_realtime(
-        "async_task_complete",
-        {"name": task.name, "status": task.status},
-        user=frappe.session.user,
-    )
-
-    enqueue_dispatch_async_tasks()
-
-
-def update_job_id(task_name):
-    """
-    Set job_id and transition to Started.
-    Based on: frappe.core.doctype.prepared_report.prepared_report.update_job_id
-    """
-    job = get_current_job()
-
-    frappe.db.set_value(
-        "Async Task",
-        task_name,
-        {
-            "job_id": job and job.id,
-            "status": "Started",
-            "started_at": now(),
-        },
-    )
-    frappe.db.commit()
+    task.execute()
 
 
 @dangerously_reconnect_on_connection_abort
