@@ -160,6 +160,8 @@ Tasks are never dropped. The dispatcher runs:
 
 See [references/implementation.md](references/implementation.md) for the full dispatch algorithm and concurrency internals.
 See [references/comparison_with_prepared_report.md](references/comparison_with_prepared_report.md) for a side-by-side schema and implementation comparison with Frappe's built-in Prepared Report.
+See [references/comparison_with_rq_job.md](references/comparison_with_rq_job.md) for a side-by-side schema and lifecycle comparison with Frappe's built-in RQ Job virtual DocType.
+See [references/comparison_with_scheduled_job.md](references/comparison_with_scheduled_job.md) for a side-by-side schema and implementation comparison with Frappe's Scheduled Job Type / Scheduled Job Log.
 
 ## Source Code
 
