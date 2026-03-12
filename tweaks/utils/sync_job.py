@@ -25,8 +25,6 @@ def create_sync_job(
     target_document_type=None,
     target_document_name=None,
     parent_sync_job=None,
-    queue=None,
-    timeout=None,
     trigger_type="Manual",
     triggered_by_doc=None,
     triggered_by_document_type=None,
@@ -54,8 +52,6 @@ def create_sync_job(
         target_document_type: Optional pre-specified target document type (overrides job type default)
         target_document_name: Optional pre-specified target document name
         parent_sync_job: Optional parent sync job name
-        queue: Optional queue override
-        timeout: Optional timeout override
         trigger_type: How the job was triggered (default: Manual)
         triggered_by_doc: Optional document that triggered this sync job
         triggered_by_document_type: Optional document type that triggered this sync job
@@ -98,8 +94,6 @@ def create_sync_job(
         target_document_type = params.get("target_document_type", target_document_type)
         target_document_name = params.get("target_document_name", target_document_name)
         parent_sync_job = params.get("parent_sync_job", parent_sync_job)
-        queue = params.get("queue", queue)
-        timeout = params.get("timeout", timeout)
         trigger_type = params.get("trigger_type", trigger_type)
         triggered_by_doc = params.get("triggered_by_doc", triggered_by_doc)
         triggered_by_document_type = params.get(
@@ -170,8 +164,6 @@ def create_sync_job(
             "operation": operation.title() if operation else None,
             "context": frappe.as_json(context) if context else None,
             "parent_sync_job": parent_sync_job,
-            "queue": queue or job_type.queue,
-            "timeout": timeout or job_type.timeout,
             "trigger_type": trigger_type,
             "dry_run": dry_run,
             "insert_enabled": insert_enabled,
@@ -200,8 +192,6 @@ def enqueue_sync_job(
     target_document_type=None,
     target_document_name=None,
     parent_sync_job=None,
-    queue=None,
-    timeout=None,
     trigger_type="Manual",
     triggered_by_doc=None,
     triggered_by_document_type=None,
@@ -229,8 +219,6 @@ def enqueue_sync_job(
         target_document_type: Optional pre-specified target document type (overrides job type default)
         target_document_name: Optional pre-specified target document name
         parent_sync_job: Optional parent sync job name
-        queue: Optional queue override
-        timeout: Optional timeout override
         trigger_type: How the job was triggered (default: Manual)
         triggered_by_doc: Optional document that triggered this sync job
         triggered_by_document_type: Optional document type that triggered this sync job
@@ -275,8 +263,6 @@ def enqueue_sync_job(
             "target_document_type": target_document_type,
             "target_document_name": target_document_name,
             "parent_sync_job": parent_sync_job,
-            "queue": queue,
-            "timeout": timeout,
             "trigger_type": trigger_type,
             "triggered_by_doc": triggered_by_doc,
             "triggered_by_document_type": triggered_by_document_type,
