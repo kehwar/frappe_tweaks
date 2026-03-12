@@ -302,6 +302,7 @@ def enqueue_async_task(
     call_whitelisted_function: bool = False,
     batch_id: str | None = None,
     batch_order: int | None = None,
+    arguments: dict | None = None,
     **kwargs,
 ) -> "AsyncTaskLog":
     """
@@ -322,7 +323,10 @@ def enqueue_async_task(
     :param call_whitelisted_function: Run via ``call_whitelisted_function`` instead of direct import
     :param batch_id: Optional batch group identifier; tasks sharing a batch_id are ordered together
     :param batch_order: Position within the batch; lower values dispatch first
-    :param kwargs: Keyword arguments forwarded to *method* or the document action
+    :param arguments: Explicit keyword arguments forwarded to *method*. Takes precedence over
+        ``**kwargs`` for keys that collide with the task API parameters (``queue``, ``method``,
+        ``timeout``, etc.).
+    :param kwargs: Additional keyword arguments forwarded to *method* or the document action
     """
     if callable(method):
         method = f"{method.__module__}.{method.__qualname__}"
@@ -333,6 +337,8 @@ def enqueue_async_task(
             "and 'document_action' must be provided."
         )
 
+    stored_kwargs = {**kwargs, **(arguments or {})}
+
     task = frappe.get_doc(
         {
             "doctype": "Async Task Log",
@@ -341,7 +347,7 @@ def enqueue_async_task(
             "document_type": document_type,
             "document_name": document_name,
             "document_action": document_action,
-            "kwargs": json.dumps(kwargs),
+            "kwargs": json.dumps(stored_kwargs),
             "at_front": 1 if at_front else 0,
             "timeout": timeout or 300,
             "call_whitelisted_function": 1 if call_whitelisted_function else 0,
@@ -399,6 +405,7 @@ def enqueue_safe_async_task(
     at_front: bool = False,
     batch_id: str | None = None,
     batch_order: int | None = None,
+    arguments: dict | None = None,
     **kwargs,
 ) -> "AsyncTaskLog":
     """
@@ -416,6 +423,7 @@ def enqueue_safe_async_task(
         call_whitelisted_function=True,
         batch_id=batch_id,
         batch_order=batch_order,
+        arguments=arguments,
         **kwargs,
     )
 

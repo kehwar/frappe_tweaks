@@ -60,6 +60,7 @@ task = enqueue_async_task(
     call_whitelisted_function=False,# execute via call_whitelisted_function (Server Scripts)
     batch_id=None,                  # optional batch group label; tasks sharing a batch_id are ordered together
     batch_order=None,               # position within the batch; lower values dispatch first
+    arguments=None,                 # explicit dict of method kwargs; overrides **kwargs on key collision
     **kwargs,                       # forwarded to method / document action as keyword arguments
 )
 # task.name  → Async Task Log document name
@@ -69,6 +70,7 @@ task = enqueue_async_task(
 - Pass either `method` **or** all three of `document_type` + `document_name` + `document_action`. Passing neither raises `ValueError`.
 - When the document fields are used, `method` is automatically derived as the doctype controller dotted path + `".{action}"` (e.g. `"erpnext.accounts.doctype.sales_invoice.sales_invoice.submit"`).
 - Inner function resolution is applied at execution time: if the document controller defines `_submit`, it is called instead of `submit` (mirroring `Document.queue_action`).
+- Use `arguments={"queue": "short"}` (not `queue=` in `**kwargs`) whenever a method argument name collides with an `enqueue_async_task` API parameter — `arguments` takes priority over `**kwargs` and its keys are never intercepted by the function signature.
 
 ### `enqueue_safe_async_task`
 
