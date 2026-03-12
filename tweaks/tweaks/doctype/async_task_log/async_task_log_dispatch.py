@@ -72,6 +72,8 @@ def dispatch_async_tasks():
 
 def _run_dispatch():
     """Execute the dispatch algorithm inside the filelock."""
+    retry_failed_tasks()
+
     AsyncTask = frappe.qb.DocType("Async Task Log")
     AsyncTaskType = frappe.qb.DocType("Async Task Type")
 

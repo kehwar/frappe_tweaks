@@ -322,6 +322,7 @@ class AsyncTaskLog(Document):
         self.db_set(
             {
                 "status": "Pending",
+                "retry_count": (self.retry_count or 0) + 1,
                 "error_message": None,
                 "debug_log": None,
                 "job_id": None,
@@ -559,7 +560,6 @@ def _save_error(task, error):
     task.reload()
     task.status = "Failed"
     task.error_message = error
-    task.retry_count = (task.retry_count or 0) + 1
     task.save(ignore_permissions=True)
 
 
