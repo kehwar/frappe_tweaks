@@ -14,6 +14,8 @@ Dispatch algorithm:
   and increment the in-memory active count.
 """
 
+from contextlib import contextmanager
+
 import frappe
 from frappe.query_builder import Order
 from frappe.utils import add_to_date, cint, now, sbool
@@ -62,7 +64,7 @@ def dispatch_async_tasks():
         return
 
     try:
-        with filelock(_DISPATCH_LOCK, timeout=0):
+        with using_dispatcher(timeout=0):
             _run_dispatch()
     except LockTimeoutError:
         return
@@ -170,7 +172,6 @@ def _set_dispatcher_state(enabled):
     and :func:`bulk_enqueue_async_task` (may run in a worker context).
     """
     frappe.db.set_default("suspend_async_task_dispatch", 0 if enabled else 1)
-    frappe.db.commit()
 
 
 @frappe.whitelist()
@@ -187,3 +188,34 @@ def toggle_dispatcher(enable):
     """
     frappe.only_for("System Manager")
     _set_dispatcher_state(sbool(enable))
+    frappe.db.commit()
+
+
+@contextmanager
+def using_dispatcher(timeout=30):
+    """
+    Context manager that suspends the dispatcher on entry and resumes it on exit.
+
+    Acquires the dispatch filelock (waiting up to `timeout` seconds for any in-progress dispatcher
+    to finish) so no concurrent dispatch can run for the duration of the block.
+    On exit the dispatcher is resumed and a single dispatch pass is enqueued.
+
+    Use this when bulk-inserting tasks that should not be dispatched individually
+    as they are created, then trigger a single dispatch pass afterwards::
+
+        with using_dispatcher(timeout=30):
+            for item in items:
+                enqueue_async_task(...)
+        # dispatcher is resumed here; enqueue_dispatch_async_tasks is called automatically
+    """
+    with filelock(_DISPATCH_LOCK, timeout=timeout):
+        dispatcher_paused = False
+        if can_dispatch_now():
+            dispatcher_paused = True
+            _set_dispatcher_state(False)
+        try:
+            yield
+        finally:
+            if dispatcher_paused:
+                _set_dispatcher_state(True)
+                enqueue_dispatch_async_tasks()

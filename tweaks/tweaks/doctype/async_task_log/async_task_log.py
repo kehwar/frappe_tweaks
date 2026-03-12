@@ -43,9 +43,8 @@ from frappe.utils.safe_exec import call_whitelisted_function
 from rq import get_current_job
 
 from tweaks.tweaks.doctype.async_task_log.async_task_log_dispatch import (
-    _set_dispatcher_state,
-    can_dispatch_now,
     enqueue_dispatch_async_tasks,
+    using_dispatcher,
 )
 
 AsyncTaskStatus = Literal[
@@ -202,39 +201,31 @@ class AsyncTaskLog(Document):
         if not self.batch_id:
             return
 
-        dispatch_paused = False
-        if can_dispatch_now():
-            _set_dispatcher_state(False)  # suspend dispatch
-            dispatch_paused = True
+        with using_dispatcher():
+            frappe.debug_log.extend(
+                [
+                    "",
+                    "Task Paused due to error in task:",
+                    f"Task: {self.name}",
+                    f"Method: {self.method}",
+                ]
+            )
 
-        frappe.debug_log.extend(
-            [
-                "",
-                "Task Paused due to error in task:",
-                f"Task: {self.name}",
-                f"Method: {self.method}",
-            ]
-        )
-
-        tasks = frappe.get_all(
-            "Async Task Log",
-            filters={
-                "batch_id": self.batch_id,
-                "status": ["in", ["Pending", "Queued", "Started"]],
-            },
-            pluck="name",
-        )
-        for task in tasks:
-            task = frappe.get_doc("Async Task Log", task)
-            if task.status in ("Pending"):
-                task.update_status("Paused")
-            elif task.status in ("Queued", "Started"):
-                task.cancel_job()
-                task.update_status("Paused")
-
-        if dispatch_paused:
-            _set_dispatcher_state(True)  # resume dispatch
-            enqueue_dispatch_async_tasks()
+            tasks = frappe.get_all(
+                "Async Task Log",
+                filters={
+                    "batch_id": self.batch_id,
+                    "status": ["in", ["Pending", "Queued", "Started"]],
+                },
+                pluck="name",
+            )
+            for task in tasks:
+                task = frappe.get_doc("Async Task Log", task)
+                if task.status in ("Pending"):
+                    task.update_status("Paused")
+                elif task.status in ("Queued", "Started"):
+                    task.cancel_job()
+                    task.update_status("Paused")
 
     def _execute(self):
         """
@@ -488,22 +479,15 @@ def bulk_enqueue_async_task(
     if not batch_id:
         batch_id = str(uuid4())
 
-    dispatch_paused = False
-    if can_dispatch_now():
-        _set_dispatcher_state(False)  # suspend dispatch while inserting
-        dispatch_paused = True
+    with using_dispatcher():
 
-    for task in tasks:
-        task.update(**kwargs)
-        task["batch_id"] = batch_id
-        task["batch_order"] = batch_order
-        batch_order += 1
+        for task in tasks:
+            task.update(**kwargs)
+            task["batch_id"] = batch_id
+            task["batch_order"] = batch_order
+            batch_order += 1
 
-        enqueue_async_task(**task)
-
-    if dispatch_paused:
-        _set_dispatcher_state(True)  # resume dispatch
-        enqueue_dispatch_async_tasks()
+            enqueue_async_task(**task)
 
     return batch_id
 
