@@ -220,6 +220,7 @@ Both `enqueue_dispatch_async_tasks()` and `enqueue_execution()` use `enqueue_aft
 
 | Field | Type | Notes |
 |---|---|---|
+| `job_name` | Data | Human-readable title; defaults to `method` when not provided |
 | `method` | Data | Required. Dotted Python path or whitelisted function name |
 | `queue` | Select | `default` / `short` / `long` |
 | `timeout` | Duration | Seconds; default 300 |

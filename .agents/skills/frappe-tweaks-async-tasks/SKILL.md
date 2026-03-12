@@ -53,6 +53,7 @@ task = enqueue_async_task(
     method=None,                    # dotted path str OR callable; optional when document_* fields are set
     queue="default",                # "default" | "short" | "long"
     timeout=300,                    # seconds; default 300
+    job_name=None,                  # human-readable label (title); defaults to method when omitted
     # --- document action shorthand (alternative to method) ---
     document_type=None,             # DocType name  ┐ all three must be provided
     document_name=None,             # document name ┤ together; method is then auto-derived
@@ -74,6 +75,7 @@ task = enqueue_async_task(
 **Rules:**
 - Pass either `method` **or** all three of `document_type` + `document_name` + `document_action`. Passing neither raises `ValueError`.
 - When the document fields are used, `method` is automatically derived as the doctype controller dotted path + `".{action}"` (e.g. `"erpnext.accounts.doctype.sales_invoice.sales_invoice.submit"`).
+- `job_name` is an optional human-readable label stored as the task title. When omitted, it is set to `method` automatically in `before_insert`.
 - Inner function resolution is applied at execution time: if the document controller defines `_submit`, it is called instead of `submit` (mirroring `Document.queue_action`).
 - Use `arguments={"queue": "short"}` (not `queue=` in `**kwargs`) whenever a method argument name collides with an `enqueue_async_task` API parameter — `arguments` takes priority over `**kwargs` and its keys are never intercepted by the function signature.
 - `max_retries=0` (the default) disables automatic retries. Set to a positive integer to enable them.
@@ -81,7 +83,7 @@ task = enqueue_async_task(
 
 ### `enqueue_safe_async_task`
 
-Shorthand for `enqueue_async_task(..., call_whitelisted_function=True)`. Use when calling whitelisted functions or Server Scripts by name. Accepts the same `max_retries` and `retry_delay` parameters.
+Shorthand for `enqueue_async_task(..., call_whitelisted_function=True)`. Use when calling whitelisted functions or Server Scripts by name. Accepts the same `job_name`, `max_retries` and `retry_delay` parameters.
 
 ```python
 task = enqueue_safe_async_task(
@@ -278,6 +280,7 @@ The dispatcher calls `retry_failed_tasks()` at the start of every dispatch pass.
 ## Observability
 
 Each `Async Task Log` document stores:
+- `job_name` — human-readable label used as the document title (defaults to `method`)
 - `started_at`, `ended_at`, `time_taken`
 - `peak_memory_usage` (RSS, KB)
 - `error_message` with full traceback on failure
