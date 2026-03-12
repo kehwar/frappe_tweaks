@@ -24,6 +24,7 @@ from tweaks.tweaks.doctype.ac_rule.ac_rule_utils import (
     has_ac_permission,
     has_resource_access,
 )
+from tweaks.tweaks.doctype.async_task.async_task import enqueue_async_task
 from tweaks.tweaks.doctype.open_observe_api.open_observe_api import (
     search_logs,
     send_logs,
@@ -111,6 +112,7 @@ def safe_exec_globals(out):
                 ),
             ),
             "get_diff": get_diff,
+            "enqueue_async_task": enqueue_async_task,
         }
     )
 
