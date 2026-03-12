@@ -27,6 +27,7 @@ import resource
 from collections.abc import Callable
 from contextlib import suppress
 from typing import Literal
+from uuid import uuid4
 
 import frappe
 from frappe import _
@@ -40,7 +41,9 @@ from frappe.utils.background_jobs import enqueue
 from rq import get_current_job
 
 from tweaks.tweaks.doctype.async_task_log.async_task_log_dispatch import (
+    can_dispatch_now,
     enqueue_dispatch_async_tasks,
+    toggle_dispatcher,
 )
 
 AsyncTaskStatus = Literal[
@@ -289,6 +292,39 @@ def enqueue_async_task(
     return task
 
 
+def bulk_enqueue_async_task(tasks: list[dict], batch_id: str = None, **kwargs) -> "AsyncTaskLog":
+    """
+    Create multiple Async Task Log documents and trigger dispatch.
+
+    Signature mirrors :func:`frappe.utils.background_jobs.enqueue`.
+
+    :param tasks: List of task dictionaries containing method, queue, timeout, at_front, call_whitelisted_function, batch_id, batch_order, and kwargs
+
+    :param kwargs: Keyword arguments to overwrite in each task dict (e.g., to set the same batch_id for all tasks)
+    """
+
+    batch_order = 0
+    if not batch_id:
+        batch_id = str(uuid4())
+
+    dispatch_paused = False
+    if can_dispatch_now():
+        toggle_dispatcher(enable=False)
+        dispatch_paused = True
+
+    for task in tasks:
+        task.update(**kwargs)
+        task["batch_id"] = batch_id
+        task["batch_order"] = batch_order
+        batch_order += 1
+
+        enqueue_async_task(**task)
+
+    if dispatch_paused:
+        toggle_dispatcher(enable=True)
+        enqueue_dispatch_async_tasks()
+
+
 def enqueue_safe_async_task(
     method: str,
     queue: str = "default",
@@ -316,6 +352,18 @@ def enqueue_safe_async_task(
         batch_order=batch_order,
         **kwargs,
     )
+
+
+def bulk_enqueue_safe_async_task(tasks: list[dict], **kwargs) -> "AsyncTaskLog":
+    """
+    Shorthand for :func:`bulk_enqueue_async_task` with ``call_whitelisted_function=True``.
+
+    Each task's *method* is passed to ``call_whitelisted_function`` at execution time,
+    so it must be a whitelisted function or a Server Script name.
+    """
+    for task in tasks:
+        task.pop("call_whitelisted_function", None)
+    return bulk_enqueue_async_task(tasks, call_whitelisted_function=True, **kwargs)
 
 
 @dangerously_reconnect_on_connection_abort
