@@ -255,6 +255,37 @@ class AsyncTaskLog(Document):
         )
 
     @frappe.whitelist()
+    def retry(self):
+        """
+        Retry a failed or canceled task: reset it to Pending and trigger dispatch.
+        """
+        if self.status not in ("Failed", "Canceled"):
+            frappe.throw(
+                _(
+                    "Only Failed or Canceled tasks can be retried. Current status: {0}"
+                ).format(self.status)
+            )
+
+        self.db_set(
+            {
+                "status": "Pending",
+                "error_message": None,
+                "debug_log": None,
+                "job_id": None,
+                "started_at": None,
+                "ended_at": None,
+                "time_taken": None,
+                "peak_memory_usage": 0,
+            },
+            update_modified=True,
+            notify=True,
+            commit=True,
+        )
+
+        self.notify_status()
+        enqueue_dispatch_async_tasks()
+
+    @frappe.whitelist()
     def enqueue_execution(self):
 
         if self.status != "Pending":
