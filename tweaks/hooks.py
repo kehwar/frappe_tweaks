@@ -86,7 +86,7 @@ scheduler_events = {
     },
     "all": [
         "tweaks.utils.sync_job.auto_retry_failed_jobs",
-        "tweaks.tweaks.doctype.async_task.async_task.dispatch_async_tasks",
+        "tweaks.tweaks.doctype.async_task.async_task_dispatch.dispatch_async_tasks",
         "tweaks.tweaks.doctype.async_task.async_task.expire_stalled_tasks",
     ],
 }
