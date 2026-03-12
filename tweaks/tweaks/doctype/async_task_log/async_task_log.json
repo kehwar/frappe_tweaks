@@ -6,6 +6,9 @@
  "engine": "InnoDB",
  "field_order": [
   "method",
+  "document_type",
+  "document_name",
+  "document_action",
   "job_id",
   "queue",
   "timeout",
@@ -44,8 +47,30 @@
    "in_list_view": 1,
    "label": "Method",
    "read_only": 1,
-   "reqd": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "document_type",
+   "fieldtype": "Link",
+   "label": "Document Type",
+   "no_copy": 1,
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "document_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Document Name",
+   "no_copy": 1,
+   "options": "document_type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "document_action",
+   "fieldtype": "Data",
+   "label": "Document Action",
+   "no_copy": 1,
+   "read_only": 1
   },
   {
    "default": "Pending",

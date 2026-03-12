@@ -65,11 +65,14 @@ class AsyncTaskLog(Document):
         batch_id: DF.Data | None
         batch_order: DF.Int
         debug_log: DF.Code | None
+        document_action: DF.Data | None
+        document_name: DF.DynamicLink | None
+        document_type: DF.Link | None
         ended_at: DF.Datetime | None
         error_message: DF.LongText | None
         job_id: DF.Data | None
         kwargs: DF.Code | None
-        method: DF.Data
+        method: DF.Data | None
         queue: DF.Literal["default", "short", "long"]
         started_at: DF.Datetime | None
         call_whitelisted_function: DF.Check
@@ -90,6 +93,20 @@ class AsyncTaskLog(Document):
                 json.loads(self.kwargs)
             except json.JSONDecodeError as e:
                 frappe.throw(_("Invalid kwargs JSON: {0}").format(str(e)))
+
+        if self.document_type and self.document_name and self.document_action:
+            if not self.method:
+                self.method = _derive_document_action_method(
+                    self.document_type, self.document_action
+                )
+
+        if not self.method:
+            frappe.throw(
+                _(
+                    "Either 'method' or all three of 'document_type', 'document_name', "
+                    "and 'document_action' must be provided."
+                )
+            )
 
     def after_insert(self):
         if self.flags.get("skip_dispatch"):
@@ -164,7 +181,14 @@ class AsyncTaskLog(Document):
         Actual execution logic, separated from status updates and error handling in execute().
         """
         kwargs = json.loads(self.kwargs or "{}")
-        if self.call_whitelisted_function:
+        if self.document_type and self.document_name and self.document_action:
+            doc = frappe.get_doc(self.document_type, self.document_name)
+            doc.unlock()
+            action = self.document_action
+            if hasattr(doc, f"_{action}"):
+                action = f"_{action}"
+            getattr(doc, action)(**kwargs)
+        elif self.call_whitelisted_function:
             from frappe.utils.safe_exec import call_whitelisted_function
 
             call_whitelisted_function(self.method, **kwargs)
@@ -247,11 +271,33 @@ def execute_task(task_name):
     task.execute()
 
 
+def _derive_document_action_method(document_type: str, action: str) -> str:
+    """
+    Derive the dotted Python path for ``action`` on the controller of *document_type*.
+
+    Mirrors the method path used by ``frappe.model.document.execute_action``:
+    ``{app}.{module}.doctype.{doctype}.{doctype}.{action}``
+    """
+    from frappe.modules.utils import get_module_app
+
+    module = frappe.db.get_value("DocType", document_type, "module")
+    if not module:
+        frappe.throw(frappe._("DocType {0} not found").format(document_type))
+
+    app = get_module_app(module)
+    doctype_snake = frappe.scrub(document_type)
+    module_snake = frappe.scrub(module)
+    return f"{app}.{module_snake}.doctype.{doctype_snake}.{doctype_snake}.{action}"
+
+
 def enqueue_async_task(
-    method: str | Callable,
+    method: str | Callable | None = None,
     queue: str = "default",
     timeout: int | None = None,
     *,
+    document_type: str | None = None,
+    document_name: str | None = None,
+    document_action: str | None = None,
     at_front: bool = False,
     call_whitelisted_function: bool = False,
     batch_id: str | None = None,
@@ -263,23 +309,38 @@ def enqueue_async_task(
 
     Signature mirrors :func:`frappe.utils.background_jobs.enqueue`.
 
-    :param method: Python dotted path or callable to invoke
+    :param method: Python dotted path or callable to invoke. Optional when
+        *document_type*, *document_name*, and *document_action* are all provided;
+        in that case *method* is derived automatically as the doctype controller
+        path + ``".{action}"``.
+    :param document_type: DocType name of the document to act on
+    :param document_name: Name of the document to act on
+    :param document_action: Method name to call on the document (e.g. ``"submit"``)
     :param queue: RQ queue name (default: ``"default"``)
     :param timeout: Job timeout in seconds (default: 300)
     :param at_front: Whether to run before other pending tasks with the same method
     :param call_whitelisted_function: Run via ``call_whitelisted_function`` instead of direct import
     :param batch_id: Optional batch group identifier; tasks sharing a batch_id are ordered together
     :param batch_order: Position within the batch; lower values dispatch first
-    :param kwargs: Keyword arguments forwarded to *method*
+    :param kwargs: Keyword arguments forwarded to *method* or the document action
     """
     if callable(method):
         method = f"{method.__module__}.{method.__qualname__}"
+
+    if not method and not (document_type and document_name and document_action):
+        raise ValueError(
+            "Either 'method' or all three of 'document_type', 'document_name', "
+            "and 'document_action' must be provided."
+        )
 
     task = frappe.get_doc(
         {
             "doctype": "Async Task Log",
             "queue": queue or "default",
             "method": method,
+            "document_type": document_type,
+            "document_name": document_name,
+            "document_action": document_action,
             "kwargs": json.dumps(kwargs),
             "at_front": 1 if at_front else 0,
             "timeout": timeout or 300,
