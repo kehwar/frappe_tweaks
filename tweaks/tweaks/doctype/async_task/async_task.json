@@ -5,21 +5,20 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "queue",
   "method",
-  "status",
+  "job_id",
+  "queue",
+  "timeout",
   "at_front",
   "column_break_1",
-  "timeout",
-  "job_id",
-  "section_break_kwargs",
   "kwargs",
-  "section_break_execution",
-  "started_at",
-  "ended_at",
-  "column_break_2",
+  "job_status_section",
+  "status",
   "time_taken",
   "peak_memory_usage",
+  "column_break_txzx",
+  "started_at",
+  "ended_at",
   "section_break_output",
   "error_message",
   "debug_log"
@@ -57,7 +56,6 @@
   },
   {
    "default": "0",
-   "description": "Run this task before other pending tasks in the same queue",
    "fieldname": "at_front",
    "fieldtype": "Check",
    "label": "At Front",
@@ -74,7 +72,6 @@
    "read_only": 1
   },
   {
-   "description": "RQ job ID",
    "fieldname": "job_id",
    "fieldtype": "Data",
    "label": "Job ID",
@@ -82,21 +79,10 @@
    "read_only": 1
   },
   {
-   "fieldname": "section_break_kwargs",
-   "fieldtype": "Section Break",
-   "label": "Arguments"
-  },
-  {
-   "description": "JSON arguments to pass to the method",
    "fieldname": "kwargs",
    "fieldtype": "JSON",
    "label": "Kwargs",
    "read_only": 1
-  },
-  {
-   "fieldname": "section_break_execution",
-   "fieldtype": "Section Break",
-   "label": "Execution"
   },
   {
    "fieldname": "started_at",
@@ -111,10 +97,6 @@
    "label": "Ended At",
    "no_copy": 1,
    "read_only": 1
-  },
-  {
-   "fieldname": "column_break_2",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "time_taken",
@@ -138,7 +120,7 @@
   {
    "fieldname": "peak_memory_usage",
    "fieldtype": "Int",
-   "label": "Peak Memory Usage (KB)",
+   "label": "Peak Memory Usage",
    "no_copy": 1,
    "read_only": 1
   },
@@ -148,11 +130,20 @@
    "label": "Debug Log",
    "no_copy": 1,
    "read_only": 1
+  },
+  {
+   "fieldname": "job_status_section",
+   "fieldtype": "Section Break",
+   "label": "Job Status"
+  },
+  {
+   "fieldname": "column_break_txzx",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 08:49:19.945340",
+ "modified": "2026-03-12 08:57:46.246846",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Async Task",
@@ -173,6 +164,7 @@
   }
  ],
  "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [
@@ -201,5 +193,6 @@
    "title": "Canceled"
   }
  ],
+ "title_field": "method",
  "track_changes": 1
 }
