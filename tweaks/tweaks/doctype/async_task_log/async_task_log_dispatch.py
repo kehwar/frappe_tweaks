@@ -16,7 +16,7 @@ Dispatch algorithm:
 
 import frappe
 from frappe.query_builder import Order
-from frappe.utils import add_to_date, now
+from frappe.utils import add_to_date, cint, now, sbool
 from frappe.utils.background_jobs import enqueue
 from frappe.utils.file_lock import LockTimeoutError
 from frappe.utils.synchronization import filelock
@@ -32,9 +32,12 @@ def enqueue_dispatch_async_tasks():
     """
     Enqueue dispatch_async_tasks as a background job.
 
-    Used by after_insert and execute_async_task so the dispatcher always runs
+    Used by after_insert so the dispatcher always runs
     in a worker process rather than in the calling thread.
     """
+    if not can_dispatch_now():
+        return
+
     enqueue(
         dispatch_async_tasks,
         queue="default",
@@ -55,6 +58,9 @@ def dispatch_async_tasks():
     Called by the scheduler (all event) to recover from any missed triggers,
     and via enqueue_dispatch_async_tasks after task creation/completion.
     """
+    if not can_dispatch_now():
+        return
+
     try:
         with filelock(_DISPATCH_LOCK, timeout=0):
             _run_dispatch()
@@ -143,3 +149,24 @@ def expire_stalled_tasks():
         },
         update_modified=False,
     )
+
+
+def can_dispatch_now():
+    """
+    Check if dispatching is currently allowed based on the "suspend_async_task_dispatch" default.
+    Based on: frappe.email.doctype.email_queue.email_queue.EmailQueue.can_send_now
+    """
+    if cint(frappe.db.get_default("suspend_async_task_dispatch")) == 1:
+        return False
+
+    return True
+
+
+@frappe.whitelist()
+def toggle_dispatcher(enable):
+    """
+    Toggle dispatcher
+    Based on: frappe.email.doctype.email_queue.email_queue.toggle_sending
+    """
+    frappe.only_for("System Manager")
+    frappe.db.set_default("suspend_async_task_dispatch", 0 if sbool(enable) else 1)

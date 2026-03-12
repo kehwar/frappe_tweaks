@@ -47,6 +47,8 @@ task = enqueue_async_task(
     timeout=300,                    # seconds; default 300
     at_front=False,                 # jump ahead of other Pending tasks for this method
     call_whitelisted_function=False,# execute via call_whitelisted_function (Server Scripts)
+    batch_id=None,                  # optional batch group label; tasks sharing a batch_id are ordered together
+    batch_order=None,               # position within the batch; lower values dispatch first
     **kwargs,                       # forwarded to method as keyword arguments
 )
 # task.name  → Async Task Log document name
