@@ -58,6 +58,8 @@ class AsyncTaskLog(Document):
         from frappe.types import DF
 
         at_front: DF.Check
+        batch_id: DF.Data | None
+        batch_order: DF.Int
         debug_log: DF.Code | None
         ended_at: DF.Datetime | None
         error_message: DF.LongText | None
@@ -248,6 +250,8 @@ def enqueue_async_task(
     *,
     at_front: bool = False,
     call_whitelisted_function: bool = False,
+    batch_id: str | None = None,
+    batch_order: int | None = None,
     **kwargs,
 ) -> "AsyncTaskLog":
     """
@@ -260,6 +264,8 @@ def enqueue_async_task(
     :param timeout: Job timeout in seconds (default: 300)
     :param at_front: Whether to run before other pending tasks with the same method
     :param call_whitelisted_function: Run via ``call_whitelisted_function`` instead of direct import
+    :param batch_id: Optional batch group identifier; tasks sharing a batch_id are ordered together
+    :param batch_order: Position within the batch; lower values dispatch first
     :param kwargs: Keyword arguments forwarded to *method*
     """
     if callable(method):
@@ -274,6 +280,8 @@ def enqueue_async_task(
             "at_front": 1 if at_front else 0,
             "timeout": timeout or 300,
             "call_whitelisted_function": 1 if call_whitelisted_function else 0,
+            "batch_id": batch_id,
+            "batch_order": batch_order,
         }
     )
     task.insert(ignore_permissions=True)
@@ -287,6 +295,8 @@ def enqueue_safe_async_task(
     timeout: int | None = None,
     *,
     at_front: bool = False,
+    batch_id: str | None = None,
+    batch_order: int | None = None,
     **kwargs,
 ) -> "AsyncTaskLog":
     """
@@ -302,6 +312,8 @@ def enqueue_safe_async_task(
         timeout=timeout,
         at_front=at_front,
         call_whitelisted_function=True,
+        batch_id=batch_id,
+        batch_order=batch_order,
         **kwargs,
     )
 

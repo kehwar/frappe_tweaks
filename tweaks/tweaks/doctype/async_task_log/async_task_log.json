@@ -20,6 +20,9 @@
   "column_break_txzx",
   "started_at",
   "ended_at",
+  "column_break_hsrf",
+  "batch_id",
+  "batch_order",
   "section_break_output",
   "error_message",
   "debug_log"
@@ -109,8 +112,7 @@
   },
   {
    "fieldname": "section_break_output",
-   "fieldtype": "Section Break",
-   "label": "Output"
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "error_message",
@@ -148,11 +150,27 @@
    "fieldtype": "Check",
    "label": "Call Whitelisted Function",
    "read_only": 1
+  },
+  {
+   "fieldname": "batch_id",
+   "fieldtype": "Data",
+   "label": "Batch ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "batch_order",
+   "fieldtype": "Int",
+   "label": "Batch Order",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_hsrf",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 09:53:19.868062",
+ "modified": "2026-03-12 11:44:42.473696",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Async Task Log",

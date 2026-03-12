@@ -83,6 +83,8 @@ def _run_dispatch():
         .where(AsyncTask.status == "Pending")
         .orderby(AsyncTask.at_front, order=Order.desc)
         .orderby(Coalesce(AsyncTaskType.priority, 0), order=Order.desc)
+        .orderby(AsyncTask.batch_id, order=Order.asc)
+        .orderby(Coalesce(AsyncTask.batch_order, 999999), order=Order.asc)
         .orderby(AsyncTask.creation, order=Order.asc)
         .run(as_dict=True)
     )
