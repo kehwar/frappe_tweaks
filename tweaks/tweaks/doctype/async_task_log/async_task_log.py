@@ -313,3 +313,27 @@ def _save_error(task, error):
     task.status = "Failed"
     task.error_message = error
     task.save(ignore_permissions=True)
+
+
+def get_current_task():
+
+    job = get_current_job()
+    if not job:
+        return None
+
+    task = frappe.db.exists("Async Task Log", {"job_id": job.id})
+    if task:
+        return frappe.get_doc("Async Task Log", task)
+
+    return None
+
+
+def notify_task_status(message):
+    """
+    Publish a realtime message to the user who enqueued the current task.
+
+    :param message: Message payload (dict)
+    """
+    task = get_current_task()
+    if task:
+        task.notify_status(message=message)
