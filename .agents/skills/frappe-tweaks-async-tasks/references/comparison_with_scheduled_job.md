@@ -1,7 +1,6 @@
-# Async Task (Tweaks) vs Scheduled Job (Frappe Core) — Comparison
+# Async Task Log vs Scheduled Job — Comparison
 
-This reference compares the Tweaks **Async Task** system (Async Task Log + Async Task Type) with
-Frappe Core's **Scheduled Job** system (Scheduled Job Type + Scheduled Job Log).
+`Scheduled Job` is Frappe Core's time-based background execution system (Scheduled Job Type + Scheduled Job Log). Consult this document when choosing between on-demand async tasks and recurring scheduled work, or when understanding the trade-offs in observability, concurrency, and cancellation.
 
 ---
 
@@ -26,9 +25,11 @@ Frappe Core's **Scheduled Job** system (Scheduled Job Type + Scheduled Job Log).
 
 ---
 
-## 3. Schema: Configuration DocType
+## 3. Schema
 
-### Async Task Type
+### 3a. Configuration DocType
+
+#### Async Task Type
 
 | Field | Type | Purpose |
 |---|---|---|
@@ -40,7 +41,7 @@ Frappe Core's **Scheduled Job** system (Scheduled Job Type + Scheduled Job Log).
 **Optional**: creating an Async Task Type is not required. Tasks without a type record run with
 default priority (0) and no concurrency limit.
 
-### Scheduled Job Type
+#### Scheduled Job Type
 
 | Field | Type | Purpose |
 |---|---|---|
@@ -58,9 +59,9 @@ of "run without configuration".
 
 ---
 
-## 4. Schema: Log DocType
+### 3b. Log / Execution DocType
 
-### Async Task Log
+#### Async Task Log
 
 | Field | Type | Notes |
 |---|---|---|
@@ -79,14 +80,7 @@ of "run without configuration".
 | `error_message` | Code / LongText | Full traceback on failure |
 | `debug_log` | Code | `frappe.debug_log` captured during execution |
 
-### Scheduled Job Log
-
-| Field | Type | Notes |
-|---|---|---|
-| `scheduled_job_type` | Link → Scheduled Job Type | Parent job definition |
-| `status` | Select | `Scheduled` / `Start` / `Complete` / `Failed` |
-| `details` | Code | Traceback on failure |
-| `debug_log` | Code | `frappe.debug_log` captured during execution |
+#### Scheduled Job Log
 
 **Key differences in log schema:**
 - Async Task Log stores all execution parameters (`queue`, `timeout`, `kwargs`) — the log is
@@ -98,7 +92,7 @@ of "run without configuration".
 
 ---
 
-## 5. Status Lifecycle
+## 4. Status Lifecycle
 
 ### Async Task Log
 
@@ -137,7 +131,7 @@ No realtime event is published. The log is only committed to the database.
 
 ---
 
-## 6. Execution Flow
+## 5. Execution Flow
 
 ### Async Task
 
@@ -178,7 +172,23 @@ frappe scheduler (beat process)
 
 ---
 
-## 7. Concurrency Control
+## 6. Key Differences
+
+| Concern | Async Task | Scheduled Job |
+|---|---|---|
+| **Trigger model** | On-demand (`enqueue_async_task`) | Time-based scheduler (cron/frequency) |
+| **Repetition** | One-shot | Recurring |
+| **Configuration** | Optional (`Async Task Type`) | Required (`Scheduled Job Type`) |
+| **Concurrency control** | Yes (`concurrency_limit` per method) | Via `job_id` deduplication only |
+| **Priority ordering** | Yes (`priority` + `at_front`) | No |
+| **Cancellation** | Yes (any pre-terminal state) | No |
+| **Realtime events** | Yes (`async_task_status`) | No |
+| **Timing & memory recorded** | Yes | No |
+| **Log schema** | Full execution parameters | Status + debug output only |
+
+---
+
+## 7. Concurrency & Priority
 
 | | Async Task | Scheduled Job |
 |---|---|---|
@@ -199,7 +209,7 @@ frappe scheduler (beat process)
 
 ---
 
-## 9. Realtime Progress Notifications
+## 9. Realtime Notifications
 
 | | Async Task | Scheduled Job |
 |---|---|---|
@@ -227,12 +237,28 @@ number of days using `Now() - Interval(days=days)`.
 
 ---
 
-## 12. Queue Selection
+## 11a. Queue Selection
 
 | | Async Task | Scheduled Job |
 |---|---|---|
 | **Configurable** | Yes — `queue` field on each task (default / short / long) | Derived from frequency: `long` for `*Long` or `*Maintenance` frequencies, `default` otherwise |
 | **Default** | `"default"` | `"default"` |
+
+---
+
+## 12. When to Choose Each
+
+Use **Async Task** when:
+- Work is triggered by user actions, API calls, or application code.
+- You need concurrency limits, priority ordering, or task cancellation.
+- You want realtime progress updates and a persistent, inspectable task log.
+- The work is on-demand or event-driven, not time-based.
+
+Use **Scheduled Job** when:
+- The work must run automatically on a fixed cron/time schedule.
+- No manual triggering or cancellation is needed.
+- Minimal log overhead is acceptable (status and debug output only).
+- You want the scheduler to manage re-execution without application code.
 
 ---
 

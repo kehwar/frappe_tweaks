@@ -1,10 +1,31 @@
-# Async Task Log vs Prepared Report — Schema & Implementation Comparison
+# Async Task Log vs Prepared Report — Comparison
 
-Side-by-side reference for understanding how `Async Task Log` (Frappe Tweaks) compares to Frappe's built-in `Prepared Report`. Useful when deciding which system to use, or when porting logic from one to the other.
+`Prepared Report` is Frappe's built-in system for running Script Reports in the background and storing their output as gzip-compressed File attachments. Consult this document when deciding which system to use for background work, or when porting logic from Prepared Reports to Async Tasks.
 
 ---
 
-## DocType Schema
+## 1. Purpose & Trigger Model
+
+| Dimension | Async Task | Prepared Report |
+|---|---|---|
+| **Triggered by** | Application code (`enqueue_async_task`) | Report UI ("Run in Background") or `make_prepared_report()` |
+| **Who initiates** | Any code path, agent, or user action | User via Report page or application code |
+| **Output ownership** | Caller manages its own output | Built-in gzip File attachment stored on the document |
+| **Primary use case** | General-purpose observable background work | Running Frappe/ERPNext Script Reports in the background |
+
+---
+
+## 2. DocType Roles
+
+| Role | Async Task system | Prepared Report |
+|---|---|---|
+| **Execution record** | `Async Task Log` | `Prepared Report` |
+| **Configuration** | `Async Task Type` (optional, per method) | `Report` (defines the report logic and timeout) |
+| **Result storage** | — (method writes its own output) | gzip-compressed JSON as a File attachment on the document |
+
+---
+
+## 3. Schema
 
 | Field | Async Task Log | Prepared Report |
 |---|---|---|
@@ -29,7 +50,7 @@ Side-by-side reference for understanding how `Async Task Log` (Frappe Tweaks) co
 
 ---
 
-## Status Lifecycle
+## 4. Status Lifecycle
 
 ### Async Task Log
 
@@ -55,7 +76,7 @@ Queued → Started → Completed
 
 ---
 
-## Enqueueing Flow
+## 5. Execution Flow
 
 ### Async Task Log
 
@@ -89,7 +110,21 @@ No dispatcher — every `PreparedReport` insert immediately submits one RQ job. 
 
 ---
 
-## Concurrency & Priority
+## 6. Key Differences
+
+| Concern | Async Task Log | Prepared Report |
+|---|---|---|
+| **Pre-queue waiting** | `Pending` state with concurrency-aware dispatcher | None — enqueued directly on insert |
+| **Concurrency control** | `Async Task Type.concurrency_limit` per method | None |
+| **Priority ordering** | `Async Task Type.priority` + per-task `at_front` | None |
+| **Output storage** | Caller-managed | gzip File attachment on the document |
+| **Realtime events** | Every status transition | Terminal state only (`report_generated`) |
+| **Cancellation** | Full (any pre-terminal state) | Partial (trash only, no status update) |
+| **Use case scope** | Any Python callable or Server Script | Frappe Script Reports only |
+
+---
+
+## 7. Concurrency & Priority
 
 | Concern | Async Task Log | Prepared Report |
 |---|---|---|
@@ -99,7 +134,19 @@ No dispatcher — every `PreparedReport` insert immediately submits one RQ job. 
 
 ---
 
-## Realtime Notifications
+## 8. Cancellation
+
+| | Async Task Log | Prepared Report |
+|---|---|---|
+| Cancel from code | `task.cancel()` | Not available |
+| Cancel from UI | Yes (via Document actions) | Not available |
+| Cancel on trash | Yes — `cancel_job()` called in `on_trash` | Partial — `on_trash` calls `job.stop_job()` / `job.delete()` but does not update status |
+| Cancelable states | Pending, Queued, Started | — |
+| Post-cancel status | `Canceled` | — |
+
+---
+
+## 9. Realtime Notifications
 
 ### Async Task Log
 
@@ -125,7 +172,7 @@ Only one event is published, at the very end of `generate_report()`. No in-progr
 
 ---
 
-## Error Handling
+## 10. Error Handling
 
 Both systems use `@dangerously_reconnect_on_connection_abort` on their `_save_error` helpers to survive database connection drops mid-execution.
 
@@ -143,7 +190,7 @@ Both systems use `@dangerously_reconnect_on_connection_abort` on their `_save_er
 
 ---
 
-## Old Log Cleanup
+## 11. Log Cleanup
 
 | | Async Task Log | Prepared Report |
 |---|---|---|
@@ -153,7 +200,7 @@ Both systems use `@dangerously_reconnect_on_connection_abort` on their `_save_er
 
 ---
 
-## Result / Output Handling
+## 11a. Result / Output Handling
 
 **Async Task Log** makes no assumptions about output format. The called method is responsible for persisting any results (e.g., updating a document, writing a File, setting a field). The log stores only status and diagnostic data.
 
@@ -161,19 +208,7 @@ Both systems use `@dangerously_reconnect_on_connection_abort` on their `_save_er
 
 ---
 
-## Cancellation
-
-| | Async Task Log | Prepared Report |
-|---|---|---|
-| Cancel from code | `task.cancel()` | Not available |
-| Cancel from UI | Yes (via Document actions) | Not available |
-| Cancel on trash | Yes — `cancel_job()` called in `on_trash` | Partial — `on_trash` calls `job.stop_job()` / `job.delete()` but does not update status |
-| Cancelable states | Pending, Queued, Started | — |
-| Post-cancel status | `Canceled` | — |
-
----
-
-## Choosing Between the Two
+## 12. When to Choose Each
 
 Use **Async Task Log** when:
 - You need concurrency limits, priority ordering, or task cancellation.
@@ -188,7 +223,7 @@ Use **Prepared Report** when:
 
 ---
 
-## Source Files
+## 13. Source Files
 
 | Component | Path |
 |---|---|

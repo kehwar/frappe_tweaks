@@ -1,21 +1,31 @@
-# Async Task Log vs RQ Job — Schema Comparison
+# Async Task Log vs RQ Job — Comparison
 
-Side-by-side reference for understanding how `Async Task Log` (Frappe Tweaks) relates to Frappe's built-in `RQ Job` virtual DocType. `RQ Job` surfaces the raw Redis Queue entry; `Async Task Log` is the persistent, observable wrapper that sits above it.
+`Async Task Log` (Frappe Tweaks) is the persistent, observable wrapper that sits above RQ. `RQ Job` is Frappe's virtual DocType that surfaces the raw Redis Queue entry. Consult this document to understand how the two records relate at runtime, or when choosing where to read execution state.
 
 ---
 
-## Storage & Nature
+## 1. Purpose & Trigger Model
 
-| Aspect | Async Task Log | RQ Job |
+| Dimension | Async Task Log | RQ Job |
 |---|---|---|
-| **Storage** | MariaDB — persistent beyond worker lifetime | Redis — ephemeral; purged after job TTL |
-| **DocType kind** | Regular DocType | Virtual DocType (reads from Redis via `rq`) |
-| **Lifecycle scope** | Born before the RQ job exists (`Pending`); survives after it is removed from Redis | Exists only while the RQ job is alive in Redis |
-| **Link between them** | `async_task_log.job_id` → `rq_job.job_id` | No reference back to `Async Task Log` |
+| **What it is** | Persistent MariaDB record wrapping an RQ job | Ephemeral Redis entry representing a queued execution |
+| **Created by** | `enqueue_async_task()` | Promoted by the ATL dispatcher (or `frappe.enqueue()` directly) |
+| **Lifecycle scope** | Born before the RQ job exists (`Pending`); persists after Redis removes it | Exists only while the RQ job is alive in Redis |
+| **Primary use case** | Observable, cancellable, concurrency-controlled background work | Raw task execution entry for RQ workers |
 
 ---
 
-## DocType Schema
+## 2. DocType Roles
+
+| Role | Async Task system | RQ Job |
+|---|---|---|
+| **Execution record** | `Async Task Log` (MariaDB, permanent) | `RQ Job` (virtual DocType, reads from Redis) |
+| **Configuration** | `Async Task Type` (optional) | — |
+| **Link between them** | `async_task_log.job_id` → `rq_job.job_id` | No back-reference to `Async Task Log` |
+
+---
+
+## 3. Schema
 
 | Field | Async Task Log | RQ Job |
 |---|---|---|
@@ -38,7 +48,7 @@ Side-by-side reference for understanding how `Async Task Log` (Frappe Tweaks) re
 
 ---
 
-## Status Lifecycle
+## 4. Status Lifecycle
 
 ### Async Task Log
 
@@ -69,22 +79,7 @@ queued → scheduled
 
 ---
 
-## Key Differences
-
-| Concern | Async Task Log | RQ Job |
-|---|---|---|
-| **Persistence** | Permanent MariaDB record | Expires from Redis (default ~500 jobs retained) |
-| **Pre-queue waiting** | `Pending` state with concurrency-aware dispatcher | Not supported — jobs go to Redis immediately |
-| **Concurrency control** | `Async Task Type.concurrency_limit` per method | None — all queued jobs compete equally |
-| **Priority ordering** | `Async Task Type.priority` + per-task `at_front` | FIFO within queue tier |
-| **Observability** | Full: timing, memory, debug log, error, realtime events | Limited: timing, exception string |
-| **Cancellation** | Supported via `task.cancel()` from any pre-terminal state | Supported via `frappe.utils.background_jobs.stop_job()` |
-| **Server Script support** | Yes (`call_whitelisted_function=True`) | No |
-| **Status vocabulary** | Title Case (`Finished`, `Failed`) | Lowercase (`finished`, `failed`) |
-
----
-
-## Relationship at Runtime
+## 5. Execution Flow
 
 ```
 enqueue_async_task(method, **kwargs)
@@ -103,3 +98,110 @@ enqueue_async_task(method, **kwargs)
 ```
 
 The `Async Task Log` owns the full lifecycle record. The `RQ Job` is the transient execution entry in Redis that the ATL promotes to and monitors.
+
+---
+
+## 6. Key Differences
+
+| Concern | Async Task Log | RQ Job |
+|---|---|---|
+| **Persistence** | Permanent MariaDB record | Expires from Redis (default ~500 jobs retained) |
+| **Pre-queue waiting** | `Pending` state with concurrency-aware dispatcher | Not supported — jobs go to Redis immediately |
+| **Concurrency control** | `Async Task Type.concurrency_limit` per method | None — all queued jobs compete equally |
+| **Priority ordering** | `Async Task Type.priority` + per-task `at_front` | FIFO within queue tier |
+| **Observability** | Full: timing, memory, debug log, error, realtime events | Limited: timing, exception string |
+| **Cancellation** | Supported via `task.cancel()` from any pre-terminal state | Supported via `frappe.utils.background_jobs.stop_job()` |
+| **Server Script support** | Yes (`call_whitelisted_function=True`) | No |
+| **Status vocabulary** | Title Case (`Finished`, `Failed`) | Lowercase (`finished`, `failed`) |
+
+---
+
+## 7. Concurrency & Priority
+
+| Concern | Async Task Log | RQ Job |
+|---|---|---|
+| **Per-method limit** | `Async Task Type.concurrency_limit` | None — all queued jobs compete equally |
+| **Priority ordering** | `Async Task Type.priority` + per-task `at_front` | FIFO within queue tier |
+| **Pre-queue waiting** | `Pending` state; tasks wait for a concurrency slot | Not supported — enqueued immediately to Redis |
+| **Deduplication** | Dispatcher filelock prevents duplicate promotions | Optional `job_id` deduplication via `frappe.enqueue` |
+
+---
+
+## 8. Cancellation
+
+| | Async Task Log | RQ Job |
+|---|---|---|
+| **Supported** | Yes | Yes |
+| **From UI** | Yes (whitelist action on form) | No |
+| **From code** | `task.cancel()` | `frappe.utils.background_jobs.stop_job(job_id)` |
+| **Effect on worker** | `stop_job()` if Started; `delete()` if Queued | Sends SIGINT to worker |
+| **Cancelable states** | Pending, Queued, Started | Any non-terminal state |
+| **Post-cancel status** | `Canceled` | `canceled` (lowercase) |
+
+---
+
+## 9. Realtime Notifications
+
+| | Async Task Log | RQ Job |
+|---|---|---|
+| **Event name** | `async_task_status` | — |
+| **Payload** | `{name, status, message}` | — |
+| **Frequency** | Every status transition | — |
+| **Custom messages** | `task.notify_status(message=...)` or `notify_task_status(message=...)` | — |
+| **Target** | User who enqueued the task | — |
+
+RQ Jobs have no realtime notification system. Callers must poll `frappe.call("frappe.core.doctype.rq_job.rq_job.get_status", ...)` to check job state.
+
+---
+
+## 10. Error Handling
+
+| | Async Task Log | RQ Job |
+|---|---|---|
+| **Error storage** | `error_message` (Code) — full Python traceback | `exc_info` (Code) — raw RQ exception string |
+| **Memory & timing on failure** | Recorded in `_save_error` | Not captured |
+| **Debug log on failure** | Captured in `debug_log` | Not captured |
+| **DB rollback before save** | Yes (`frappe.db.rollback()`) | N/A (managed by RQ internals) |
+| **Connection abort recovery** | `_save_error` decorated with `@dangerously_reconnect_on_connection_abort` | No special handling |
+| **Stalled task reaper** | Yes — `expire_stalled_tasks()` after 6 h Started | No |
+
+---
+
+## 11. Log Cleanup
+
+| | Async Task Log | RQ Job |
+|---|---|---|
+| **Retention** | 90 days (default) | ~500 most recent jobs (Redis TTL) |
+| **Schedule** | `daily_long` scheduler event | Automatic Redis key expiry |
+| **Mechanism** | `AsyncTaskLog.clear_old_logs(days=90)` | Managed by RQ / Redis configuration |
+
+---
+
+## 12. When to Choose Each
+
+Use **Async Task** when:
+- You need to see task status, errors, or execution time after the job has run.
+- You need to cap concurrency per method or prioritize tasks.
+- You need cancellation support from UI or code.
+- The task is triggered by user action or application logic.
+- You want realtime progress updates in the browser.
+- You are calling a whitelisted function or Server Script.
+
+Use **`frappe.enqueue` / RQ Job directly** when:
+- Fire-and-forget with no need for post-execution inspection.
+- Integrating with existing framework hooks that already manage their own lifecycle (e.g., Sync Jobs).
+- You need to inspect the raw Redis queue state for low-level debugging.
+
+---
+
+## 13. Source Files
+
+| Component | Path |
+|---|---|
+| Async Task Log controller | `tweaks/tweaks/doctype/async_task_log/async_task_log.py` |
+| Async Task Log schema | `tweaks/tweaks/doctype/async_task_log/async_task_log.json` |
+| Async Task dispatch | `tweaks/tweaks/doctype/async_task_log/async_task_log_dispatch.py` |
+| Async Task Type | `tweaks/tweaks/doctype/async_task_type/async_task_type.py` |
+| RQ Job virtual DocType | `frappe/frappe/core/doctype/rq_job/rq_job.py` |
+| RQ Job schema | `frappe/frappe/core/doctype/rq_job/rq_job.json` |
+
