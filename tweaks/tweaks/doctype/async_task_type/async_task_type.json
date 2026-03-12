@@ -45,8 +45,13 @@
   }
  ],
  "index_web_pages_for_search": 1,
- "links": [],
- "modified": "2026-03-12 10:20:43.853793",
+ "links": [
+  {
+   "link_doctype": "Async Task Log",
+   "link_fieldname": "method"
+  }
+ ],
+ "modified": "2026-03-12 10:30:02.087141",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Async Task Type",
