@@ -327,6 +327,8 @@ def bulk_enqueue_async_task(
         _set_dispatcher_state(True)  # resume dispatch
         enqueue_dispatch_async_tasks()
 
+    return batch_id
+
 
 def enqueue_safe_async_task(
     method: str,
