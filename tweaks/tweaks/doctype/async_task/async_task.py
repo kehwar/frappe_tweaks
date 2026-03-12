@@ -25,16 +25,17 @@ Usage::
 
     # Create and immediately dispatch a task
     task = enqueue_async_task(
-        method="myapp.utils.process_something",
-        kwargs={"doc_name": "INV-0001"},
+        "myapp.utils.process_something",
         queue="default",
         at_front=True,
         timeout=120,
+        doc_name="INV-0001",
     )
 """
 
 import json
 import resource
+from collections.abc import Callable
 from contextlib import suppress
 from typing import Literal
 
@@ -209,27 +210,33 @@ class AsyncTask(Document):
 
 
 def enqueue_async_task(
-    method, kwargs=None, queue="default", at_front=False, timeout=300
-):
+    method: str | Callable,
+    queue: str = "default",
+    timeout: int | None = None,
+    *,
+    at_front: bool = False,
+    **kwargs,
+) -> "AsyncTask":
     """
     Create an Async Task document and trigger dispatch.
 
-    Args:
-        method: Python dotted path of the function to call
-        kwargs: Dict of keyword arguments to pass to the method
-        queue: RQ queue name (default: "default")
-        at_front: Whether to run before other pending tasks with the same method
-        timeout: Job timeout in seconds (default 300)
+    Signature mirrors :func:`frappe.utils.background_jobs.enqueue`.
 
-    Returns:
-        Async Task document
+    :param method: Python dotted path or callable to invoke
+    :param queue: RQ queue name (default: ``"default"``)
+    :param timeout: Job timeout in seconds (default: 300)
+    :param at_front: Whether to run before other pending tasks with the same method
+    :param kwargs: Keyword arguments forwarded to *method*
     """
+    if callable(method):
+        method = f"{method.__module__}.{method.__qualname__}"
+
     task = frappe.get_doc(
         {
             "doctype": "Async Task",
             "queue": queue or "default",
             "method": method,
-            "kwargs": json.dumps(kwargs or {}),
+            "kwargs": json.dumps(kwargs),
             "at_front": 1 if at_front else 0,
             "timeout": timeout or 300,
         }
@@ -250,6 +257,9 @@ def enqueue_dispatch_async_tasks():
         dispatch_async_tasks,
         queue="default",
         enqueue_after_commit=True,
+        job_name="async_task_dispatch",
+        job_id="async_task_dispatch",
+        deduplicate=True,
     )
 
 
