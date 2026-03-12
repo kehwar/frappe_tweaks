@@ -207,6 +207,15 @@ class AsyncTaskLog(Document):
             _set_dispatcher_state(False)  # suspend dispatch
             dispatch_paused = True
 
+        frappe.debug_log.extend(
+            [
+                "",
+                "Task Paused due to error in task:",
+                f"Task: {self.name}",
+                f"Method: {self.method}",
+            ]
+        )
+
         tasks = frappe.get_all(
             "Async Task Log",
             filters={
