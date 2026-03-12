@@ -10,6 +10,7 @@
   "queue",
   "timeout",
   "at_front",
+  "call_whitelisted_function",
   "column_break_1",
   "kwargs",
   "job_status_section",
@@ -113,7 +114,7 @@
   },
   {
    "fieldname": "error_message",
-   "fieldtype": "Long Text",
+   "fieldtype": "Code",
    "label": "Error Message",
    "no_copy": 1,
    "read_only": 1
@@ -140,11 +141,18 @@
   {
    "fieldname": "column_break_txzx",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "call_whitelisted_function",
+   "fieldtype": "Check",
+   "label": "Call Whitelisted Function",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 08:57:46.246846",
+ "modified": "2026-03-12 09:53:19.868062",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Async Task",

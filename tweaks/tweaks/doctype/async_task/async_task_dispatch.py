@@ -16,6 +16,7 @@ Dispatch algorithm:
 
 import frappe
 from frappe.query_builder import Order
+from frappe.utils import add_to_date, now
 from frappe.utils.background_jobs import enqueue
 from frappe.utils.file_lock import LockTimeoutError
 from frappe.utils.synchronization import filelock
@@ -117,8 +118,26 @@ def _enqueue_task(task_row):
     """Set a task to Queued and enqueue it in RQ."""
 
     task = frappe.get_doc("Async Task", task_row.name)
-    task.enqueue_execution(
-        queue=task_row.queue,
-        timeout=task_row.timeout,
-        at_front=bool(task_row.at_front),
+    task.enqueue_execution()
+
+
+def expire_stalled_tasks():
+    """
+    Mark tasks that have been Started longer than FAILURE_THRESHOLD as Failed.
+    Based on: frappe.core.doctype.prepared_report.prepared_report.expire_stalled_reports
+    """
+    frappe.db.set_value(
+        "Async Task",
+        {
+            "status": "Started",
+            "modified": (
+                "<",
+                add_to_date(now(), seconds=-FAILURE_THRESHOLD, as_datetime=True),
+            ),
+        },
+        {
+            "status": "Failed",
+            "error_message": frappe._("Task timed out."),
+        },
+        update_modified=False,
     )

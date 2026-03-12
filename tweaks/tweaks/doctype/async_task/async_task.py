@@ -35,7 +35,7 @@ from frappe.database.utils import dangerously_reconnect_on_connection_abort
 from frappe.model.document import Document
 from frappe.query_builder import Interval
 from frappe.query_builder.functions import Now
-from frappe.utils import add_to_date, now, time_diff_in_seconds
+from frappe.utils import now, time_diff_in_seconds
 from frappe.utils.background_jobs import enqueue
 from rq import get_current_job
 
@@ -66,6 +66,7 @@ class AsyncTask(Document):
         method: DF.Data
         queue: DF.Literal["default", "short", "long"]
         started_at: DF.Datetime | None
+        call_whitelisted_function: DF.Check
         status: DF.Literal[
             "Pending", "Queued", "Started", "Finished", "Failed", "Canceled"
         ]
@@ -145,9 +146,7 @@ class AsyncTask(Document):
         """
         try:
             self.update_status("Started")
-            kwargs = json.loads(self.kwargs or "{}")
-            method = frappe.get_attr(self.method)
-            method(**kwargs)
+            self._execute()
             frappe.db.commit()
             self.update_status("Finished")
         except Exception:
@@ -161,6 +160,19 @@ class AsyncTask(Document):
         )
 
         enqueue_dispatch_async_tasks()
+
+    def _execute(self):
+        """
+        Actual execution logic, separated from status updates and error handling in execute().
+        """
+        kwargs = json.loads(self.kwargs or "{}")
+        if self.call_whitelisted_function:
+            from frappe.utils.safe_exec import call_whitelisted_function
+
+            call_whitelisted_function(self.method, **kwargs)
+        else:
+            method = frappe.get_attr(self.method)
+            method(**kwargs)
 
     def update_status(self, status):
         """
@@ -195,21 +207,31 @@ class AsyncTask(Document):
         self.db_set(payload, update_modified=False, notify=True, commit=True)
 
     @frappe.whitelist()
-    def enqueue_execution(self, queue=None, timeout=None, at_front=False):
+    def enqueue_execution(self):
 
         if self.status != "Pending":
             frappe.throw(_("Only Pending tasks can be enqueued."))
 
         self.update_status("Queued")
 
-        self.queue_action(
-            "execute",
-            queue=queue or self.queue or "default",
-            timeout=timeout or self.timeout or 300,
-            at_front=at_front or bool(self.at_front),
+        enqueue(
+            execute_task,
+            queue=self.queue or "default",
+            timeout=self.timeout or 300,
+            at_front=bool(self.at_front),
             job_name=self.method,
             enqueue_after_commit=True,
+            task_name=self.name,
         )
+
+
+def execute_task(task_name):
+    """
+    Execute a task by name. To be called by the RQ worker process.
+    """
+    task = frappe.get_doc("Async Task", task_name)
+    task.unlock()
+    task.execute()
 
 
 def enqueue_async_task(
@@ -218,6 +240,7 @@ def enqueue_async_task(
     timeout: int | None = None,
     *,
     at_front: bool = False,
+    call_whitelisted_function: bool = False,
     **kwargs,
 ) -> "AsyncTask":
     """
@@ -229,6 +252,7 @@ def enqueue_async_task(
     :param queue: RQ queue name (default: ``"default"``)
     :param timeout: Job timeout in seconds (default: 300)
     :param at_front: Whether to run before other pending tasks with the same method
+    :param call_whitelisted_function: Run via ``call_whitelisted_function`` instead of direct import
     :param kwargs: Keyword arguments forwarded to *method*
     """
     if callable(method):
@@ -242,11 +266,37 @@ def enqueue_async_task(
             "kwargs": json.dumps(kwargs),
             "at_front": 1 if at_front else 0,
             "timeout": timeout or 300,
+            "call_whitelisted_function": 1 if call_whitelisted_function else 0,
         }
     )
     task.insert(ignore_permissions=True)
     # Dispatching is enqueued by the after_insert hook on AsyncTask
     return task
+
+
+def enqueue_safe_async_task(
+    method: str,
+    queue: str = "default",
+    timeout: int | None = None,
+    *,
+    at_front: bool = False,
+    **kwargs,
+) -> "AsyncTask":
+    """
+    Shorthand for :func:`enqueue_async_task` with ``call_whitelisted_function=True``.
+
+    *method* is passed to ``call_whitelisted_function`` at execution time,
+    so it must be a whitelisted function or a Server Script name.
+    """
+    kwargs.pop("call_whitelisted_function", None)
+    return enqueue_async_task(
+        method,
+        queue=queue,
+        timeout=timeout,
+        at_front=at_front,
+        call_whitelisted_function=True,
+        **kwargs,
+    )
 
 
 @dangerously_reconnect_on_connection_abort
@@ -259,25 +309,3 @@ def _save_error(task, error):
     task.status = "Failed"
     task.error_message = error
     task.save(ignore_permissions=True)
-
-
-def expire_stalled_tasks():
-    """
-    Mark tasks that have been Started longer than FAILURE_THRESHOLD as Failed.
-    Based on: frappe.core.doctype.prepared_report.prepared_report.expire_stalled_reports
-    """
-    frappe.db.set_value(
-        "Async Task",
-        {
-            "status": "Started",
-            "modified": (
-                "<",
-                add_to_date(now(), seconds=-FAILURE_THRESHOLD, as_datetime=True),
-            ),
-        },
-        {
-            "status": "Failed",
-            "error_message": frappe._("Task timed out."),
-        },
-        update_modified=False,
-    )
