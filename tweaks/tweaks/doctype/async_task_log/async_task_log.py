@@ -286,8 +286,9 @@ def _derive_document_action_method(document_type: str, action: str) -> str:
 
     app = get_module_app(module)
     doctype_snake = frappe.scrub(document_type)
+    doctype_pascal = "".join(word.capitalize() for word in doctype_snake.split("_"))
     module_snake = frappe.scrub(module)
-    return f"{app}.{module_snake}.doctype.{doctype_snake}.{doctype_snake}.{action}"
+    return f"{app}.{module_snake}.doctype.{doctype_snake}.{doctype_snake}.{doctype_pascal}.{action}"
 
 
 def enqueue_async_task(
