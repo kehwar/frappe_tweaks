@@ -193,8 +193,34 @@ class AsyncTaskLog(Document):
         except Exception:
             frappe.db.rollback()
             _save_error(self, error=frappe.get_traceback(with_context=True))
+            self.handle_batch_error()
 
         enqueue_dispatch_async_tasks()
+
+    def handle_batch_error(self):
+
+        if not self.batch_id:
+            return
+
+        dispatch_paused = False
+        if can_dispatch_now():
+            _set_dispatcher_state(False)  # suspend dispatch
+            dispatch_paused = True
+
+        tasks = frappe.get_all(
+            "Async Task Log", filters={"batch_id": self.batch_id}, pluck="name"
+        )
+        for task in tasks:
+            task = frappe.get_doc("Async Task Log", task)
+            if task.status in ("Pending"):
+                task.update_status("Paused")
+            elif task.status in ("Queued", "Started"):
+                task.cancel_job()
+                task.update_status("Paused")
+
+        if dispatch_paused:
+            _set_dispatcher_state(True)  # resume dispatch
+            enqueue_dispatch_async_tasks()
 
     def _execute(self):
         """
