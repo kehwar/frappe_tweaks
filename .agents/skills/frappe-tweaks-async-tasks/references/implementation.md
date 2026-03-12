@@ -183,6 +183,12 @@ return frappe.get_doc("Async Task Log", task) if task else None
 
 Useful when the executing method needs to inspect task metadata (e.g., `task.name`, `task.kwargs`) or call `task.notify_status()` directly.
 
+## Related References
+
+See [comparison_with_prepared_report.md](comparison_with_prepared_report.md) for a side-by-side schema and implementation comparison with Frappe's built-in `Prepared Report` doctype.
+
+---
+
 ## RQ Job Relationship
 
 Each `Async Task Log` holds one `job_id` pointing to the underlying `RQ Job` document. The `execute_task` function (the actual RQ job payload) loads the task by name and calls `task.execute()`.

@@ -159,6 +159,7 @@ Tasks are never dropped. The dispatcher runs:
 3. Via the scheduler (`all` event) as a recovery mechanism for missed triggers
 
 See [references/implementation.md](references/implementation.md) for the full dispatch algorithm and concurrency internals.
+See [references/comparison_with_prepared_report.md](references/comparison_with_prepared_report.md) for a side-by-side schema and implementation comparison with Frappe's built-in Prepared Report.
 
 ## Source Code
 
