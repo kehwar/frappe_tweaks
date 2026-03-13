@@ -225,7 +225,6 @@ def toggle_dispatcher(enable):
     """
     frappe.only_for("System Manager")
     _set_dispatcher_state(sbool(enable))
-    frappe.db.commit()
 
 
 @contextmanager
