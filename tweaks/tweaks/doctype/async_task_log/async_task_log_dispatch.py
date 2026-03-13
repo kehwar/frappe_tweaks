@@ -63,11 +63,8 @@ def dispatch_async_tasks():
     if not can_dispatch_now():
         return
 
-    try:
-        with using_dispatcher(timeout=0):
-            _run_dispatch()
-    except LockTimeoutError:
-        return
+    with using_dispatcher(timeout=0):
+        _run_dispatch()
 
 
 def _run_dispatch():
@@ -248,14 +245,17 @@ def using_dispatcher(timeout=30):
                 enqueue_async_task(...)
         # dispatcher is resumed here; enqueue_dispatch_async_tasks is called automatically
     """
-    with filelock(_DISPATCH_LOCK, timeout=timeout):
-        dispatcher_paused = False
-        if can_dispatch_now():
-            dispatcher_paused = True
-            _set_dispatcher_state(False)
-        try:
-            yield
-        finally:
-            if dispatcher_paused:
-                _set_dispatcher_state(True)
-                enqueue_dispatch_async_tasks()
+    try:
+        with filelock(_DISPATCH_LOCK, timeout=timeout):
+            dispatcher_paused = False
+            if can_dispatch_now():
+                dispatcher_paused = True
+                _set_dispatcher_state(False)
+            try:
+                yield
+            finally:
+                if dispatcher_paused:
+                    _set_dispatcher_state(True)
+                    enqueue_dispatch_async_tasks()
+    except LockTimeoutError:
+        pass
