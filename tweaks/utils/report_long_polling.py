@@ -30,7 +30,7 @@ def start_job(report_name, **kwargs):
 
 
 @frappe.whitelist()
-def check_status(job_id, attempts=2, sleep=5):
+def check_status(job_id, attempts=2, sleep=1):
     """
     Check the status of a prepared report job.
     Polls up to attempts times with sleep seconds between attempts.
@@ -44,8 +44,8 @@ def check_status(job_id, attempts=2, sleep=5):
         dict: Status information with 'status' field ("Queued", "Started", "Completed", "Error")
               Returns empty dict if job not found
     """
-    attempts = min(int(attempts), 3)
-    sleep = min(float(sleep), 10)
+    attempts = min(int(attempts), 2)
+    sleep = min(float(sleep), 1)
 
     for attempt in range(attempts):
         try:
