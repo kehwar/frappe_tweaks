@@ -10,12 +10,13 @@
   "document_type",
   "document_name",
   "document_action",
+  "column_break_1",
   "job_id",
   "queue",
   "timeout",
   "at_front",
   "call_whitelisted_function",
-  "column_break_1",
+  "column_break_mvis",
   "kwargs",
   "job_status_section",
   "status",
@@ -223,11 +224,15 @@
   {
    "fieldname": "column_break_hsrf",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_mvis",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 16:36:25.924819",
+ "modified": "2026-03-12 20:38:17.099251",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Async Task Log",
