@@ -64,7 +64,7 @@ def dispatch_async_tasks():
         return
 
     try:
-        with filelock(_DISPATCH_LOCK, timeout=0):
+        with filelock(_DISPATCH_LOCK, timeout=0, raise_exception=False):
             if not can_dispatch_now():
                 return
             with using_dispatcher():
