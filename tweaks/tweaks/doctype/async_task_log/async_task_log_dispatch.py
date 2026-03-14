@@ -63,8 +63,14 @@ def dispatch_async_tasks():
     if not can_dispatch_now():
         return
 
-    with using_dispatcher(timeout=0):
-        _run_dispatch()
+    try:
+        with filelock(_DISPATCH_LOCK, timeout=0):
+            if not can_dispatch_now():
+                return
+            with using_dispatcher():
+                _run_dispatch()
+    except LockTimeoutError:
+        pass
 
 
 def _run_dispatch():
@@ -195,20 +201,13 @@ def can_dispatch_now():
     Check if dispatching is currently allowed based on the "suspend_async_task_dispatch" default.
     Based on: frappe.email.doctype.email_queue.email_queue.EmailQueue.can_send_now
     """
-    if cint(frappe.db.get_default("suspend_async_task_dispatch")) == 1:
+    if (
+        cint(frappe.db.get_default("suspend_async_task_dispatch")) == 1
+        or frappe.flags.suspend_async_task_dispatch
+    ):
         return False
 
     return True
-
-
-def _set_dispatcher_state(enabled):
-    """
-    Persist the dispatcher suspension flag without permission checks.
-
-    Internal helper used by :func:`toggle_dispatcher` (public, permission-gated)
-    and :func:`bulk_enqueue_async_task` (may run in a worker context).
-    """
-    frappe.db.set_default("suspend_async_task_dispatch", 0 if enabled else 1)
 
 
 @frappe.whitelist()
@@ -224,37 +223,31 @@ def toggle_dispatcher(enable):
     Based on: frappe.email.doctype.email_queue.email_queue.toggle_sending
     """
     frappe.only_for("System Manager")
-    _set_dispatcher_state(sbool(enable))
+    frappe.db.set_default("suspend_async_task_dispatch", 0 if sbool(enable) else 1)
 
 
 @contextmanager
-def using_dispatcher(timeout=30):
+def using_dispatcher():
     """
-    Context manager that suspends the dispatcher on entry and resumes it on exit.
+    Context manager that suppresses dispatch triggers in the current process and
+    enqueues a single dispatch pass on exit.
 
-    Acquires the dispatch filelock (waiting up to `timeout` seconds for any in-progress dispatcher
-    to finish) so no concurrent dispatch can run for the duration of the block.
-    On exit the dispatcher is resumed and a single dispatch pass is enqueued.
+    Sets ``frappe.flags.suspend_async_task_dispatch`` for the duration of the block so
+    that any ``enqueue_dispatch_async_tasks`` calls made while the block is active are
+    silently dropped (e.g. from ``after_insert`` hooks triggered by bulk inserts).
+    On exit the flag is cleared and exactly one dispatch pass is enqueued.
 
     Use this when bulk-inserting tasks that should not be dispatched individually
     as they are created, then trigger a single dispatch pass afterwards::
 
-        with using_dispatcher(timeout=30):
+        with using_dispatcher():
             for item in items:
                 enqueue_async_task(...)
         # dispatcher is resumed here; enqueue_dispatch_async_tasks is called automatically
     """
+    frappe.flags.suspend_async_task_dispatch = True
     try:
-        with filelock(_DISPATCH_LOCK, timeout=timeout):
-            dispatcher_paused = False
-            if can_dispatch_now():
-                dispatcher_paused = True
-                _set_dispatcher_state(False)
-            try:
-                yield
-            finally:
-                if dispatcher_paused:
-                    _set_dispatcher_state(True)
-                    enqueue_dispatch_async_tasks()
-    except LockTimeoutError:
-        pass
+        yield
+    finally:
+        frappe.flags.suspend_async_task_dispatch = False
+        enqueue_dispatch_async_tasks()
