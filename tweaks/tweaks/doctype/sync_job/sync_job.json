@@ -25,19 +25,9 @@
   "column_break_5",
   "updated_data",
   "section_break_results",
-  "error_message",
   "multiple_target_documents",
-  "cancel_reason",
   "section_break_config",
-  "queue",
-  "timeout",
-  "queue_on_insert",
   "dry_run",
-  "column_break_3",
-  "retry_delay",
-  "max_retries",
-  "retry_count",
-  "retry_after",
   "column_break_ewsh",
   "insert_enabled",
   "update_enabled",
@@ -45,15 +35,11 @@
   "update_without_changes_enabled",
   "verbose_logging",
   "section_break_execution",
-  "job_id",
+  "task_id",
   "trigger_type",
   "triggered_by_document_type",
   "triggered_by_document_name",
-  "trigger_document_timestamp",
-  "column_break_6",
-  "started_at",
-  "ended_at",
-  "time_taken"
+  "trigger_document_timestamp"
  ],
  "fields": [
   {
@@ -175,71 +161,9 @@
    "read_only": 1
   },
   {
-   "default": "1",
-   "fieldname": "queue_on_insert",
-   "fieldtype": "Check",
-   "label": "Auto Queue",
-   "set_only_once": 1
-  },
-  {
    "fieldname": "section_break_config",
    "fieldtype": "Section Break",
    "label": "Job Configuration"
-  },
-  {
-   "description": "RQ queue name",
-   "fetch_from": "sync_job_type.queue",
-   "fetch_if_empty": 1,
-   "fieldname": "queue",
-   "fieldtype": "Data",
-   "label": "Queue",
-   "read_only": 1
-  },
-  {
-   "description": "Job timeout in seconds",
-   "fetch_from": "sync_job_type.timeout",
-   "fetch_if_empty": 1,
-   "fieldname": "timeout",
-   "fieldtype": "Int",
-   "label": "Timeout",
-   "set_only_once": 1
-  },
-  {
-   "fieldname": "column_break_3",
-   "fieldtype": "Column Break"
-  },
-  {
-   "description": "Delay between retries in minutes",
-   "fetch_from": "sync_job_type.retry_delay",
-   "fetch_if_empty": 1,
-   "fieldname": "retry_delay",
-   "fieldtype": "Int",
-   "label": "Retry Delay",
-   "set_only_once": 1
-  },
-  {
-   "description": "Maximum retry attempts",
-   "fetch_from": "sync_job_type.max_retries",
-   "fetch_if_empty": 1,
-   "fieldname": "max_retries",
-   "fieldtype": "Int",
-   "label": "Max Retries",
-   "set_only_once": 1
-  },
-  {
-   "default": "0",
-   "depends_on": "eval:doc.retry_count",
-   "fetch_if_empty": 1,
-   "fieldname": "retry_count",
-   "fieldtype": "Int",
-   "label": "Retry Count",
-   "read_only": 1
-  },
-  {
-   "fieldname": "retry_after",
-   "fieldtype": "Datetime",
-   "label": "Retry After",
-   "read_only": 1
   },
   {
    "default": "1",
@@ -351,36 +275,12 @@
    "label": "Execution Tracking"
   },
   {
-   "description": "RQ job ID",
-   "fieldname": "job_id",
-   "fieldtype": "Data",
-   "label": "Job ID",
+   "description": "Async task that executed this sync job",
+   "fieldname": "task_id",
+   "fieldtype": "Link",
+   "label": "Task",
    "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "started_at",
-   "fieldtype": "Datetime",
-   "label": "Started At",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "ended_at",
-   "fieldtype": "Datetime",
-   "label": "Ended At",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_6",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "time_taken",
-   "fieldtype": "Duration",
-   "label": "Time Taken",
-   "no_copy": 1,
+   "options": "Async Task Log",
    "read_only": 1
   },
   {
@@ -397,20 +297,6 @@
    "fieldname": "section_break_results",
    "fieldtype": "Section Break",
    "label": "Results"
-  },
-  {
-   "fieldname": "error_message",
-   "fieldtype": "Long Text",
-   "label": "Error Message",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "cancel_reason",
-   "fieldtype": "Long Text",
-   "label": "Cancel Reason",
-   "no_copy": 1,
-   "read_only": 1
   },
   {
    "fieldname": "column_break_yndn",

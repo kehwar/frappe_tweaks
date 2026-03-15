@@ -8,10 +8,8 @@ import frappe
 from frappe import _
 from frappe.core.doctype.log_settings.log_settings import LogType
 from frappe.model.document import Document
-from frappe.query_builder import Interval, Order
+from frappe.query_builder import Interval
 from frappe.query_builder.functions import Now
-from frappe.utils import add_to_date, create_batch, now, time_diff_in_seconds
-from frappe.utils.background_jobs import enqueue
 
 # Valid sync job operations (immutable)
 VALID_SYNC_OPERATIONS = ("insert", "update", "delete")
@@ -40,31 +38,20 @@ class SyncJob(Document, LogType):
     if TYPE_CHECKING:
         from frappe.types import DF
 
-        cancel_reason: DF.LongText | None
         context: DF.Code | None
         current_data: DF.Code | None
         diff_summary: DF.Code | None
-        ended_at: DF.Datetime | None
-        error_message: DF.LongText | None
         insert_enabled: DF.Check
         update_enabled: DF.Check
         delete_enabled: DF.Check
         update_without_changes_enabled: DF.Check
         verbose_logging: DF.Check
         dry_run: DF.Check
-        job_id: DF.Data | None
-        max_retries: DF.Int
         multiple_target_documents: DF.Code | None
         operation: DF.Literal["", "Insert", "Update", "Delete"]
         parent_sync_job: DF.Link | None
-        queue: DF.Data | None
-        queue_on_insert: DF.Check
-        retry_after: DF.Datetime | None
-        retry_count: DF.Int
-        retry_delay: DF.Int
         source_document_type: DF.Link | None
         source_document_name: DF.DynamicLink | None
-        started_at: DF.Datetime | None
         status: DF.Literal[
             "Pending",
             "Queued",
@@ -80,8 +67,7 @@ class SyncJob(Document, LogType):
         sync_job_type: DF.Link
         target_document_type: DF.Link | None
         target_document_name: DF.DynamicLink | None
-        time_taken: DF.Duration | None
-        timeout: DF.Int
+        task_id: DF.Link | None
         title: DF.Data | None
         trigger_type: DF.Literal[
             "Manual", "Scheduler", "Webhook", "API", "Document Hook"
@@ -131,14 +117,6 @@ class SyncJob(Document, LogType):
                 self.target_document_type = job_type.target_document_type
 
             # Allow override, otherwise use defaults from type
-            if self.queue is None:
-                self.queue = job_type.queue or "default"
-            if self.timeout is None:
-                self.timeout = job_type.timeout or 300
-            if self.retry_delay is None:
-                self.retry_delay = job_type.retry_delay or 5
-            if self.max_retries is None:
-                self.max_retries = job_type.max_retries or 3
             if self.verbose_logging is None:
                 self.verbose_logging = job_type.verbose_logging or 0
 
@@ -167,21 +145,17 @@ class SyncJob(Document, LogType):
             return self.source_document_type[:140]
 
     def after_insert(self):
-        """Enqueue sync job after insert if queue_on_insert is enabled"""
-        # Only queue if queue_on_insert is True
-        if not self.queue_on_insert:
-            return
-
-        # Park as Waiting; _enqueue_next_waiting_job will promote it to Queued
-        # immediately if no other job is running, otherwise it will wait its turn.
-        self.db_set("status", "Waiting", update_modified=False)
-        frappe.db.commit()
-        _enqueue_next_waiting_job()
+        """Enqueue sync job after insert via the Async Task system."""
+        self._enqueue_async_task()
 
     def on_trash(self):
-        """Cancel background job if queued or waiting"""
-        if self.status in ["Queued", "Waiting"]:
-            self.cancel_sync()
+        """Cancel the linked async task's RQ job on delete."""
+        if self.task_id:
+            try:
+                task = frappe.get_doc("Async Task Log", self.task_id)
+                task.cancel_job()
+            except Exception:
+                pass
 
     @frappe.whitelist()
     def cancel_sync(self, reason=None):
@@ -189,57 +163,32 @@ class SyncJob(Document, LogType):
         Cancel sync job (only Pending, Queued, Waiting or Failed)
 
         Args:
-            reason: Optional cancellation reason
+            reason: Optional cancellation reason (passed to the linked async task)
         """
         if self.status not in ["Pending", "Queued", "Waiting", "Failed"]:
             frappe.throw(_("Cannot cancel job with status {0}").format(self.status))
 
-        # Stop RQ job if exists
-        if self.job_id:
+        # Cancel async task if one is linked — its status update will call
+        # on_async_task_status_update("Canceled") which calls _finish_job
+        if self.task_id:
             try:
-                job = frappe.get_doc("RQ Job", self.job_id)
-                if self.status == "Queued":
-                    job.delete()
+                task = frappe.get_doc("Async Task Log", self.task_id)
+                task.cancel()
+                return
             except Exception:
-                pass  # Job may not exist or already processed
+                pass
 
-        # Set cancel reason before finishing
-        if reason:
-            self.cancel_reason = reason
-
-        # Use _finish_job to handle status change, timing, and cleanup
+        # Fallback: no task or task cancellation failed, finish directly
         self._finish_job(status="Canceled")
 
     @frappe.whitelist()
     def retry(self):
-        """Retry failed sync job"""
-        # Increment retry count
-        self.retry_count = (self.retry_count or 0) + 1
+        """Retry failed sync job by retrying the linked async task."""
+        if not self.task_id:
+            frappe.throw(_("No async task linked to retry"))
 
-        # Clear retry_after timestamp
-        self.retry_after = None
-
-        # Park as Waiting; _enqueue_next_waiting_job will promote it when the slot is free
-        self.status = "Waiting"
-        self.error_message = None
-
-        self.flags.ignore_links = True
-        self.save(ignore_permissions=True)
-
-        _enqueue_next_waiting_job()
-
-    @frappe.whitelist()
-    def start(self):
-        """Manually start a pending sync job"""
-        if self.status != "Pending":
-            frappe.throw(_("Can only start jobs with status Pending"))
-
-        # Park as Waiting; _enqueue_next_waiting_job will promote it when the slot is free
-        self.status = "Waiting"
-        self.flags.ignore_links = True
-        self.save(ignore_permissions=True)
-
-        _enqueue_next_waiting_job()
+        task = frappe.get_doc("Async Task Log", self.task_id)
+        task.retry(now=True)
 
     @staticmethod
     def clear_old_logs(days: int = 30) -> None:
@@ -249,22 +198,69 @@ class SyncJob(Document, LogType):
             table, filters=(table.modified < (Now() - Interval(days=days)))
         )
 
+    def on_async_task_status_update(self, task, message=None):
+        """
+        Handle status updates from the linked Async Task Log.
+
+        Called by AsyncTaskLog.notify_target_document when the async task status
+        changes. Updates the sync job status to reflect the current execution state.
+
+        Args:
+            task: AsyncTaskLog document with the new status
+            message: Optional status message
+        """
+        if task.status == "Pending" and (task.retry_count or 0) > 0:
+            # Auto-retry: the dispatcher has reset the task to Pending for another attempt
+            self.db_set({"status": "Waiting"}, update_modified=False)
+        elif task.status == "Queued":
+            self.db_set(
+                {"status": "Queued", "task_id": task.name}, update_modified=False
+            )
+        elif task.status == "Started":
+            self.db_set(
+                {"status": "Started", "task_id": task.name}, update_modified=False
+            )
+        elif task.status == "Failed":
+            self.db_set({"status": "Failed"}, update_modified=False)
+        elif task.status == "Canceled":
+            self._finish_job(status="Canceled")
+        # "Finished" — execute() already set the correct business status
+        # (Finished / Skipped / No Target / Relayed) via _finish_job()
+
+    def _enqueue_async_task(self):
+        """
+        Create an Async Task Log for this sync job and store the link.
+
+        The Async Task Type for execute_sync_job has concurrency_limit=1, ensuring
+        only one sync job runs at a time.
+
+        Queue, timeout, and retry settings are read from the linked Sync Job Type
+        and stored on the async task so the dispatcher and retry mechanism handle
+        scheduling without extra logic here.
+        """
+        from tweaks.tweaks.doctype.async_task_log.async_task_log import (
+            enqueue_async_task,
+        )
+
+        job_type = frappe.get_doc("Sync Job Type", self.sync_job_type)
+
+        task = enqueue_async_task(
+            "tweaks.tweaks.doctype.sync_job.sync_job.execute_sync_job",
+            document_type="Sync Job",
+            document_name=self.name,
+            queue=job_type.queue or "default",
+            timeout=job_type.timeout or 300,
+            max_retries=job_type.max_retries or 0,
+            retry_delay=(job_type.retry_delay or 0) * 60,  # convert minutes -> seconds
+            sync_job_name=self.name,
+        )
+        self.db_set("task_id", task.name, update_modified=False)
+        frappe.db.commit()
+
     @frappe.whitelist()
-    def execute(self, job_id=None):
+    def execute(self):
         """Execute the sync job"""
         try:
-
-            # Update status to Started
-            self.db_set(
-                {
-                    "job_id": job_id,
-                    "status": "Started",
-                    "started_at": now(),
-                },
-                update_modified=False,
-                notify=True,
-                commit=True,
-            )
 
             # Load components
             source_doc = self.get_source_document()
@@ -349,11 +345,9 @@ class SyncJob(Document, LogType):
         # Validate module structure (hard validation)
         try:
             validate_sync_job_module(module, soft=False)
-        except Exception as e:
-            # Module validation error - don't increment retry_count
+        except Exception:
+            # Module validation error — set Failed and re-raise (no retry for config errors)
             self.status = "Failed"
-            self.error_message = _("Module validation failed: {0}").format(str(e))
-            self.ended_at = now()
             self.flags.ignore_links = True
             self.save(ignore_permissions=True)
             frappe.db.commit()
@@ -554,15 +548,10 @@ class SyncJob(Document, LogType):
                 target_document_type=target_info["target_document_type"],
                 target_document_name=target_info.get("target_document_name"),
                 parent_sync_job=self.name,
-                queue=self.queue,
-                timeout=self.timeout,
-                retry_delay=self.retry_delay,
-                max_retries=self.max_retries,
                 trigger_type=self.trigger_type,
                 triggered_by_document_name=self.triggered_by_document_name,
                 triggered_by_document_type=self.triggered_by_document_type,
                 trigger_document_timestamp=self.trigger_document_timestamp,
-                queue_on_insert=self.queue_on_insert,
                 dry_run=self.dry_run,
             )
 
@@ -607,7 +596,7 @@ class SyncJob(Document, LogType):
         Unified method to finish sync job with various statuses.
 
         This method handles the common finishing logic:
-        - Sets job status and timing
+        - Sets job status
         - Saves and commits the job
         - Calls the finished hook if applicable
         - Optionally raises StopIteration to halt execution
@@ -622,13 +611,8 @@ class SyncJob(Document, LogType):
             stop_execution: Whether to raise StopIteration to halt execution
             stop_message: Message for StopIteration exception
         """
-        # Set status and timing
+        # Set status
         self.status = status
-        self.ended_at = now()
-
-        # Calculate time taken if started_at is set
-        if self.started_at and self.ended_at:
-            self.time_taken = time_diff_in_seconds(self.ended_at, self.started_at)
 
         # Clear current_data and updated_data if verbose_logging is disabled
         # and status is one of the completion states
@@ -797,16 +781,12 @@ class SyncJob(Document, LogType):
             return
 
         self.status = "Failed"
-        self.error_message = frappe.get_traceback(with_context=True)
-        self.ended_at = now()
-
-        # Set retry_after timestamp
-        if (self.retry_count or 0) < self.max_retries:
-            self.retry_after = add_to_date(now(), minutes=self.retry_delay or 5)
 
         self.flags.ignore_links = True
         self.save(ignore_permissions=True)
         frappe.db.commit()
+
+        raise  # re-raise so the async task records failure and handles auto-retry
 
 
 @frappe.whitelist()
@@ -823,75 +803,17 @@ def clear_all_logs() -> None:
 
 def execute_sync_job(sync_job_name):
     """
-    Execute sync job (runs in background)
+    Execute sync job (runs in background via Async Task system).
 
-    The global lock is held by _enqueue_next_waiting_job before this function
-    is enqueued. This function just executes the job and, in the finally block,
-    releases the lock and wakes the next waiting job.
+    Called by the Async Task worker. Concurrency is enforced by the
+    Async Task Type for this method (concurrency_limit=1), so only one
+    sync job runs at a time without requiring a manual Redis lock.
 
     Args:
         sync_job_name: Name of Sync Job document
     """
-    from rq import get_current_job
-
-    job = get_current_job()
-
     sync_job = frappe.get_doc("Sync Job", sync_job_name, for_update=1)
-
-    lock_key = f"{frappe.local.site}:sync_job_lock"
-
-    try:
-        sync_job.execute(job_id=job.id if job else None)
-    finally:
-        frappe.cache().delete(lock_key)
-        _enqueue_next_waiting_job()
-
-
-def _enqueue_next_waiting_job():
-    """
-    Find the oldest waiting sync job (across all types) and enqueue it.
-
-    Tries to acquire the global sync job lock. If the lock is already held
-    (another job is running), returns early — the running job will call this
-    function again when it finishes.
-
-    If the lock is acquired but there are no waiting jobs, releases the lock
-    immediately.
-    """
-    lock_key = f"{frappe.local.site}:sync_job_lock"
-
-    SyncJob = frappe.qb.DocType("Sync Job")
-    waiting_jobs = (
-        frappe.qb.from_(SyncJob)
-        .select(SyncJob.name, SyncJob.queue, SyncJob.timeout)
-        .where(SyncJob.status == "Waiting")
-        .orderby(SyncJob.creation, order=Order.asc)
-        .limit(1)
-        .run(as_dict=True)
-    )
-
-    if not waiting_jobs:
-        return
-
-    next_job = waiting_jobs[0]
-    lock_timeout = (next_job.timeout or 300) + 60
-
-    acquired = frappe.cache().set(lock_key, next_job.name, nx=True, ex=lock_timeout)
-    if not acquired:
-        # Another job is already running; it will wake the next waiter when done.
-        return
-
-    frappe.db.set_value("Sync Job", next_job.name, "status", "Queued", update_modified=False)
-
-    enqueue(
-        execute_sync_job,
-        queue=next_job.queue or "default",
-        timeout=next_job.timeout or 300,
-        sync_job_name=next_job.name,
-        enqueue_after_commit=True,
-    )
-
-    frappe.db.commit()
+    sync_job.execute()
 
 
 def get_document_even_if_deleted(doctype, name):
