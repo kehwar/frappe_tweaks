@@ -21,20 +21,19 @@ $.extend(frappe.async_tasks, {
 
         const TERMINAL = ['Finished', 'Failed', 'Canceled']
 
-        const _handler = ({ name, status, message: msg }) => {
+        const _handler = ({ name, status, message: msg, error: err }) => {
             if (name !== name)
                 return
             const s = steps[status] || { pct: 10, label: status }
             frappe.show_progress(dialog_title, s.pct, 100, msg || s.label, true)
             if (TERMINAL.includes(status)) {
                 frappe.realtime.off('async_task_status', _handler)
-                if (status !== 'Finished') {
-                    frappe.hide_progress()
-                    frappe.set_route('Form', 'Async Task Log', name)
+                if (status === 'Failed') {
+                    frappe.throw(err || __('Task failed with an unknown error.'))
                 }
             }
             if (handler) {
-                handler({ name, status, message: msg })
+                handler({ name, status, message: msg, error: err })
             }
         }
 

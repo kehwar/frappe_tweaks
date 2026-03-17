@@ -264,7 +264,7 @@ class AsyncTaskLog(Document):
             method = frappe.get_attr(self.method)
             method(**kwargs)
 
-    def update_status(self, status, message=None):
+    def update_status(self, status, message=None, error=None):
         """
         Persist task status to the database and update in-memory state.
 
@@ -279,7 +279,7 @@ class AsyncTaskLog(Document):
         if frappe.debug_log:
             payload["debug_log"] = "\n".join(frappe.debug_log)
         if status == "Failed":
-            payload["error_message"] = frappe.get_traceback(with_context=True)
+            payload["error_message"] = error
         if status == "Started":
             job = get_current_job()
             payload["job_id"] = job.id if job else None
@@ -296,21 +296,24 @@ class AsyncTaskLog(Document):
 
         self.db_set(payload, update_modified=True, notify=True, commit=True)
 
-        self.notify_status(message=message)
+        self.notify_status(message=message, error=error)
 
-        self.notify_target_document(message=message)
+        self.notify_target_document(message=message, error=error)
 
-    def notify_target_document(self, message=None):
+    def notify_target_document(self, message=None, error=None):
         if self.document_type and self.document_name:
             try:
                 doc = frappe.get_doc(self.document_type, self.document_name)
                 doc.run_method(
-                    "on_async_task_status_update", task=self, message=message
+                    "on_async_task_status_update",
+                    task=self,
+                    message=message,
+                    error=error,
                 )
             except:
                 pass
 
-    def notify_status(self, message=None):
+    def notify_status(self, message=None, error=None):
         """
         Publish a realtime message to the user who enqueued the task.
 
@@ -319,7 +322,12 @@ class AsyncTaskLog(Document):
         """
         frappe.publish_realtime(
             "async_task_status",
-            {"name": self.name, "status": self.status, "message": message},
+            {
+                "name": self.name,
+                "status": self.status,
+                "message": message,
+                "error": error,
+            },
             user=frappe.session.user,
         )
 
@@ -579,11 +587,10 @@ def _save_error(task, error):
     Based on: frappe.core.doctype.prepared_report.prepared_report.PreparedReport._save_error
     """
     task.reload()
-    task.status = "Failed"
-    task.error_message = error
-    task.save(ignore_permissions=True)
+    task.update_status("Failed", error=error)
 
 
+@frappe.request_cache
 def get_current_task():
 
     job = get_current_job()
