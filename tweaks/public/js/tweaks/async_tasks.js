@@ -21,8 +21,8 @@ $.extend(frappe.async_tasks, {
 
         const TERMINAL = ['Finished', 'Failed', 'Canceled']
 
-        const _handler = ({ name, status, message: msg, error: err }) => {
-            if (name !== name)
+        const _handler = ({ name: taskName, status, message: msg, error: err }) => {
+            if (taskName !== name)
                 return
             const s = steps[status] || { pct: 10, label: status }
             frappe.show_progress(dialog_title, s.pct, 100, msg || s.label, true)
@@ -33,7 +33,7 @@ $.extend(frappe.async_tasks, {
                 }
             }
             if (handler) {
-                handler({ name, status, message: msg, error: err })
+                handler({ name: taskName, status, message: msg, error: err })
             }
         }
 
