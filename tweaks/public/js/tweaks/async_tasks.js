@@ -25,7 +25,16 @@ $.extend(frappe.async_tasks, {
             if (taskName !== name)
                 return
             const s = steps[status] || { pct: 10, label: status }
-            frappe.show_progress(dialog_title, s.pct, 100, msg || s.label, true)
+            let progressCount = s.pct
+            let progressTotal = 100
+            let progressLabel = msg || s.label
+            if (msg && typeof msg === 'object' && msg.progress) {
+                const p = msg.progress
+                if (p.count != null) progressCount = p.count
+                if (p.total != null) progressTotal = p.total
+                if (p.description != null) progressLabel = p.description
+            }
+            frappe.show_progress(dialog_title, progressCount, progressTotal, progressLabel, true)
             if (TERMINAL.includes(status)) {
                 frappe.realtime.off('async_task_status', _handler)
                 if (status === 'Failed') {

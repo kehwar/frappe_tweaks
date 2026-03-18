@@ -237,6 +237,22 @@ def my_long_running_job(items):
 
 `notify_task_status` resolves the current RQ job, looks up the matching `Async Task Log`, and calls `notify_status()` on it. It is a no-op when called outside a worker context.
 
+### Structured progress messages
+
+Pass a dict with a `progress` key to emit granular progress information. The `frappe.async_tasks.show_progress` handler understands this format and will drive the progress bar with exact count/total values instead of the default status-based percentages.
+
+```python
+notify_task_status(message={
+    "progress": {
+        "count": i + 1,       # current step (used as the numerator)
+        "total": len(items),  # total steps (used as the denominator)
+        "description": f"Processing item {i + 1} of {len(items)}…",
+    }
+})
+```
+
+All three fields (`count`, `total`, `description`) are optional — include only the ones you need. When any field is absent the JS handler falls back to the default step-based value for that part of the progress bar.
+
 ## JavaScript API
 
 A thin JS namespace `frappe.async_tasks` is available on every desk page, provided by `tweaks/public/js/tweaks/async_tasks.js`.
@@ -257,6 +273,7 @@ High-level wrapper around `frappe.realtime.on("async_task_status", …)` that dr
 - Fetches the task's current status via `frappe.client.get_value`. If the task is already in a terminal state, the handler fires immediately without waiting for a realtime event.
 - On **Failed**, calls `frappe.throw(error)` to surface the error message in a dialog.
 - The realtime listener is automatically deregistered once a terminal status (`Finished`, `Failed`, `Canceled`) is received.
+- When `message` is an object with a `progress` property, the handler reads `progress.count`, `progress.total`, and `progress.description` to drive the progress bar with exact values. Any missing field falls back to the default step-based value.
 
 ```javascript
 // Enqueue via a server call, then track progress
@@ -272,6 +289,24 @@ frappe.call({
         )
     },
 })
+```
+
+**Server-side structured progress (drives the bar with exact count/total):**
+
+```python
+# Inside the background method — no task document reference needed
+from tweaks.tweaks.doctype.async_task_log.async_task_log import notify_task_status
+
+def my_long_running_job(items):
+    for i, item in enumerate(items):
+        process(item)
+        notify_task_status(message={
+            "progress": {
+                "count": i + 1,
+                "total": len(items),
+                "description": f"Processing item {i + 1} of {len(items)}…",
+            }
+        })
 ```
 
 ## Cancellation
