@@ -41,16 +41,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Job Name",
-   "read_only": 1
-  },
-  {
-   "default": "default",
-   "fieldname": "queue",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Queue",
-   "options": "default\nshort\nlong",
+   "length": 300,
    "read_only": 1
   },
   {
@@ -58,6 +49,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Method",
+   "length": 300,
    "read_only": 1,
    "search_index": 1
   },
@@ -85,6 +77,62 @@
    "read_only": 1
   },
   {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "job_id",
+   "fieldtype": "Data",
+   "label": "Job ID",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "default": "default",
+   "fieldname": "queue",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Queue",
+   "options": "default\nshort\nlong",
+   "read_only": 1
+  },
+  {
+   "fieldname": "timeout",
+   "fieldtype": "Duration",
+   "label": "Timeout",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "at_front",
+   "fieldtype": "Check",
+   "label": "At Front",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "call_whitelisted_function",
+   "fieldtype": "Check",
+   "label": "Call Whitelisted Function",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_mvis",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "kwargs",
+   "fieldtype": "JSON",
+   "label": "Kwargs",
+   "read_only": 1
+  },
+  {
+   "fieldname": "job_status_section",
+   "fieldtype": "Section Break",
+   "label": "Job Status"
+  },
+  {
    "default": "Pending",
    "depends_on": "eval:!doc.__islocal",
    "fieldname": "status",
@@ -97,34 +145,22 @@
    "read_only": 1
   },
   {
-   "default": "0",
-   "fieldname": "at_front",
-   "fieldtype": "Check",
-   "label": "At Front",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_1",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "timeout",
+   "fieldname": "time_taken",
    "fieldtype": "Duration",
-   "label": "Timeout",
-   "read_only": 1
-  },
-  {
-   "fieldname": "job_id",
-   "fieldtype": "Data",
-   "label": "Job ID",
+   "label": "Time Taken",
    "no_copy": 1,
    "read_only": 1
   },
   {
-   "fieldname": "kwargs",
-   "fieldtype": "JSON",
-   "label": "Kwargs",
+   "fieldname": "peak_memory_usage",
+   "fieldtype": "Int",
+   "label": "Peak Memory Usage",
+   "no_copy": 1,
    "read_only": 1
+  },
+  {
+   "fieldname": "column_break_txzx",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "started_at",
@@ -141,52 +177,8 @@
    "read_only": 1
   },
   {
-   "fieldname": "time_taken",
-   "fieldtype": "Duration",
-   "label": "Time Taken",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "section_break_output",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "error_message",
-   "fieldtype": "Code",
-   "label": "Error Message",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "peak_memory_usage",
-   "fieldtype": "Int",
-   "label": "Peak Memory Usage",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "debug_log",
-   "fieldtype": "Code",
-   "label": "Debug Log",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "job_status_section",
-   "fieldtype": "Section Break",
-   "label": "Job Status"
-  },
-  {
-   "fieldname": "column_break_txzx",
+   "fieldname": "column_break_hsrf",
    "fieldtype": "Column Break"
-  },
-  {
-   "default": "0",
-   "fieldname": "call_whitelisted_function",
-   "fieldtype": "Check",
-   "label": "Call Whitelisted Function",
-   "read_only": 1
   },
   {
    "fieldname": "batch_id",
@@ -222,17 +214,27 @@
    "read_only": 1
   },
   {
-   "fieldname": "column_break_hsrf",
-   "fieldtype": "Column Break"
+   "fieldname": "section_break_output",
+   "fieldtype": "Section Break"
   },
   {
-   "fieldname": "column_break_mvis",
-   "fieldtype": "Column Break"
+   "fieldname": "error_message",
+   "fieldtype": "Code",
+   "label": "Error Message",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "debug_log",
+   "fieldtype": "Code",
+   "label": "Debug Log",
+   "no_copy": 1,
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 20:38:17.099251",
+ "modified": "2026-03-18 15:05:47.027958",
  "modified_by": "Administrator",
  "module": "Tweaks",
  "name": "Async Task Log",
@@ -240,6 +242,7 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "create": 1,
    "delete": 1,
    "email": 1,
    "export": 1,
@@ -247,7 +250,8 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
-   "share": 1
+   "share": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",
