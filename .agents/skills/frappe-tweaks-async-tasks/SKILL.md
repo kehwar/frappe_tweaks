@@ -210,11 +210,12 @@ Pending → Queued → Started → Finished
 - **Canceled**: Manually canceled; RQ job stopped if already Queued/Started.
 - **Auto-retry**: When a task has `max_retries > 0` and `retry_count < max_retries`, the dispatcher automatically resets it to `Pending` after the `retry_delay` has elapsed since the last failure. `retry_count` is incremented each time a retry is triggered.
 
-A realtime event `async_task_status` is published to the creating user on **every status transition** (Queued, Started, Finished, Failed, Canceled). Listen for this event to react to any stage, not just completion.
+A realtime event `async_task_status` is published to the creating user on **every status transition** (Queued, Started, Finished, Failed, Canceled). Use `frappe.async_tasks.show_progress` (see [JavaScript API](#javascript-api) below) for the idiomatic high-level approach. For raw access:
 
 ```javascript
-// Payload: {"name": task_name, "status": new_status, "message": optional_message}
-frappe.realtime.on("async_task_status", (data) => { ... })
+// Payload: { name, status, message, error }
+// Always filter by name — events are broadcast for ALL tasks
+frappe.realtime.on("async_task_status", ({ name, status, message, error }) => { ... })
 ```
 
 You can also push a custom message alongside a status update by calling `notify_status()` directly:
@@ -235,6 +236,43 @@ def my_long_running_job(items):
 ```
 
 `notify_task_status` resolves the current RQ job, looks up the matching `Async Task Log`, and calls `notify_status()` on it. It is a no-op when called outside a worker context.
+
+## JavaScript API
+
+A thin JS namespace `frappe.async_tasks` is available on every desk page, provided by `tweaks/public/js/tweaks/async_tasks.js`.
+
+### `frappe.async_tasks.show_progress(name, title?, handler?)`
+
+High-level wrapper around `frappe.realtime.on("async_task_status", …)` that drives a `frappe.show_progress` bar for a given task. Use this instead of wiring the raw realtime event by hand.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `name` | `string` | Yes | `Async Task Log` document name to track. |
+| `title` | `string` | No | Progress bar title. Defaults to `"Task {name}"`. |
+| `handler` | `function` | No | Optional callback invoked on every status event: `({ name, status, message, error }) => void`. |
+
+**Behaviour:**
+- Immediately shows the progress bar at 10 % ("Pending").
+- Registers the `async_task_status` realtime listener **before** fetching current status, so no transition event is missed.
+- Fetches the task's current status via `frappe.client.get_value`. If the task is already in a terminal state, the handler fires immediately without waiting for a realtime event.
+- On **Failed**, calls `frappe.throw(error)` to surface the error message in a dialog.
+- The realtime listener is automatically deregistered once a terminal status (`Finished`, `Failed`, `Canceled`) is received.
+
+```javascript
+// Enqueue via a server call, then track progress
+frappe.call({
+    method: "myapp.api.start_import",
+    callback(r) {
+        frappe.async_tasks.show_progress(
+            r.message,              // Async Task Log name
+            __("Importing data"),   // progress bar title
+            ({ status }) => {
+                if (status === "Finished") frappe.show_alert(__("Import complete!"))
+            }
+        )
+    },
+})
+```
 
 ## Cancellation
 
