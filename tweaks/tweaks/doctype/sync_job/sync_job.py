@@ -173,7 +173,7 @@ class SyncJob(Document, LogType):
         if self.task_id:
             try:
                 task = frappe.get_doc("Async Task Log", self.task_id)
-                task.cancel()
+                task.cancel(message=reason)
                 return
             except Exception:
                 pass
