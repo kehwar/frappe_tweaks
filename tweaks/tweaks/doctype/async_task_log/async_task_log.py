@@ -310,6 +310,7 @@ class AsyncTaskLog(Document):
                     message=message,
                     error=error,
                 )
+                doc.notify_update()
             except:
                 pass
 
