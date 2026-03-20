@@ -24,7 +24,6 @@
   "current_data",
   "column_break_5",
   "updated_data",
-  "section_break_results",
   "multiple_target_documents",
   "section_break_config",
   "dry_run",
@@ -292,11 +291,6 @@
    "label": "Trigger Type",
    "options": "Manual\nScheduler\nWebhook\nAPI\nDocument Hook",
    "read_only": 1
-  },
-  {
-   "fieldname": "section_break_results",
-   "fieldtype": "Section Break",
-   "label": "Results"
   },
   {
    "fieldname": "column_break_yndn",

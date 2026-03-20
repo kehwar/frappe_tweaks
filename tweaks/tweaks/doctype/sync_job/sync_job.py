@@ -147,11 +147,11 @@ class SyncJob(Document, LogType):
         self._enqueue_async_task()
 
     def on_trash(self):
-        """Cancel the linked async task's RQ job on delete."""
+        """Cancel the linked async task on delete."""
         if self.task_id:
             try:
                 task = frappe.get_doc("Async Task Log", self.task_id)
-                task.cancel_job()
+                task.cancel()
             except Exception:
                 pass
 
