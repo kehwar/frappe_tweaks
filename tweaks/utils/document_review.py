@@ -89,8 +89,8 @@ def get_rules_for_doctype(doctype):
             List of Document Review Rule documents
     """
 
-    # Skip during migration
-    if frappe.flags.in_migrate or frappe.flags.in_install:
+    # Skip during migration, install, or automated test record creation
+    if frappe.flags.in_migrate or frappe.flags.in_install or frappe.flags.in_test:
         return
 
     cache_key = f"document_review_rules:{doctype}"
