@@ -318,17 +318,21 @@ class AsyncTaskLog(Document):
         """
         Publish a realtime message to the user who enqueued the task.
 
-        :param event: Realtime event name
         :param message: Message payload (dict)
+        :param error: Error message string
         """
+        payload = {
+            "name": self.name,
+            "status": self.status,
+            "message": message,
+            "error": error,
+        }
+        if self.batch_id:
+            payload["batch_id"] = self.batch_id
+
         frappe.publish_realtime(
             "async_task_status",
-            {
-                "name": self.name,
-                "status": self.status,
-                "message": message,
-                "error": error,
-            },
+            payload,
             user=frappe.session.user,
         )
 
@@ -500,17 +504,19 @@ def enqueue_async_task(
     return task
 
 
-def bulk_enqueue_async_task(
-    tasks: list[dict], batch_id: str = None, **kwargs
-) -> "AsyncTaskLog":
+def bulk_enqueue_async_task(tasks: list[dict], batch_id: str = None, **kwargs) -> str:
     """
     Create multiple Async Task Log documents and trigger dispatch.
 
-    Signature mirrors :func:`frappe.utils.background_jobs.enqueue`.
+    After all tasks are inserted a single ``async_batch_enqueued`` realtime
+    event is published to the creating user with ``{ batch_id, total }`` so
+    that clients can begin tracking batch progress.
 
-    :param tasks: List of task dictionaries containing method, queue, timeout, at_front, call_whitelisted_function, batch_id, batch_order, and kwargs
-
-    :param kwargs: Keyword arguments to overwrite in each task dict (e.g., to set the same batch_id for all tasks)
+    :param tasks: List of task dictionaries containing method, queue, timeout,
+        at_front, call_whitelisted_function, batch_id, batch_order, and kwargs
+    :param kwargs: Keyword arguments to overwrite in each task dict (e.g., to
+        set the same queue for all tasks)
+    :returns: The ``batch_id`` string (auto-generated UUID when not provided)
     """
 
     batch_order = 0
@@ -526,6 +532,12 @@ def bulk_enqueue_async_task(
             batch_order += 1
 
             enqueue_async_task(**task)
+
+    frappe.publish_realtime(
+        "async_batch_enqueued",
+        {"batch_id": batch_id, "total": batch_order},
+        user=frappe.session.user,
+    )
 
     return batch_id
 

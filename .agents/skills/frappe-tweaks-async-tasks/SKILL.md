@@ -213,9 +213,17 @@ Pending → Queued → Started → Finished
 A realtime event `async_task_status` is published to the creating user on **every status transition** (Queued, Started, Finished, Failed, Canceled). Use `frappe.async_tasks.show_progress` (see [JavaScript API](#javascript-api) below) for the idiomatic high-level approach. For raw access:
 
 ```javascript
-// Payload: { name, status, message, error }
+// Payload: { name, status, message, error, batch_id? }
+// batch_id is only present when the task belongs to a batch.
 // Always filter by name — events are broadcast for ALL tasks
-frappe.realtime.on("async_task_status", ({ name, status, message, error }) => { ... })
+frappe.realtime.on("async_task_status", ({ name, status, message, error, batch_id }) => { ... })
+```
+
+When tasks are created via `bulk_enqueue_async_task`, a single `async_batch_enqueued` event is published after all tasks are inserted:
+
+```javascript
+// Payload: { batch_id, total }
+frappe.realtime.on("async_batch_enqueued", ({ batch_id, total }) => { ... })
 ```
 
 You can also push a custom message alongside a status update by calling `notify_status()` directly:
@@ -307,6 +315,88 @@ def my_long_running_job(items):
                 "description": f"Processing item {i + 1} of {len(items)}…",
             }
         })
+```
+
+### `frappe.async_tasks.show_batch_progress(batch_id, coordinator_task_name, title?, handler?)`
+
+Two-phase progress tracker for the **coordinator + bulk batch** pattern, where a coordinator task resolves a list of items and then calls `bulk_enqueue_async_task` to fan out.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `batch_id` | `string` | Yes | Batch identifier returned by the server synchronously. |
+| `coordinator_task_name` | `string` | Yes | `Async Task Log` name of the coordinator task. |
+| `title` | `string` | No | Progress bar title. |
+| `handler` | `function` | No | Callback invoked on each event (see below). |
+
+**Lifecycle:**
+
+1. **Phase 1 — Coordinator**: Registers an `async_batch_enqueued` listener immediately, then calls `show_progress(coordinator_task_name, …)` internally to show a single-task bar while the coordinator runs.
+2. **Phase 2 — Batch**: When `async_batch_enqueued` fires with the matching `batch_id`, the total is captured and the bar switches to counting individual task completions.
+3. **Done**: When all N tasks reach a terminal state (`Finished | Failed | Canceled`) the `handler` is called once with a completion summary.
+
+**Handler call shapes:**
+
+```javascript
+// Called on every coordinator status event (Phase 1):
+handler({ coordinator_status: "Started" | "Finished" | "Failed" | "Canceled", error })
+
+// Called once all batch tasks are done (Phase 2 completion):
+handler({ batch_id, finished, failed, canceled, total })
+```
+
+Distinguish the two shapes by checking `coordinator_status !== undefined`.
+
+**Usage:**
+
+```javascript
+// Server returns { batch_id, coordinator_task_name } synchronously
+frappe.call({
+    method: "myapp.api.bulk_create",
+    callback(r) {
+        const { batch_id, coordinator_task_name } = r.message
+        frappe.async_tasks.show_batch_progress(
+            batch_id,
+            coordinator_task_name,
+            __("Creating records"),
+            ({ batch_id, finished, failed, canceled, total, coordinator_status }) => {
+                if (coordinator_status !== undefined) return  // ignore Phase 1 events
+                frappe.show_alert({
+                    message: __("{0} of {1} created, {2} failed", [finished, total, failed]),
+                    indicator: failed > 0 ? "orange" : "green",
+                })
+                listview.refresh()
+            },
+        )
+    },
+})
+```
+
+**Server-side coordinator pattern:**
+
+```python
+import uuid
+from tweaks.tweaks.doctype.async_task_log.async_task_log import (
+    enqueue_async_task,
+    bulk_enqueue_async_task,
+    notify_task_status,
+)
+
+@frappe.whitelist()
+def bulk_create(items):
+    batch_id = str(uuid.uuid4())
+    coordinator = enqueue_async_task(
+        "myapp.api._coordinator",
+        queue="short",
+        batch_id=batch_id,
+        arguments={"items": items, "batch_id": batch_id},
+    )
+    return {"batch_id": batch_id, "coordinator_task_name": coordinator.name}
+
+def _coordinator(items, batch_id):
+    notify_task_status(message=f"Resolved {len(items)} items. Enqueueing…")
+    tasks = [{"method": "myapp.api.process_item", "arguments": {"item": i, "batch_id": batch_id}} for i in items]
+    bulk_enqueue_async_task(tasks, batch_id=batch_id)
+    # bulk_enqueue_async_task emits async_batch_enqueued { batch_id, total } automatically.
 ```
 
 ## Cancellation
