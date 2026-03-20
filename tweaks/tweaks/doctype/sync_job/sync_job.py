@@ -18,7 +18,6 @@ VALID_SYNC_OPERATIONS = ("insert", "update", "delete")
 SyncJobStatus = Literal[
     "Pending",
     "Queued",
-    "Waiting",
     "Started",
     "Finished",
     "Failed",
@@ -55,7 +54,6 @@ class SyncJob(Document, LogType):
         status: DF.Literal[
             "Pending",
             "Queued",
-            "Waiting",
             "Started",
             "Finished",
             "Failed",
@@ -160,12 +158,12 @@ class SyncJob(Document, LogType):
     @frappe.whitelist()
     def cancel_sync(self, reason=None):
         """
-        Cancel sync job (only Pending, Queued, Waiting or Failed)
+        Cancel sync job (only Pending, Queued or Failed)
 
         Args:
             reason: Optional cancellation reason (passed to the linked async task)
         """
-        if self.status not in ["Pending", "Queued", "Waiting", "Failed"]:
+        if self.status not in ["Pending", "Queued", "Failed"]:
             frappe.throw(_("Cannot cancel job with status {0}").format(self.status))
 
         # Cancel async task if one is linked — its status update will call
@@ -211,7 +209,7 @@ class SyncJob(Document, LogType):
         """
         if task.status == "Pending" and (task.retry_count or 0) > 0:
             # Auto-retry: the dispatcher has reset the task to Pending for another attempt
-            self.db_set({"status": "Waiting"}, update_modified=False)
+            self.db_set({"status": "Pending"}, update_modified=False)
         elif task.status == "Queued":
             self.db_set(
                 {"status": "Queued", "task_id": task.name}, update_modified=False
