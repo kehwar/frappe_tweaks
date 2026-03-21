@@ -323,18 +323,44 @@ class AsyncTaskLog(Document):
         """
         payload = {
             "name": self.name,
+            "job_name": self.job_name,
             "status": self.status,
             "message": message,
             "error": error,
         }
         if self.batch_id:
             payload["batch_id"] = self.batch_id
+            payload.update(self._get_batch_progress())
 
         frappe.publish_realtime(
             "async_task_status",
             payload,
             user=frappe.session.user,
         )
+
+    def _get_batch_progress(self) -> dict:
+        """
+        Return ``{batch_done, batch_total}`` for the current batch by reading
+        authoritative counters from Redis.
+
+        If this status transition is terminal, the done counter is incremented
+        atomically *before* reading so the emitted value is already up-to-date.
+        """
+        TERMINAL = ("Finished", "Failed", "Canceled")
+        cache = frappe.cache
+        total_key = cache.make_key(f"async_batch:{self.batch_id}:total")
+        done_key = cache.make_key(f"async_batch:{self.batch_id}:done")
+
+        if self.status in TERMINAL:
+            batch_done = cache.incr(done_key)
+        else:
+            raw = cache.get(done_key)
+            batch_done = int(raw) if raw is not None else 0
+
+        raw_total = cache.get(total_key)
+        batch_total = int(raw_total) if raw_total is not None else None
+
+        return {"batch_done": batch_done, "batch_total": batch_total}
 
     @frappe.whitelist()
     def retry(self, now=False):
@@ -532,6 +558,18 @@ def bulk_enqueue_async_task(tasks: list[dict], batch_id: str = None, **kwargs) -
             batch_order += 1
 
             enqueue_async_task(**task)
+
+    # Persist the batch total in Redis so workers can read it back during
+    # execution and include authoritative counters in status events.
+    # Key expires after 24 h — long enough for any realistic batch run.
+    _BATCH_TTL = 86_400  # seconds
+    cache = frappe.cache
+    total_key = cache.make_key(f"async_batch:{batch_id}:total")
+    done_key = cache.make_key(f"async_batch:{batch_id}:done")
+    cache.set(total_key, batch_order)
+    cache.set(done_key, 0)
+    cache.expire(total_key, _BATCH_TTL)
+    cache.expire(done_key, _BATCH_TTL)
 
     frappe.publish_realtime(
         "async_batch_enqueued",
