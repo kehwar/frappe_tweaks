@@ -267,7 +267,7 @@ High-level wrapper around `frappe.realtime.on("async_task_status", …)` that dr
 |---|---|---|---|
 | `name` | `string` | Yes | `Async Task Log` document name to track. |
 | `title` | `string` | No | Progress bar title. Defaults to `"Task {name}"`. |
-| `handler` | `function` | No | Optional callback invoked on **every** status event: `({ name, status, message, error }) => void`. |
+| `handler` | `function` | No | Optional callback invoked on **every** status event: `({ name, status, message, error, job_name }) => void`. |
 | `hide_on_completion` | `boolean` | No | Whether to hide/close the bar on terminal status. Default `true`. |
 
 **Behaviour:**
@@ -321,15 +321,16 @@ Pure batch progress tracker. Shows a `frappe.show_progress` bar that counts indi
 |---|---|---|---|
 | `batch_id` | `string` | Yes | Batch identifier returned by the server. |
 | `title` | `string` | No | Progress bar title. Defaults to `"Processing…"`. |
-| `handler` | `function` | No | Called once when all tasks are terminal: `({ batch_id, done, total }) => void`. |
+| `handler` | `function` | No | Called on **every** matching event: `({ batch_id, status, message, batch_done, batch_total, job_name }) => void`. |
 | `hide_on_completion` | `boolean` | No | Whether to hide/close the bar on completion. Default `true`. |
 
 **Behaviour:**
 - Immediately shows an indeterminate bar (`0 / 100`, "Starting…") while waiting for the first event.
 - Listens for `async_task_status` events; filters by `batch_id` and drops events where `batch_total == null` (tasks arrived before Redis keys were written).
-- Each event carries `batch_done` and `batch_total` from Redis (set atomically by the server). The bar label format is: `(Completed {done} of {total}) {job_name}: {description}`.
-- `handler` is called exactly **once** when `batch_done >= batch_total` and all tasks are terminal. It is **not** called on intermediate events.
-- Does **not** handle the coordinator task — that is the caller's responsibility (see below).  
+- Each event carries `batch_done` and `batch_total` from Redis (set atomically by the server). The default bar label is `"{job_name}: {status_label}"` (or just `"{status_label}"` when no `job_name`). Structured `msg.progress` overrides count/total/description as usual.
+- `handler` is called on **every** matching event (Pending, Queued, Started, Finished, Failed, Canceled). Guard with `status === 'Finished'` (or a count check) if you only want to act once on completion.
+- The realtime listener is deregistered when a terminal-status event brings `batch_done >= batch_total`.
+- Does **not** handle the coordinator task — that is the caller's responsibility (see below).
 
 **Usage:**
 
@@ -337,10 +338,11 @@ Pure batch progress tracker. Shows a `frappe.show_progress` bar that counts indi
 frappe.async_tasks.show_batch_progress(
     batch_id,
     __("Creating records"),
-    ({ done, total }) => {
+    ({ status, batch_done, batch_total }) => {
+        if (status !== 'Finished' || batch_done < batch_total) return
         frappe.show_alert({
-            message: __("{0} of {1} created", [done, total]),
-            indicator: done < total ? "orange" : "green",
+            message: __("{0} of {1} created", [batch_done, batch_total]),
+            indicator: "green",
         })
         listview.refresh()
     },
@@ -358,10 +360,11 @@ frappe.call({
     callback(r) {
         const { batch_id, coordinator_task_name } = r.message
 
-        const onBatchComplete = ({ done, total }) => {
+        const onBatchComplete = ({ status, batch_done, batch_total }) => {
+            if (status !== 'Finished' || batch_done < batch_total) return
             frappe.show_alert({
-                message: __("{0} of {1} created", [done, total]),
-                indicator: done < total ? "orange" : "green",
+                message: __("{0} of {1} created", [batch_done, batch_total]),
+                indicator: "green",
             })
             listview.refresh()
         }
