@@ -571,12 +571,6 @@ def bulk_enqueue_async_task(tasks: list[dict], batch_id: str = None, **kwargs) -
     cache.expire(total_key, _BATCH_TTL)
     cache.expire(done_key, _BATCH_TTL)
 
-    frappe.publish_realtime(
-        "async_batch_enqueued",
-        {"batch_id": batch_id, "total": batch_order},
-        user=frappe.session.user,
-    )
-
     return batch_id
 
 

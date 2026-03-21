@@ -1,7 +1,7 @@
 frappe.provide("frappe.async_tasks")
 
 $.extend(frappe.async_tasks, {
-    show_progress: function (name, title, handler) {
+    show_progress: function (name, title, handler, hide_on_completion = true) {
         if (!name) {
             frappe.throw(__('Task name is required.'))
         }
@@ -34,7 +34,7 @@ $.extend(frappe.async_tasks, {
                 if (p.total != null) progressTotal = p.total
                 if (p.description != null) progressLabel = p.description
             }
-            frappe.show_progress(dialog_title, progressCount, progressTotal, progressLabel, true)
+            frappe.show_progress(dialog_title, progressCount, progressTotal, progressLabel, hide_on_completion)
             if (TERMINAL.includes(status)) {
                 frappe.realtime.off('async_task_status', _handler)
                 if (status === 'Failed') {
@@ -64,7 +64,7 @@ $.extend(frappe.async_tasks, {
      * @param {function} [handler] - Called when all tasks are terminal with
      *   { batch_id, done, total }.
      */
-    show_batch_progress: function (batch_id, title, handler) {
+    show_batch_progress: function (batch_id, title, handler, hide_on_completion = true) {
         if (!batch_id) {
             frappe.throw(__('batch_id is required.'))
         }
@@ -85,7 +85,7 @@ $.extend(frappe.async_tasks, {
                 batch_done,
                 batch_total,
                 __('(Completed {0} of {1}) {2}: {3}', [batch_done, batch_total, job_name || '', description]),
-                true,
+                hide_on_completion,
             )
 
             if (TERMINAL.includes(status) && batch_done >= batch_total) {
