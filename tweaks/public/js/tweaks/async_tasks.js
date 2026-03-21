@@ -21,7 +21,7 @@ $.extend(frappe.async_tasks, {
 
         const TERMINAL = ['Finished', 'Failed', 'Canceled']
 
-        const _handler = ({ name: taskName, status, message: msg, error: err }) => {
+        const _handler = ({ name: taskName, status, message: msg, error: err, job_name }) => {
             if (taskName !== name)
                 return
             const s = steps[status] || { pct: 10, label: status }
@@ -42,7 +42,7 @@ $.extend(frappe.async_tasks, {
                 }
             }
             if (handler) {
-                handler({ name: taskName, status, message: msg, error: err })
+                handler({ name: taskName, status, message: msg, error: err, job_name })
             }
         }
 
@@ -75,24 +75,43 @@ $.extend(frappe.async_tasks, {
         // Show an indeterminate bar immediately while we wait for the first event.
         frappe.show_progress(dialog_title, 0, 100, __('Starting…'))
 
-        const _handler = ({ batch_id: evtBatchId, status, job_name, message: msg, batch_done, batch_total }) => {
+        const steps = {
+            Pending: __('Pending'),
+            Queued: __('Queued'),
+            Started: __('Running'),
+            Finished: __('Finished'),
+            Failed: __('Failed'),
+            Canceled: __('Canceled'),
+        }
+
+        const _handler = ({ batch_id: evtBatchId, status, message: msg, batch_done, batch_total, job_name }) => {
             if (evtBatchId !== batch_id) return
             if (batch_total == null) return  // batch not yet registered in Redis — drop
 
-            const description = msg || status
+            let progressCount = batch_done
+            let progressTotal = batch_total
+            let progressLabel = msg || (job_name ? __('{0}: {1}', [job_name, steps[status] || status]) : (steps[status] || status))
+            if (msg && typeof msg === 'object' && msg.progress) {
+                const p = msg.progress
+                if (p.count != null) progressCount = p.count
+                if (p.total != null) progressTotal = p.total
+                if (p.description != null) progressLabel = p.description
+            }
+
             frappe.show_progress(
                 dialog_title,
-                batch_done,
-                batch_total,
-                __('(Completed {0} of {1}) {2}: {3}', [batch_done, batch_total, job_name || '', description]),
-                hide_on_completion,
+                progressCount,
+                progressTotal,
+                progressLabel,
+                hide_on_completion, 
             )
 
-            if (TERMINAL.includes(status) && batch_done >= batch_total) {
+            if (TERMINAL.includes(status) && progressCount >= progressTotal) {
                 frappe.realtime.off('async_task_status', _handler)
-                if (handler) {
-                    handler({ batch_id, done: batch_done, total: batch_total })
-                }
+            }
+
+            if(handler){
+                handler({ batch_id: evtBatchId, status, message: msg, batch_done, batch_total, job_name })
             }
         }
 
