@@ -213,17 +213,11 @@ Pending → Queued → Started → Finished
 A realtime event `async_task_status` is published to the creating user on **every status transition** (Queued, Started, Finished, Failed, Canceled). Use `frappe.async_tasks.show_progress` (see [JavaScript API](#javascript-api) below) for the idiomatic high-level approach. For raw access:
 
 ```javascript
-// Payload: { name, status, message, error, batch_id? }
-// batch_id is only present when the task belongs to a batch.
-// Always filter by name — events are broadcast for ALL tasks
-frappe.realtime.on("async_task_status", ({ name, status, message, error, batch_id }) => { ... })
-```
-
-When tasks are created via `bulk_enqueue_async_task`, a single `async_batch_enqueued` event is published after all tasks are inserted:
-
-```javascript
-// Payload: { batch_id, total }
-frappe.realtime.on("async_batch_enqueued", ({ batch_id, total }) => { ... })
+// Payload: { name, job_name, status, message, error, batch_id?, batch_done?, batch_total? }
+// batch_id, batch_done, batch_total are only present when the task belongs to a batch.
+// batch_done/batch_total are authoritative counters read from Redis — embedded in every batch task event.
+// Always filter by name/batch_id — events are broadcast for ALL tasks.
+frappe.realtime.on("async_task_status", ({ name, job_name, status, message, error, batch_id, batch_done, batch_total }) => { ... })
 ```
 
 You can also push a custom message alongside a status update by calling `notify_status()` directly:
@@ -265,7 +259,7 @@ All three fields (`count`, `total`, `description`) are optional — include only
 
 A thin JS namespace `frappe.async_tasks` is available on every desk page, provided by `tweaks/public/js/tweaks/async_tasks.js`.
 
-### `frappe.async_tasks.show_progress(name, title?, handler?)`
+### `frappe.async_tasks.show_progress(name, title?, handler?, hide_on_completion?)`
 
 High-level wrapper around `frappe.realtime.on("async_task_status", …)` that drives a `frappe.show_progress` bar for a given task. Use this instead of wiring the raw realtime event by hand.
 
@@ -273,15 +267,17 @@ High-level wrapper around `frappe.realtime.on("async_task_status", …)` that dr
 |---|---|---|---|
 | `name` | `string` | Yes | `Async Task Log` document name to track. |
 | `title` | `string` | No | Progress bar title. Defaults to `"Task {name}"`. |
-| `handler` | `function` | No | Optional callback invoked on every status event: `({ name, status, message, error }) => void`. |
+| `handler` | `function` | No | Optional callback invoked on **every** status event: `({ name, status, message, error }) => void`. |
+| `hide_on_completion` | `boolean` | No | Whether to hide/close the bar on terminal status. Default `true`. |
 
 **Behaviour:**
 - Immediately shows the progress bar at 10 % ("Pending").
-- Registers the `async_task_status` realtime listener **before** fetching current status, so no transition event is missed.
-- Fetches the task's current status via `frappe.client.get_value`. If the task is already in a terminal state, the handler fires immediately without waiting for a realtime event.
+- Registers the `async_task_status` realtime listener so no transition event is missed.
 - On **Failed**, calls `frappe.throw(error)` to surface the error message in a dialog.
 - The realtime listener is automatically deregistered once a terminal status (`Finished`, `Failed`, `Canceled`) is received.
 - When `message` is an object with a `progress` property, the handler reads `progress.count`, `progress.total`, and `progress.description` to drive the progress bar with exact values. Any missing field falls back to the default step-based value.
+
+> **Important:** `handler` is called on **every matching event** (Pending, Queued, Started, Finished, Failed, Canceled), not only on terminal ones. If your handler should only fire once (e.g. to transition to a second phase), guard it with a `status` check.
 
 ```javascript
 // Enqueue via a server call, then track progress
@@ -317,59 +313,74 @@ def my_long_running_job(items):
         })
 ```
 
-### `frappe.async_tasks.show_batch_progress(batch_id, coordinator_task_name, title?, handler?)`
+### `frappe.async_tasks.show_batch_progress(batch_id, title?, handler?, hide_on_completion?)`
 
-Two-phase progress tracker for the **coordinator + bulk batch** pattern, where a coordinator task resolves a list of items and then calls `bulk_enqueue_async_task` to fan out.
+Pure batch progress tracker. Shows a `frappe.show_progress` bar that counts individual task completions using **server-authoritative Redis counters** embedded in every `async_task_status` event. The client owns no counter state — missed events are harmless.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `batch_id` | `string` | Yes | Batch identifier returned by the server synchronously. |
-| `coordinator_task_name` | `string` | Yes | `Async Task Log` name of the coordinator task. |
-| `title` | `string` | No | Progress bar title. |
-| `handler` | `function` | No | Callback invoked on each event (see below). |
+| `batch_id` | `string` | Yes | Batch identifier returned by the server. |
+| `title` | `string` | No | Progress bar title. Defaults to `"Processing…"`. |
+| `handler` | `function` | No | Called once when all tasks are terminal: `({ batch_id, done, total }) => void`. |
+| `hide_on_completion` | `boolean` | No | Whether to hide/close the bar on completion. Default `true`. |
 
-**Lifecycle:**
-
-1. **Phase 1 — Coordinator**: Registers an `async_batch_enqueued` listener immediately, then calls `show_progress(coordinator_task_name, …)` internally to show a single-task bar while the coordinator runs.
-2. **Phase 2 — Batch**: When `async_batch_enqueued` fires with the matching `batch_id`, the total is captured and the bar switches to counting individual task completions.
-3. **Done**: When all N tasks reach a terminal state (`Finished | Failed | Canceled`) the `handler` is called once with a completion summary.
-
-**Handler call shapes:**
-
-```javascript
-// Called on every coordinator status event (Phase 1):
-handler({ coordinator_status: "Started" | "Finished" | "Failed" | "Canceled", error })
-
-// Called once all batch tasks are done (Phase 2 completion):
-handler({ batch_id, finished, failed, canceled, total })
-```
-
-Distinguish the two shapes by checking `coordinator_status !== undefined`.
+**Behaviour:**
+- Immediately shows an indeterminate bar (`0 / 100`, "Starting…") while waiting for the first event.
+- Listens for `async_task_status` events; filters by `batch_id` and drops events where `batch_total == null` (tasks arrived before Redis keys were written).
+- Each event carries `batch_done` and `batch_total` from Redis (set atomically by the server). The bar label format is: `(Completed {done} of {total}) {job_name}: {description}`.
+- `handler` is called exactly **once** when `batch_done >= batch_total` and all tasks are terminal. It is **not** called on intermediate events.
+- Does **not** handle the coordinator task — that is the caller's responsibility (see below).  
 
 **Usage:**
 
 ```javascript
-// Server returns { batch_id, coordinator_task_name } synchronously
+frappe.async_tasks.show_batch_progress(
+    batch_id,
+    __("Creating records"),
+    ({ done, total }) => {
+        frappe.show_alert({
+            message: __("{0} of {1} created", [done, total]),
+            indicator: done < total ? "orange" : "green",
+        })
+        listview.refresh()
+    },
+)
+```
+
+### Two-phase coordinator → batch pattern
+
+When a coordinator task resolves a list of items and then calls `bulk_enqueue_async_task` to fan out, orchestrate the two phases in the **caller**:
+
+```javascript
+// Server returns { batch_id, coordinator_task_name } synchronously.
 frappe.call({
     method: "myapp.api.bulk_create",
     callback(r) {
         const { batch_id, coordinator_task_name } = r.message
-        frappe.async_tasks.show_batch_progress(
-            batch_id,
+
+        const onBatchComplete = ({ done, total }) => {
+            frappe.show_alert({
+                message: __("{0} of {1} created", [done, total]),
+                indicator: done < total ? "orange" : "green",
+            })
+            listview.refresh()
+        }
+
+        // Phase 1: show coordinator bar. On Finished, transition to batch bar.
+        frappe.async_tasks.show_progress(
             coordinator_task_name,
             __("Creating records"),
-            ({ batch_id, finished, failed, canceled, total, coordinator_status }) => {
-                if (coordinator_status !== undefined) return  // ignore Phase 1 events
-                frappe.show_alert({
-                    message: __("{0} of {1} created, {2} failed", [finished, total, failed]),
-                    indicator: failed > 0 ? "orange" : "green",
-                })
-                listview.refresh()
+            ({ status }) => {
+                if (status === "Finished")
+                    frappe.async_tasks.show_batch_progress(batch_id, __("Creating records"), onBatchComplete)
             },
+            false,  // don't auto-hide Phase 1 bar — Phase 2 will take over
         )
     },
 })
 ```
+
+**Key point:** Guard the `show_batch_progress` call with `status === "Finished"` because `handler` in `show_progress` is called on **every** event. Without the guard, `show_batch_progress` would be registered once per event (Pending, Queued, Started, Finished), leading to duplicate completion callbacks.
 
 **Server-side coordinator pattern:**
 
@@ -387,16 +398,17 @@ def bulk_create(items):
     coordinator = enqueue_async_task(
         "myapp.api._coordinator",
         queue="short",
-        batch_id=batch_id,
+        job_name="Bulk Create",
         arguments={"items": items, "batch_id": batch_id},
     )
     return {"batch_id": batch_id, "coordinator_task_name": coordinator.name}
 
 def _coordinator(items, batch_id):
     notify_task_status(message=f"Resolved {len(items)} items. Enqueueing…")
-    tasks = [{"method": "myapp.api.process_item", "arguments": {"item": i, "batch_id": batch_id}} for i in items]
+    tasks = [{"method": "myapp.api.process_item", "batch_id": batch_id, "arguments": {"item": i}} for i in items]
     bulk_enqueue_async_task(tasks, batch_id=batch_id)
-    # bulk_enqueue_async_task emits async_batch_enqueued { batch_id, total } automatically.
+    # bulk_enqueue_async_task writes Redis counters (total + done=0) with a 24 h TTL.
+    # Batch task events will embed batch_done/batch_total from those keys automatically.
 ```
 
 ## Cancellation
