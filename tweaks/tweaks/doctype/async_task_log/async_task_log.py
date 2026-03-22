@@ -549,16 +549,6 @@ def bulk_enqueue_async_task(tasks: list[dict], batch_id: str = None, **kwargs) -
     if not batch_id:
         batch_id = str(uuid4())
 
-    with using_dispatcher():
-
-        for task in tasks:
-            task.update(**kwargs)
-            task["batch_id"] = batch_id
-            task["batch_order"] = batch_order
-            batch_order += 1
-
-            enqueue_async_task(**task)
-
     # Persist the batch total in Redis so workers can read it back during
     # execution and include authoritative counters in status events.
     # Key expires after 24 h — long enough for any realistic batch run.
@@ -570,6 +560,16 @@ def bulk_enqueue_async_task(tasks: list[dict], batch_id: str = None, **kwargs) -
     cache.set(done_key, 0)
     cache.expire(total_key, _BATCH_TTL)
     cache.expire(done_key, _BATCH_TTL)
+
+    with using_dispatcher():
+
+        for task in tasks:
+            task.update(**kwargs)
+            task["batch_id"] = batch_id
+            task["batch_order"] = batch_order
+            batch_order += 1
+
+            enqueue_async_task(**task)
 
     return batch_id
 
