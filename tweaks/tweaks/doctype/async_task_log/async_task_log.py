@@ -556,7 +556,7 @@ def bulk_enqueue_async_task(tasks: list[dict], batch_id: str = None, **kwargs) -
     cache = frappe.cache
     total_key = cache.make_key(f"async_batch:{batch_id}:total")
     done_key = cache.make_key(f"async_batch:{batch_id}:done")
-    cache.set(total_key, batch_order)
+    cache.set(total_key, len(tasks))
     cache.set(done_key, 0)
     cache.expire(total_key, _BATCH_TTL)
     cache.expire(done_key, _BATCH_TTL)
