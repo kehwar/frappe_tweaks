@@ -42,14 +42,22 @@ def execute(filters=None):
         - Custom Field DocType: frappe/custom/doctype/custom_field/
         - Property Setter DocType: frappe/custom/doctype/property_setter/
     """
-    columns = get_columns()
+    filters = filters or {}
+    columns = get_columns(filters)
     data = get_data(filters)
     return columns, data
 
 
-def get_columns():
+def get_columns(filters):
     """Define report columns"""
-    return [
+    columns = [
+        {
+            "fieldname": "doctype_module",
+            "label": _("Module (DocType)"),
+            "fieldtype": "Link",
+            "options": "Module Def",
+            "width": 140,
+        },
         {
             "fieldname": "dt",
             "label": _("DocType"),
@@ -58,45 +66,82 @@ def get_columns():
             "width": 180,
         },
         {
-            "fieldname": "fieldname",
-            "label": _("Field Name / Key"),
-            "fieldtype": "Data",
-            "width": 200,
-        },
-        {
             "fieldname": "customization_type",
             "label": _("Customization Type"),
             "fieldtype": "Data",
             "width": 150,
         },
         {
-            "fieldname": "properties",
-            "label": _("Properties"),
-            "fieldtype": "Text",
-            "width": 500,
-        },
-        {
-            "fieldname": "module",
-            "label": _("Module"),
-            "fieldtype": "Link",
-            "options": "Module Def",
+            "fieldname": "doctype_or_field",
+            "label": _("Applied For"),
+            "fieldtype": "Data",
             "width": 120,
         },
         {
-            "fieldname": "custom_field_name",
-            "label": _("Custom Field Name"),
+            "fieldname": "fieldname",
+            "label": _("Field Name"),
             "fieldtype": "Data",
-            "width": 0,
-            "hidden": 1,
+            "width": 200,
         },
         {
-            "fieldname": "doctype_or_field",
-            "label": _("Applied For"),
+            "fieldname": "property",
+            "label": _("Property"),
+            "fieldtype": "Data",
+            "width": 180,
+        },
+        {
+            "fieldname": "value",
+            "label": _("Value"),
+            "fieldtype": "Data",
+            "width": 300,
+        },
+        {
+            "fieldname": "customization_module",
+            "label": _("Module (Customization)"),
+            "fieldtype": "Link",
+            "options": "Module Def",
+            "width": 140,
+        },
+        {
+            "fieldname": "customization_name",
+            "label": _("Customization Name"),
             "fieldtype": "Data",
             "width": 0,
             "hidden": 1,
         },
     ]
+
+    if filters.get("show_system_generated"):
+        columns.append(
+            {
+                "fieldname": "is_system_generated",
+                "label": _("System Generated"),
+                "fieldtype": "Check",
+                "width": 140,
+            }
+        )
+
+    if filters.get("show_ui_fields"):
+        columns.append(
+            {
+                "fieldname": "fieldtype",
+                "label": _("Field Type"),
+                "fieldtype": "Data",
+                "width": 140,
+            }
+        )
+
+    if filters.get("show_custom_doctype"):
+        columns.append(
+            {
+                "fieldname": "is_custom_doctype",
+                "label": _("Custom DocType"),
+                "fieldtype": "Check",
+                "width": 140,
+            }
+        )
+
+    return columns
 
 
 def get_data(filters):
@@ -104,11 +149,11 @@ def get_data(filters):
     data = []
     filters = filters or {}
 
-    # Add Custom Fields
+    # Add Custom Fields (always DocField — skip if filter requests DocType only)
     if (
         not filters.get("customization_type")
         or filters.get("customization_type") == "Custom Field"
-    ):
+    ) and filters.get("doctype_or_field") != "DocType":
         data.extend(get_custom_fields(filters))
 
     # Add Property Setters
@@ -118,8 +163,35 @@ def get_data(filters):
     ):
         data.extend(get_property_setters(filters))
 
-    # Sort by DocType
-    data.sort(key=lambda x: (x["dt"], x["fieldname"]))
+    # Sort by DocType, fieldname, property
+    data.sort(
+        key=lambda x: (x["dt"], x.get("fieldname") or "", x.get("property") or "")
+    )
+
+    # Batch-fetch DocType module for all unique dt values
+    unique_dts = {row["dt"] for row in data}
+    dt_module_map = {
+        d["name"]: d["module"]
+        for d in frappe.get_all(
+            "DocType",
+            filters={"name": ["in", list(unique_dts)]},
+            fields=["name", "module"],
+        )
+    }
+    for row in data:
+        row["doctype_module"] = dt_module_map.get(row["dt"], "")
+
+    if filters.get("show_custom_doctype"):
+        custom_dt_set = {
+            d["name"]
+            for d in frappe.get_all(
+                "DocType",
+                filters={"name": ["in", list(dt_module_map)], "custom": 1},
+                fields=["name"],
+            )
+        }
+        for row in data:
+            row["is_custom_doctype"] = 1 if row["dt"] in custom_dt_set else 0
 
     return data
 
@@ -131,8 +203,8 @@ def get_custom_fields(filters):
     if filters.get("doctype"):
         filter_dict["dt"] = filters.get("doctype")
 
-    if filters.get("module"):
-        filter_dict["module"] = filters.get("module")
+    if filters.get("customization_module"):
+        filter_dict["module"] = filters.get("customization_module")
 
     if not filters.get("show_system_generated"):
         filter_dict["is_system_generated"] = 0
@@ -147,6 +219,7 @@ def get_custom_fields(filters):
             "label",
             "module",
             "name",
+            "is_system_generated",
         ],
         order_by="dt, fieldname",
     )
@@ -164,38 +237,37 @@ def get_custom_fields(filters):
             continue
 
         field["customization_type"] = "Custom Field"
-
-        # Build properties string
-        props = []
-        if field.get("fieldtype"):
-            props.append(f"fieldtype={field['fieldtype']}")
-        if field.get("label"):
-            props.append(f"label={field['label']}")
-        field["properties"] = "; ".join(props)
-
-        field["custom_field_name"] = field["name"]
+        field["property"] = ""
+        field["value"] = ""
+        field["customization_name"] = field["name"]
+        field["doctype_or_field"] = "DocField"
+        field["customization_module"] = field.pop("module", None)
         result.append(field)
 
     return result
 
 
 def get_property_setters(filters):
-    """Get Property Setters data, aggregated by DocType or DocType/Fieldname"""
+    """Get Property Setters data, one row per property setter"""
     filter_dict = {}
 
     if filters.get("doctype"):
         filter_dict["doc_type"] = filters.get("doctype")
 
-    if filters.get("module"):
-        filter_dict["module"] = filters.get("module")
+    if filters.get("customization_module"):
+        filter_dict["module"] = filters.get("customization_module")
 
     if not filters.get("show_system_generated"):
         filter_dict["is_system_generated"] = 0
+
+    if filters.get("doctype_or_field"):
+        filter_dict["doctype_or_field"] = filters.get("doctype_or_field")
 
     property_setters = frappe.get_all(
         "Property Setter",
         filters=filter_dict,
         fields=[
+            "name",
             "doc_type",
             "doctype_or_field",
             "field_name",
@@ -203,47 +275,31 @@ def get_property_setters(filters):
             "property",
             "value",
             "module",
+            "is_system_generated",
         ],
-        order_by="doc_type, field_name",
+        order_by="doc_type, field_name, property",
     )
 
-    # Aggregate property setters by doc_type and field grouping
-    aggregated = {}
+    result = []
     for ps in property_setters:
-        # Determine the fieldname key for aggregation
-        if ps["doctype_or_field"] == "DocType":
-            fieldname = ps["doc_type"]
-        elif ps["doctype_or_field"] == "DocField":
-            fieldname = f"{ps['doc_type']} / {ps['field_name']}"
-        else:
-            fieldname = (
-                f"{ps['doc_type']} / {ps.get('field_name') or ps.get('row_name')}"
-            )
-
-        # Create aggregation key
-        key = (ps["doc_type"], fieldname, ps["module"], ps["doctype_or_field"])
-
-        if key not in aggregated:
-            aggregated[key] = {
+        fieldname = (
+            ""
+            if ps["doctype_or_field"] == "DocType"
+            else (ps.get("field_name") or ps.get("row_name") or "")
+        )
+        result.append(
+            {
                 "customization_type": "Property Setter",
                 "dt": ps["doc_type"],
                 "fieldname": fieldname,
-                "properties": [],
-                "module": ps["module"],
-                "custom_field_name": None,
+                "property": ps["property"],
+                "value": ps["value"] or "",
+                "customization_module": ps["module"],
+                "customization_name": ps["name"],
                 "doctype_or_field": ps["doctype_or_field"],
+                "is_system_generated": ps.get("is_system_generated", 0),
+                "fieldtype": "",
             }
-
-        aggregated[key]["properties"].append(f"{ps['property']}={ps['value']}")
-
-    # Convert to list and format properties
-    result = []
-    for data in aggregated.values():
-        # Sort properties and join with separator
-        data["properties"] = "; ".join(sorted(data["properties"]))
-        result.append(data)
-
-    # Sort by doc_type and fieldname
-    result.sort(key=lambda x: (x["dt"], x["fieldname"]))
+        )
 
     return result
