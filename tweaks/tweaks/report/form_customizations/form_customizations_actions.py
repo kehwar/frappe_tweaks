@@ -130,6 +130,9 @@ def _apply_rows_to_doc(doc, rows):
             value = row.get("value")
             if not prop:
                 continue
+            # Frappe rejects default_print_format on standard DocTypes during save
+            if prop == "default_print_format":
+                continue
             if row.get("doctype_or_field") == "DocType":
                 setattr(doc, prop, value)
             else:

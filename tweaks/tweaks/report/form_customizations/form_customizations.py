@@ -90,6 +90,12 @@ def _cf_status(cf_props, native_field_row):
     return "Stale"
 
 
+# Properties that cannot be legally applied to standard DocTypes (Frappe rejects them
+# during migration). Always reported as Active so they remain visible but are never
+# incorrectly flagged as Stale.
+_ALWAYS_ACTIVE_PROPERTIES = frozenset({"default_print_format"})
+
+
 def _ps_status(
     property_name,
     value,
@@ -102,10 +108,14 @@ def _ps_status(
     Compute Active / Stale for a Property Setter.
 
     Compares against the live tabDocField (DocField PS) or tabDocType (DocType PS) row.
-    Active = the PS overrides a different native value, or property has no DB column.
+    Active = the PS overrides a different native value, or property has no DB column,
+             or the property is in _ALWAYS_ACTIVE_PROPERTIES.
     Stale  = the PS value matches the native value exactly, OR the target field no
              longer exists (orphaned PS).
     """
+    if property_name in _ALWAYS_ACTIVE_PROPERTIES:
+        return "Active"
+
     if doctype_or_field == "DocType":
         # native_dt_row is None if property isn't a valid tabDocType column → Active
         if native_dt_row is None:
