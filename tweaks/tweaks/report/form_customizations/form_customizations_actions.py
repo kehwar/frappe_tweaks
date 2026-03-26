@@ -27,6 +27,119 @@ def enqueue_delete_customizations(filters=None):
     return task.name
 
 
+@frappe.whitelist()
+def migrate_customizations(filters=None):
+    """Apply filtered customizations directly onto each unique DocType and save."""
+    frappe.only_for("System Manager")
+
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+
+    from tweaks.tweaks.report.form_customizations.form_customizations import get_data
+
+    rows = get_data(filters or {})
+
+    dt_rows: dict = {}
+    for row in rows:
+        dt = row.get("dt")
+        if dt:
+            dt_rows.setdefault(dt, []).append(row)
+
+    migrated = 0
+    errors = {}
+
+    for dt in sorted(dt_rows):
+        try:
+            doc = frappe.get_doc("DocType", dt)
+            _apply_rows_to_doc(doc, dt_rows[dt])
+            doc.save()
+            migrated += 1
+        except Exception as e:
+            errors[dt] = str(e)
+            frappe.logger().warning(
+                "migrate_customizations: failed to save DocType %s: %s", dt, e
+            )
+
+    return {"migrated": migrated, "failed": len(errors), "errors": errors}
+
+
+_CF_DOCFIELD_FIELDS = frozenset(
+    {
+        "fieldname",
+        "label",
+        "fieldtype",
+        "options",
+        "default",
+        "description",
+        "depends_on",
+        "mandatory_depends_on",
+        "read_only_depends_on",
+        "reqd",
+        "hidden",
+        "bold",
+        "in_list_view",
+        "in_standard_filter",
+        "read_only",
+        "allow_on_submit",
+        "search_index",
+        "no_copy",
+        "print_hide",
+        "print_hide_if_no_value",
+        "fetch_from",
+        "fetch_if_empty",
+        "permlevel",
+        "precision",
+        "length",
+        "columns",
+        "translatable",
+        "unique",
+        "insert_after",
+    }
+)
+
+
+def _apply_rows_to_doc(doc, rows):
+    """Apply Custom Field and Property Setter rows onto a DocType document in memory."""
+    for row in rows:
+        name = row.get("customization_name")
+        if not name:
+            continue
+
+        if row["customization_type"] == "Custom Field":
+            cf = frappe.get_doc("Custom Field", name)
+            cf_dict = {
+                k: v for k, v in cf.as_dict().items() if k in _CF_DOCFIELD_FIELDS
+            }
+            insert_after = cf_dict.get("insert_after")
+            position = -1
+            if insert_after:
+                idx = next(
+                    (
+                        i
+                        for i, f in enumerate(doc.fields)
+                        if f.fieldname == insert_after
+                    ),
+                    None,
+                )
+                if idx is not None:
+                    position = idx + 1
+            doc.append("fields", cf_dict, position)
+
+        elif row["customization_type"] == "Property Setter":
+            prop = row.get("property")
+            value = row.get("value")
+            if not prop:
+                continue
+            if row.get("doctype_or_field") == "DocType":
+                setattr(doc, prop, value)
+            else:
+                fieldname = row.get("fieldname")
+                for field in doc.fields:
+                    if field.fieldname == fieldname:
+                        setattr(field, prop, value)
+                        break
+
+
 def delete_customizations(filters=None):
     """
     Delete Custom Fields and Property Setters matching the given filters.
