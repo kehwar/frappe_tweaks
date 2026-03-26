@@ -102,12 +102,17 @@ def _ps_status(property_name, value, doctype_or_field, native_field_row, native_
         # native_dt_row is None if property isn't a valid tabDocType column → Active
         if native_dt_row is None:
             return "Active"
-        native_val = str(native_dt_row.get(property_name, "") or "")
+        native_raw = native_dt_row.get(property_name)
     else:
         if native_field_row is None:
             return "Active"
-        native_val = str(native_field_row.get(property_name, "") or "")
-    return "Stale" if native_val == str(value or "") else "Active"
+        native_raw = native_field_row.get(property_name)
+
+    # Use str(native_raw) when present so that integer 0 becomes "0", not "".
+    # None means the column doesn't exist / was absent → treat as empty string.
+    native_val = "" if native_raw is None else str(native_raw)
+    ps_val = "" if value is None else str(value)
+    return "Stale" if native_val == ps_val else "Active"
 
 
 def execute(filters=None):
