@@ -129,6 +129,13 @@ frappe.query_reports['Form Customizations'] = {
                         default: get_filter('doctype'),
                     },
                     {
+                        label: __('DocType Module'),
+                        fieldname: 'doctype_module',
+                        fieldtype: 'Link',
+                        options: 'Module Def',
+                        default: get_filter('doctype_module'),
+                    },
+                    {
                         label: __('Customization Module'),
                         fieldname: 'customization_module',
                         fieldtype: 'Link',
@@ -226,6 +233,13 @@ frappe.query_reports['Form Customizations'] = {
                         fieldtype: 'Link',
                         options: 'DocType',
                         default: get_filter('doctype'),
+                    },
+                    {
+                        label: __('DocType Module'),
+                        fieldname: 'doctype_module',
+                        fieldtype: 'Link',
+                        options: 'Module Def',
+                        default: get_filter('doctype_module'),
                     },
                     {
                         label: __('Customization Module'),
