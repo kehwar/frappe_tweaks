@@ -415,6 +415,14 @@ def get_data(filters):
                 field_exists=field_exists,
             )
 
+    # Apply doctype_module filter (post-annotation, since it comes from batch fetch)
+    if filters.get("doctype_module"):
+        data = [
+            row
+            for row in data
+            if row.get("doctype_module") == filters["doctype_module"]
+        ]
+
     # Apply status filter
     if filters.get("status"):
         data = [row for row in data if row.get("status") == filters["status"]]

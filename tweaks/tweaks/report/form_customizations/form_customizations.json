@@ -16,6 +16,14 @@
    "wildcard_filter": 0
   },
   {
+   "fieldname": "doctype_module",
+   "fieldtype": "Link",
+   "label": "DocType Module",
+   "mandatory": 0,
+   "options": "Module Def",
+   "wildcard_filter": 0
+  },
+  {
    "fieldname": "module",
    "fieldtype": "Link",
    "label": "Module",

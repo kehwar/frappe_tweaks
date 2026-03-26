@@ -10,6 +10,12 @@ frappe.query_reports['Form Customizations'] = {
             options: 'DocType',
         },
         {
+            fieldname: 'doctype_module',
+            label: __('DocType Module'),
+            fieldtype: 'Link',
+            options: 'Module Def',
+        },
+        {
             fieldname: 'customization_module',
             label: __('Customization Module'),
             fieldtype: 'Link',
