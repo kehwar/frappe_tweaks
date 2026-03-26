@@ -90,13 +90,21 @@ def _cf_status(cf_props, native_field_row):
     return "Stale"
 
 
-def _ps_status(property_name, value, doctype_or_field, native_field_row, native_dt_row):
+def _ps_status(
+    property_name,
+    value,
+    doctype_or_field,
+    native_field_row,
+    native_dt_row,
+    field_exists=True,
+):
     """
     Compute Active / Stale for a Property Setter.
 
     Compares against the live tabDocField (DocField PS) or tabDocType (DocType PS) row.
     Active = the PS overrides a different native value, or property has no DB column.
-    Stale  = the PS value matches the native value exactly.
+    Stale  = the PS value matches the native value exactly, OR the target field no
+             longer exists (orphaned PS).
     """
     if doctype_or_field == "DocType":
         # native_dt_row is None if property isn't a valid tabDocType column → Active
@@ -104,6 +112,10 @@ def _ps_status(property_name, value, doctype_or_field, native_field_row, native_
             return "Active"
         native_raw = native_dt_row.get(property_name)
     else:
+        # If the referenced field doesn't exist at all (neither native nor custom),
+        # the PS is orphaned and serves no purpose → Stale.
+        if not field_exists:
+            return "Stale"
         if native_field_row is None:
             return "Active"
         native_raw = native_field_row.get(property_name)
@@ -324,6 +336,20 @@ def get_data(filters):
             if df.get("fieldname"):
                 native_docfield_map[(df["parent"], df["fieldname"])] = df
 
+    # --- Batch-fetch existing Custom Field (dt, fieldname) pairs ---
+    # Used to detect orphaned DocField Property Setters (field deleted from both
+    # native schema and custom fields).
+    custom_field_key_set: set[tuple[str, str]] = set()
+    if unique_dts:
+        cf_key_rows = frappe.get_all(
+            "Custom Field",
+            filters={"dt": ["in", list(unique_dts)]},
+            fields=["dt", "fieldname"],
+        )
+        for cf in cf_key_rows:
+            if cf.get("fieldname"):
+                custom_field_key_set.add((cf["dt"], cf["fieldname"]))
+
     # --- Batch-fetch native DocType rows for DocType-level PSes ---
     # Only fetch properties that are actual tabDocType columns; others → Active.
     native_doctype_map = {}  # dt -> dt_dict
@@ -359,12 +385,24 @@ def get_data(filters):
                 native_docfield_map.get((dt, fieldname)) if fieldname else None
             )
             native_dt_row = native_doctype_map.get(dt)
+            # A DocField PS whose fieldname no longer exists anywhere is orphaned.
+            field_exists = bool(
+                row.get("doctype_or_field") == "DocType"
+                or (
+                    fieldname
+                    and (
+                        (dt, fieldname) in native_docfield_map
+                        or (dt, fieldname) in custom_field_key_set
+                    )
+                )
+            )
             row["status"] = _ps_status(
                 row.get("property") or "",
                 row.get("value") or "",
                 row.get("doctype_or_field") or "",
                 native_field_row,
                 native_dt_row,
+                field_exists=field_exists,
             )
 
     # Apply status filter
