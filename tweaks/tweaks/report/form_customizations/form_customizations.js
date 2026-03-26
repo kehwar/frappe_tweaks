@@ -93,12 +93,78 @@ frappe.query_reports['Form Customizations'] = {
     },
 
     onload(report) {
-        report.page.add_inner_button(__('Delete Stale Customizations'), () => {
-            frappe.confirm(
-                __('This will permanently delete all <b>Stale</b> Custom Fields and Property Setters. Continue?'),
-                () => {
+        report.page.add_inner_button(__('Delete Customizations...'), () => {
+            const get_filter = (fieldname) => report.get_filter_value(fieldname) || ''
+
+            const dialog = new frappe.ui.Dialog({
+                title: __('Delete Customizations'),
+                fields: [
+                    {
+                        fieldtype: 'HTML',
+                        options: `<div class="alert alert-warning" style="margin-bottom: 12px;">
+                            ${__('This will <b>permanently delete</b> all matching Custom Fields and Property Setters.')}
+                        </div>`,
+                    },
+                    {
+                        label: __('Status'),
+                        fieldname: 'status',
+                        fieldtype: 'Select',
+                        options: '\nActive\nStale',
+                        default: get_filter('status'),
+                    },
+                    {
+                        label: __('DocType'),
+                        fieldname: 'doctype',
+                        fieldtype: 'Link',
+                        options: 'DocType',
+                        default: get_filter('doctype'),
+                    },
+                    {
+                        label: __('Customization Module'),
+                        fieldname: 'customization_module',
+                        fieldtype: 'Link',
+                        options: 'Module Def',
+                        default: get_filter('customization_module'),
+                    },
+                    {
+                        label: __('Customization Type'),
+                        fieldname: 'customization_type',
+                        fieldtype: 'Select',
+                        options: '\nCustom Field\nProperty Setter',
+                        default: get_filter('customization_type'),
+                    },
+                    {
+                        label: __('Applied For'),
+                        fieldname: 'doctype_or_field',
+                        fieldtype: 'Select',
+                        options: '\nDocType\nDocField',
+                        default: get_filter('doctype_or_field'),
+                    },
+                    {
+                        label: __('Include System Generated'),
+                        fieldname: 'show_system_generated',
+                        fieldtype: 'Check',
+                        default: get_filter('show_system_generated') ? 1 : 0,
+                    },
+                    {
+                        label: __('Include UI Fields'),
+                        fieldname: 'show_ui_fields',
+                        fieldtype: 'Check',
+                        default: get_filter('show_ui_fields') ? 1 : 0,
+                    },
+                    {
+                        label: __('Include Custom DocType'),
+                        fieldname: 'show_custom_doctype',
+                        fieldtype: 'Check',
+                        default: get_filter('show_custom_doctype') ? 1 : 0,
+                    },
+                ],
+                primary_action_label: __('Delete'),
+                primary_action(filters) {
+                    dialog.hide()
                     frappe.call({
-                        method: 'tweaks.tweaks.report.form_customizations.form_customizations_actions.enqueue_delete_stale_customizations',
+                        method: 'tweaks.tweaks.report.form_customizations.form_customizations_actions.enqueue_delete_customizations',
+                        args: { filters },
                         callback({ message: task_name }) {
                             frappe.show_alert({
                                 message: __('Task enqueued: {0}', [task_name]),
@@ -106,8 +172,9 @@ frappe.query_reports['Form Customizations'] = {
                             })
                         },
                     })
-                }
-            )
+                },
+            })
+            dialog.show()
         })
     },
 }

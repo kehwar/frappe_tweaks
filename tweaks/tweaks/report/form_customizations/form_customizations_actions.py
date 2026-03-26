@@ -1,6 +1,8 @@
 # Copyright (c) 2026, Erick W.R. and contributors
 # For license information, please see license.txt
 
+import json
+
 import frappe
 from frappe import _
 
@@ -8,31 +10,33 @@ from tweaks.tweaks.doctype.async_task_log.async_task_log import enqueue_async_ta
 
 
 @frappe.whitelist()
-def enqueue_delete_stale_customizations():
-    """Enqueue a background task to delete all stale Custom Fields and Property Setters."""
+def enqueue_delete_customizations(filters=None):
+    """Enqueue a background task to delete Custom Fields and Property Setters matching filters."""
     frappe.only_for("System Manager")
 
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+
     task = enqueue_async_task(
-        method=delete_stale_customizations,
-        job_name=_("Delete Stale Form Customizations"),
+        method=delete_customizations,
+        job_name=_("Delete Form Customizations"),
         queue="long",
+        filters=filters or {},
     )
 
     return task.name
 
 
-def delete_stale_customizations():
+def delete_customizations(filters=None):
     """
-    Delete all stale Custom Fields and Property Setters.
+    Delete Custom Fields and Property Setters matching the given filters.
 
-    A customization is "Stale" when the native DocType already defines the
-    same field / property with an identical value, making the customization
-    redundant.  This function re-uses the report's get_data() logic with a
-    Stale status filter to collect the candidates, then deletes them.
+    Delegates to the report's get_data() to collect matching rows, then
+    permanently deletes each Custom Field or Property Setter found.
     """
     from tweaks.tweaks.report.form_customizations.form_customizations import get_data
 
-    rows = get_data({"status": "Stale", "show_system_generated": 1})
+    rows = get_data(filters or {})
 
     deleted_cf = 0
     deleted_ps = 0
@@ -52,7 +56,7 @@ def delete_stale_customizations():
     frappe.db.commit()
 
     frappe.logger().info(
-        "delete_stale_customizations: deleted %d Custom Field(s) and %d Property Setter(s)",
+        "delete_customizations: deleted %d Custom Field(s) and %d Property Setter(s)",
         deleted_cf,
         deleted_ps,
     )
