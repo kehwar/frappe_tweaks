@@ -102,11 +102,11 @@ frappe.query_reports['Form Customizations'] = {
     },
 
     onload(report) {
-        report.page.add_inner_button(__('Bulk Migrate'), () => {
+        report.page.add_inner_button(__('Bulk Bake'), () => {
             const get_filter = (fieldname) => report.get_filter_value(fieldname) || ''
 
             const dialog = new frappe.ui.Dialog({
-                title: __('Bulk Migrate Customizations'),
+                title: __('Bulk Bake Customizations'),
                 fields: [
                     {
                         fieldtype: 'HTML',
@@ -178,26 +178,26 @@ frappe.query_reports['Form Customizations'] = {
                         default: get_filter('show_custom_doctype'),
                     },
                 ],
-                primary_action_label: __('Migrate'),
+                primary_action_label: __('Bake'),
                 primary_action(filters) {
                     dialog.hide()
                     frappe.call({
-                        method: 'tweaks.tweaks.report.form_customizations.form_customizations_actions.migrate_customizations',
+                        method: 'tweaks.tweaks.report.form_customizations.form_customizations_actions.bake_customizations',
                         args: { filters },
                         callback({ message }) {
-                            const { migrated, failed, errors } = message
+                            const { baked, failed, errors } = message
                             if (failed) {
                                 const error_list = Object.entries(errors)
                                     .map(([dt, err]) => `<li><b>${frappe.utils.escape_html(dt)}</b>: ${frappe.utils.escape_html(err)}</li>`)
                                     .join('')
                                 frappe.msgprint({
-                                    title: __('Bulk Migrate Result'),
-                                    message: __('Migrated: {0} &nbsp; Failed: {1}<ul style="margin-top:8px">{2}</ul>', [migrated, failed, error_list]),
+                                    title: __('Bulk Bake Result'),
+                                    message: __('Baked: {0} &nbsp; Failed: {1}<ul style="margin-top:8px">{2}</ul>', [baked, failed, error_list]),
                                     indicator: 'orange',
                                 })
                             } else {
                                 frappe.show_alert({
-                                    message: __('Migrated {0} DocType(s)', [migrated]),
+                                    message: __('Baked {0} DocType(s)', [baked]),
                                     indicator: 'green',
                                 })
                             }

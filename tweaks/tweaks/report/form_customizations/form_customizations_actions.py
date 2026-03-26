@@ -28,8 +28,8 @@ def enqueue_delete_customizations(filters=None):
 
 
 @frappe.whitelist()
-def migrate_customizations(filters=None):
-    """Apply filtered customizations directly onto each unique DocType and save."""
+def bake_customizations(filters=None):
+    """Bake filtered customizations directly onto each unique DocType and save."""
     frappe.only_for("System Manager")
 
     if isinstance(filters, str):
@@ -45,7 +45,7 @@ def migrate_customizations(filters=None):
         if dt:
             dt_rows.setdefault(dt, []).append(row)
 
-    migrated = 0
+    baked = 0
     errors = {}
 
     for dt in sorted(dt_rows):
@@ -53,14 +53,14 @@ def migrate_customizations(filters=None):
             doc = frappe.get_doc("DocType", dt)
             _apply_rows_to_doc(doc, dt_rows[dt])
             doc.save()
-            migrated += 1
+            baked += 1
         except Exception as e:
             errors[dt] = str(e)
             frappe.logger().warning(
-                "migrate_customizations: failed to save DocType %s: %s", dt, e
+                "bake_customizations: failed to save DocType %s: %s", dt, e
             )
 
-    return {"migrated": migrated, "failed": len(errors), "errors": errors}
+    return {"baked": baked, "failed": len(errors), "errors": errors}
 
 
 _CF_DOCFIELD_FIELDS = frozenset(
