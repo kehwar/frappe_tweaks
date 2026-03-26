@@ -4,6 +4,111 @@
 import frappe
 from frappe import _
 
+# Fields compared when checking a Custom Field against the native tabDocField row.
+_CF_COMPARE_FIELDS = frozenset(
+    {
+        "fieldtype",
+        "label",
+        "options",
+        "default",
+        "description",
+        "depends_on",
+        "mandatory_depends_on",
+        "read_only_depends_on",
+        "reqd",
+        "hidden",
+        "bold",
+        "in_list_view",
+        "in_standard_filter",
+        "read_only",
+        "allow_on_submit",
+        "search_index",
+        "no_copy",
+        "print_hide",
+        "print_hide_if_no_value",
+        "fetch_from",
+        "fetch_if_empty",
+        "permlevel",
+        "precision",
+        "length",
+        "columns",
+        "translatable",
+        "unique",
+    }
+)
+
+_CF_INT_FIELDS = frozenset(
+    {
+        "reqd",
+        "hidden",
+        "bold",
+        "in_list_view",
+        "in_standard_filter",
+        "read_only",
+        "allow_on_submit",
+        "search_index",
+        "no_copy",
+        "print_hide",
+        "print_hide_if_no_value",
+        "fetch_if_empty",
+        "permlevel",
+        "length",
+        "columns",
+        "translatable",
+        "unique",
+    }
+)
+
+
+def _norm(val, is_int):
+    """Normalize a value for comparison: absent/None treated as 0 (int) or '' (str)."""
+    if is_int:
+        if val is None or val == "":
+            return 0
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return 0
+    return val or ""
+
+
+def _cf_status(cf_props, native_field_row):
+    """
+    Compute Active / Stale for a Custom Field against a tabDocField row.
+
+    Active = the field doesn't exist natively, or at least one compared property differs.
+    Stale  = the field exists natively and every compared property matches exactly.
+    """
+    if native_field_row is None:
+        return "Active"
+    for prop in _CF_COMPARE_FIELDS:
+        is_int = prop in _CF_INT_FIELDS
+        if _norm(cf_props.get(prop), is_int) != _norm(
+            native_field_row.get(prop), is_int
+        ):
+            return "Active"
+    return "Stale"
+
+
+def _ps_status(property_name, value, doctype_or_field, native_field_row, native_dt_row):
+    """
+    Compute Active / Stale for a Property Setter.
+
+    Compares against the live tabDocField (DocField PS) or tabDocType (DocType PS) row.
+    Active = the PS overrides a different native value, or property has no DB column.
+    Stale  = the PS value matches the native value exactly.
+    """
+    if doctype_or_field == "DocType":
+        # native_dt_row is None if property isn't a valid tabDocType column → Active
+        if native_dt_row is None:
+            return "Active"
+        native_val = str(native_dt_row.get(property_name, "") or "")
+    else:
+        if native_field_row is None:
+            return "Active"
+        native_val = str(native_field_row.get(property_name, "") or "")
+    return "Stale" if native_val == str(value or "") else "Active"
+
 
 def execute(filters=None):
     """
@@ -64,6 +169,12 @@ def get_columns(filters):
             "fieldtype": "Link",
             "options": "DocType",
             "width": 180,
+        },
+        {
+            "fieldname": "status",
+            "label": _("Status"),
+            "fieldtype": "Data",
+            "width": 100,
         },
         {
             "fieldname": "customization_type",
@@ -181,15 +292,93 @@ def get_data(filters):
     for row in data:
         row["doctype_module"] = dt_module_map.get(row["dt"], "")
 
-    if filters.get("show_custom_doctype"):
-        custom_dt_set = {
-            d["name"]
-            for d in frappe.get_all(
-                "DocType",
-                filters={"name": ["in", list(dt_module_map)], "custom": 1},
-                fields=["name"],
-            )
+    # Identify custom doctypes — always needed for status computation
+    custom_dt_set = {
+        d["name"]
+        for d in frappe.get_all(
+            "DocType",
+            filters={"name": ["in", list(dt_module_map)], "custom": 1},
+            fields=["name"],
+        )
+    }
+
+    non_custom_dts = [dt for dt in unique_dts if dt not in custom_dt_set]
+
+    # --- Batch-fetch native DocField rows ---
+    # Collect all DocField property names needed (CF comparison + DocField PS properties)
+    docfield_props_needed = set(_CF_COMPARE_FIELDS)
+    for row in data:
+        if (
+            row.get("customization_type") == "Property Setter"
+            and row.get("doctype_or_field") == "DocField"
+            and row.get("property")
+            and row["dt"] not in custom_dt_set
+        ):
+            docfield_props_needed.add(row["property"])
+
+    native_docfield_map = {}  # (dt, fieldname) -> field_dict
+    if non_custom_dts:
+        df_rows = frappe.get_all(
+            "DocField",
+            filters={"parent": ["in", non_custom_dts]},
+            fields=list(docfield_props_needed | {"parent", "fieldname"}),
+        )
+        for df in df_rows:
+            if df.get("fieldname"):
+                native_docfield_map[(df["parent"], df["fieldname"])] = df
+
+    # --- Batch-fetch native DocType rows for DocType-level PSes ---
+    # Only fetch properties that are actual tabDocType columns; others → Active.
+    native_doctype_map = {}  # dt -> dt_dict (keyed by property; missing key = Active)
+    if non_custom_dts:
+        dt_ps_props = {
+            row["property"]
+            for row in data
+            if row.get("customization_type") == "Property Setter"
+            and row.get("doctype_or_field") == "DocType"
+            and row["dt"] not in custom_dt_set
+            and row.get("property")
         }
+        if dt_ps_props:
+            doctype_cols = set(frappe.db.get_table_columns("DocType"))
+            valid_dt_ps_props = dt_ps_props & doctype_cols
+            if valid_dt_ps_props:
+                dt_rows = frappe.get_all(
+                    "DocType",
+                    filters={"name": ["in", non_custom_dts]},
+                    fields=list(valid_dt_ps_props | {"name"}),
+                )
+                native_doctype_map = {r["name"]: r for r in dt_rows}
+
+    # Compute status for each row
+    for row in data:
+        dt = row["dt"]
+        if dt in custom_dt_set:
+            row["status"] = "Custom"
+        elif row["customization_type"] == "Custom Field":
+            cf_props = row.pop("_cf_props", {})
+            native_field_row = native_docfield_map.get((dt, row.get("fieldname") or ""))
+            row["status"] = _cf_status(cf_props, native_field_row)
+        else:
+            fieldname = row.get("fieldname") or ""
+            native_field_row = (
+                native_docfield_map.get((dt, fieldname)) if fieldname else None
+            )
+            native_dt_row = native_doctype_map.get(dt)
+            row["status"] = _ps_status(
+                row.get("property") or "",
+                row.get("value") or "",
+                row.get("doctype_or_field") or "",
+                native_field_row,
+                native_dt_row,
+            )
+
+    # Apply status filter
+    if filters.get("status"):
+        data = [row for row in data if row.get("status") == filters["status"]]
+
+    # Optionally annotate is_custom_doctype
+    if filters.get("show_custom_doctype"):
         for row in data:
             row["is_custom_doctype"] = 1 if row["dt"] in custom_dt_set else 0
 
@@ -197,7 +386,7 @@ def get_data(filters):
 
 
 def get_custom_fields(filters):
-    """Get Custom Fields data"""
+    """Get Custom Fields data, fetching all comparison fields for status computation."""
     filter_dict = {}
 
     if filters.get("doctype"):
@@ -209,40 +398,44 @@ def get_custom_fields(filters):
     if not filters.get("show_system_generated"):
         filter_dict["is_system_generated"] = 0
 
+    fetch_fields = list(
+        {"dt", "fieldname", "module", "name", "is_system_generated"}.union(
+            _CF_COMPARE_FIELDS
+        )
+    )
+
     custom_fields = frappe.get_all(
         "Custom Field",
         filters=filter_dict,
-        fields=[
-            "dt",
-            "fieldname",
-            "fieldtype",
-            "label",
-            "module",
-            "name",
-            "is_system_generated",
-        ],
+        fields=fetch_fields,
         order_by="dt, fieldname",
     )
 
-    # Process the data to match the report format
     result = []
     ui_field_types = ["Column Break", "Section Break", "Tab Break"]
 
     for field in custom_fields:
-        # Skip UI fields if show_ui_fields is not checked
         if (
             not filters.get("show_ui_fields")
             and field.get("fieldtype") in ui_field_types
         ):
             continue
 
-        field["customization_type"] = "Custom Field"
-        field["property"] = ""
-        field["value"] = ""
-        field["customization_name"] = field["name"]
-        field["doctype_or_field"] = "DocField"
-        field["customization_module"] = field.pop("module", None)
-        result.append(field)
+        result.append(
+            {
+                "dt": field["dt"],
+                "fieldname": field.get("fieldname") or "",
+                "fieldtype": field.get("fieldtype") or "",
+                "customization_type": "Custom Field",
+                "doctype_or_field": "DocField",
+                "property": "",
+                "value": "",
+                "customization_module": field.get("module"),
+                "customization_name": field["name"],
+                "is_system_generated": field.get("is_system_generated", 0),
+                "_cf_props": {prop: field.get(prop) for prop in _CF_COMPARE_FIELDS},
+            }
+        )
 
     return result
 

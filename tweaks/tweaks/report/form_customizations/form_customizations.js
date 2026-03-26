@@ -42,12 +42,28 @@ frappe.query_reports['Form Customizations'] = {
             options: ['', 'DocType', 'DocField'],
         },
         {
+            fieldname: 'status',
+            label: __('Status'),
+            fieldtype: 'Select',
+            options: ['', 'Active', 'Stale', 'Custom'],
+        },
+        {
             fieldname: 'show_custom_doctype',
             label: __('Show Custom DocType'),
             fieldtype: 'Check',
         },
     ],
     formatter: function (value, row, column, data, default_formatter) {
+
+        if (column.fieldname === 'status' && value) {
+            const color_map = {
+                'Active': 'green',
+                'Stale': 'orange',
+                'Custom': 'blue',
+            }
+            const color = color_map[value] || 'gray'
+            return `<span class="indicator-pill ${color}">${frappe.utils.escape_html(value)}</span>`
+        }
 
         if (column.fieldname === 'dt' && data && data.dt) {
             // Link to filtered list view for the DocType
