@@ -292,35 +292,33 @@ def get_data(filters):
     for row in data:
         row["doctype_module"] = dt_module_map.get(row["dt"], "")
 
-    # Identify custom doctypes — always needed for status computation
-    custom_dt_set = {
-        d["name"]
-        for d in frappe.get_all(
-            "DocType",
-            filters={"name": ["in", list(dt_module_map)], "custom": 1},
-            fields=["name"],
-        )
-    }
+    # Identify custom doctypes — only needed for the is_custom_doctype annotation
+    custom_dt_set = None
+    if filters.get("show_custom_doctype"):
+        custom_dt_set = {
+            d["name"]
+            for d in frappe.get_all(
+                "DocType",
+                filters={"name": ["in", list(dt_module_map)], "custom": 1},
+                fields=["name"],
+            )
+        }
 
-    non_custom_dts = [dt for dt in unique_dts if dt not in custom_dt_set]
-
-    # --- Batch-fetch native DocField rows ---
-    # Collect all DocField property names needed (CF comparison + DocField PS properties)
+    # --- Batch-fetch native DocField rows for all doctypes ---
     docfield_props_needed = set(_CF_COMPARE_FIELDS)
     for row in data:
         if (
             row.get("customization_type") == "Property Setter"
             and row.get("doctype_or_field") == "DocField"
             and row.get("property")
-            and row["dt"] not in custom_dt_set
         ):
             docfield_props_needed.add(row["property"])
 
     native_docfield_map = {}  # (dt, fieldname) -> field_dict
-    if non_custom_dts:
+    if unique_dts:
         df_rows = frappe.get_all(
             "DocField",
-            filters={"parent": ["in", non_custom_dts]},
+            filters={"parent": ["in", list(unique_dts)]},
             fields=list(docfield_props_needed | {"parent", "fieldname"}),
         )
         for df in df_rows:
@@ -329,14 +327,13 @@ def get_data(filters):
 
     # --- Batch-fetch native DocType rows for DocType-level PSes ---
     # Only fetch properties that are actual tabDocType columns; others → Active.
-    native_doctype_map = {}  # dt -> dt_dict (keyed by property; missing key = Active)
-    if non_custom_dts:
+    native_doctype_map = {}  # dt -> dt_dict
+    if unique_dts:
         dt_ps_props = {
             row["property"]
             for row in data
             if row.get("customization_type") == "Property Setter"
             and row.get("doctype_or_field") == "DocType"
-            and row["dt"] not in custom_dt_set
             and row.get("property")
         }
         if dt_ps_props:
@@ -345,7 +342,7 @@ def get_data(filters):
             if valid_dt_ps_props:
                 dt_rows = frappe.get_all(
                     "DocType",
-                    filters={"name": ["in", non_custom_dts]},
+                    filters={"name": ["in", list(unique_dts)]},
                     fields=list(valid_dt_ps_props | {"name"}),
                 )
                 native_doctype_map = {r["name"]: r for r in dt_rows}
@@ -353,17 +350,13 @@ def get_data(filters):
     # Compute status for each row
     for row in data:
         dt = row["dt"]
-        if dt in custom_dt_set:
-            row["status"] = "Custom"
-        elif row["customization_type"] == "Custom Field":
+        if row["customization_type"] == "Custom Field":
             cf_props = row.pop("_cf_props", {})
             native_field_row = native_docfield_map.get((dt, row.get("fieldname") or ""))
             row["status"] = _cf_status(cf_props, native_field_row)
         else:
             fieldname = row.get("fieldname") or ""
-            native_field_row = (
-                native_docfield_map.get((dt, fieldname)) if fieldname else None
-            )
+            native_field_row = native_docfield_map.get((dt, fieldname)) if fieldname else None
             native_dt_row = native_doctype_map.get(dt)
             row["status"] = _ps_status(
                 row.get("property") or "",
@@ -378,7 +371,7 @@ def get_data(filters):
         data = [row for row in data if row.get("status") == filters["status"]]
 
     # Optionally annotate is_custom_doctype
-    if filters.get("show_custom_doctype"):
+    if filters.get("show_custom_doctype") and custom_dt_set is not None:
         for row in data:
             row["is_custom_doctype"] = 1 if row["dt"] in custom_dt_set else 0
 
