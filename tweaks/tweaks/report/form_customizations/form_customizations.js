@@ -96,11 +96,11 @@ frappe.query_reports['Form Customizations'] = {
     },
 
     onload(report) {
-        report.page.add_inner_button(__('Delete Customizations...'), () => {
+        report.page.add_inner_button(__('Bulk Delete'), () => {
             const get_filter = (fieldname) => report.get_filter_value(fieldname) || ''
 
             const dialog = new frappe.ui.Dialog({
-                title: __('Delete Customizations'),
+                title: __('Bulk Delete Customizations'),
                 fields: [
                     {
                         fieldtype: 'HTML',
