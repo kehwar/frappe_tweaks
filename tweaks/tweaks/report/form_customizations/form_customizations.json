@@ -33,16 +33,18 @@
   },
   {
    "fieldname": "show_system_generated",
-   "fieldtype": "Check",
-   "label": "Show System Generated",
+   "fieldtype": "Select",
+   "label": "System Generated",
    "mandatory": 0,
+   "options": "\nYes\nNo",
    "wildcard_filter": 0
   },
   {
    "fieldname": "show_ui_fields",
-   "fieldtype": "Check",
-   "label": "Show UI Fields",
+   "fieldtype": "Select",
+   "label": "UI Fields",
    "mandatory": 0,
+   "options": "\nYes\nNo",
    "wildcard_filter": 0
   }
  ],

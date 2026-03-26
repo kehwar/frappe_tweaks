@@ -207,6 +207,12 @@ def get_columns(filters):
             "width": 300,
         },
         {
+            "fieldname": "fieldtype",
+            "label": _("Field Type"),
+            "fieldtype": "Data",
+            "width": 140,
+        },
+        {
             "fieldname": "customization_module",
             "label": _("Module (Customization)"),
             "fieldtype": "Link",
@@ -222,7 +228,7 @@ def get_columns(filters):
         },
     ]
 
-    if filters.get("show_system_generated"):
+    if not filters.get("show_system_generated"):
         columns.append(
             {
                 "fieldname": "is_system_generated",
@@ -232,17 +238,7 @@ def get_columns(filters):
             }
         )
 
-    if filters.get("show_ui_fields"):
-        columns.append(
-            {
-                "fieldname": "fieldtype",
-                "label": _("Field Type"),
-                "fieldtype": "Data",
-                "width": 140,
-            }
-        )
-
-    if filters.get("show_custom_doctype"):
+    if not filters.get("show_custom_doctype"):
         columns.append(
             {
                 "fieldname": "is_custom_doctype",
@@ -292,17 +288,15 @@ def get_data(filters):
     for row in data:
         row["doctype_module"] = dt_module_map.get(row["dt"], "")
 
-    # Identify custom doctypes — only needed for the is_custom_doctype annotation
-    custom_dt_set = None
-    if filters.get("show_custom_doctype"):
-        custom_dt_set = {
-            d["name"]
-            for d in frappe.get_all(
-                "DocType",
-                filters={"name": ["in", list(dt_module_map)], "custom": 1},
-                fields=["name"],
-            )
-        }
+    # Fetch custom doctypes — used for both filtering and annotation
+    custom_dt_set = {
+        d["name"]
+        for d in frappe.get_all(
+            "DocType",
+            filters={"name": ["in", list(dt_module_map)], "custom": 1},
+            fields=["name"],
+        )
+    }
 
     # --- Batch-fetch native DocField rows for all doctypes ---
     docfield_props_needed = set(_CF_COMPARE_FIELDS)
@@ -356,7 +350,9 @@ def get_data(filters):
             row["status"] = _cf_status(cf_props, native_field_row)
         else:
             fieldname = row.get("fieldname") or ""
-            native_field_row = native_docfield_map.get((dt, fieldname)) if fieldname else None
+            native_field_row = (
+                native_docfield_map.get((dt, fieldname)) if fieldname else None
+            )
             native_dt_row = native_doctype_map.get(dt)
             row["status"] = _ps_status(
                 row.get("property") or "",
@@ -370,10 +366,13 @@ def get_data(filters):
     if filters.get("status"):
         data = [row for row in data if row.get("status") == filters["status"]]
 
-    # Optionally annotate is_custom_doctype
-    if filters.get("show_custom_doctype") and custom_dt_set is not None:
-        for row in data:
-            row["is_custom_doctype"] = 1 if row["dt"] in custom_dt_set else 0
+    # Filter and annotate custom doctype
+    show_custom = filters.get("show_custom_doctype")
+    if show_custom in ("Yes", "No"):
+        want_custom = show_custom == "Yes"
+        data = [row for row in data if (row["dt"] in custom_dt_set) == want_custom]
+    for row in data:
+        row["is_custom_doctype"] = 1 if row["dt"] in custom_dt_set else 0
 
     return data
 
@@ -388,7 +387,10 @@ def get_custom_fields(filters):
     if filters.get("customization_module"):
         filter_dict["module"] = filters.get("customization_module")
 
-    if not filters.get("show_system_generated"):
+    show_sys_gen = filters.get("show_system_generated")
+    if show_sys_gen == "Yes":
+        filter_dict["is_system_generated"] = 1
+    elif show_sys_gen == "No":
         filter_dict["is_system_generated"] = 0
 
     fetch_fields = list(
@@ -406,12 +408,12 @@ def get_custom_fields(filters):
 
     result = []
     ui_field_types = ["Column Break", "Section Break", "Tab Break"]
+    show_ui = filters.get("show_ui_fields")
 
     for field in custom_fields:
-        if (
-            not filters.get("show_ui_fields")
-            and field.get("fieldtype") in ui_field_types
-        ):
+        if show_ui == "No" and field.get("fieldtype") in ui_field_types:
+            continue
+        if show_ui == "Yes" and field.get("fieldtype") not in ui_field_types:
             continue
 
         result.append(
@@ -443,7 +445,10 @@ def get_property_setters(filters):
     if filters.get("customization_module"):
         filter_dict["module"] = filters.get("customization_module")
 
-    if not filters.get("show_system_generated"):
+    show_sys_gen = filters.get("show_system_generated")
+    if show_sys_gen == "Yes":
+        filter_dict["is_system_generated"] = 1
+    elif show_sys_gen == "No":
         filter_dict["is_system_generated"] = 0
 
     if filters.get("doctype_or_field"):

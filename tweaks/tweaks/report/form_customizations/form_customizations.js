@@ -27,13 +27,15 @@ frappe.query_reports['Form Customizations'] = {
         },
         {
             fieldname: 'show_system_generated',
-            label: __('Show System Generated'),
-            fieldtype: 'Check',
+            label: __('System Generated'),
+            fieldtype: 'Select',
+            options: ['', 'Yes', 'No'],
         },
         {
             fieldname: 'show_ui_fields',
-            label: __('Show UI Fields'),
-            fieldtype: 'Check',
+            label: __('UI Fields'),
+            fieldtype: 'Select',
+            options: ['', 'Yes', 'No'],
         },
         {
             fieldname: 'doctype_or_field',
@@ -49,8 +51,9 @@ frappe.query_reports['Form Customizations'] = {
         },
         {
             fieldname: 'show_custom_doctype',
-            label: __('Show Custom DocType'),
-            fieldtype: 'Check',
+            label: __('Custom DocType'),
+            fieldtype: 'Select',
+            options: ['', 'Yes', 'No'],
         },
     ],
     formatter: function (value, row, column, data, default_formatter) {
@@ -141,22 +144,25 @@ frappe.query_reports['Form Customizations'] = {
                         default: get_filter('doctype_or_field'),
                     },
                     {
-                        label: __('Include System Generated'),
+                        label: __('System Generated'),
                         fieldname: 'show_system_generated',
-                        fieldtype: 'Check',
-                        default: get_filter('show_system_generated') ? 1 : 0,
+                        fieldtype: 'Select',
+                        options: '\nYes\nNo',
+                        default: get_filter('show_system_generated'),
                     },
                     {
-                        label: __('Include UI Fields'),
+                        label: __('UI Fields'),
                         fieldname: 'show_ui_fields',
-                        fieldtype: 'Check',
-                        default: get_filter('show_ui_fields') ? 1 : 0,
+                        fieldtype: 'Select',
+                        options: '\nYes\nNo',
+                        default: get_filter('show_ui_fields'),
                     },
                     {
-                        label: __('Include Custom DocType'),
+                        label: __('Custom DocType'),
                         fieldname: 'show_custom_doctype',
-                        fieldtype: 'Check',
-                        default: get_filter('show_custom_doctype') ? 1 : 0,
+                        fieldtype: 'Select',
+                        options: '\nYes\nNo',
+                        default: get_filter('show_custom_doctype'),
                     },
                 ],
                 primary_action_label: __('Delete'),
@@ -175,6 +181,6 @@ frappe.query_reports['Form Customizations'] = {
                 },
             })
             dialog.show()
-        })
+        }, __("Actions"))
     },
 }
