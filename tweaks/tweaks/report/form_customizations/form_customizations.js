@@ -92,4 +92,23 @@ frappe.query_reports['Form Customizations'] = {
 
         return default_formatter(value, row, column, data)
     },
+
+    onload(report) {
+        report.page.add_inner_button(__('Delete Stale Customizations'), () => {
+            frappe.confirm(
+                __('This will permanently delete all <b>Stale</b> Custom Fields and Property Setters. Continue?'),
+                () => {
+                    frappe.call({
+                        method: 'tweaks.tweaks.report.form_customizations.form_customizations_actions.enqueue_delete_stale_customizations',
+                        callback({ message: task_name }) {
+                            frappe.show_alert({
+                                message: __('Task enqueued: {0}', [task_name]),
+                                indicator: 'green',
+                            })
+                        },
+                    })
+                }
+            )
+        })
+    },
 }
