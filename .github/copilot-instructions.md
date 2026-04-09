@@ -30,7 +30,6 @@ Before working on any feature, load the relevant skill:
 | Power Query / Power BI | `frappe-tweaks-power-query-expert` |
 | Sync Jobs | `frappe-tweaks-sync-job-expert` |
 | Typst PDF generation | `frappe-typst-expert` |
-| Translations (PO/POT) | `frappe-tweaks-translation-helper` |
 
 Skills are in `.agents/skills/`.
 
