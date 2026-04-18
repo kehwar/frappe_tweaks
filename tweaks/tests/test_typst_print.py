@@ -1,12 +1,19 @@
 # Copyright (c) 2026, Erick W.R. and contributors
 # See license.txt
 
+import io
 import json
+import os
+import shutil
+import tarfile
+import tempfile
+from unittest.mock import patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from tweaks.utils.typst_print import (
+    _extract_main_typ_from_tar,
     _extract_source_from_html,
     _get_typst_source,
     build_typst_context,
@@ -30,15 +37,21 @@ def _make_print_format(typst_type=True, html=MINIMAL_TYPST):
 class TestGetTypstSource(FrappeTestCase):
     def test_returns_html_field_content(self):
         pf = _make_print_format(html="  #strong[Hi]  ")
-        self.assertEqual(_get_typst_source(pf), "#strong[Hi]")
+        source_type, source_data = _get_typst_source(pf)
+        self.assertEqual(source_type, "inline")
+        self.assertEqual(source_data, "#strong[Hi]")
 
     def test_returns_empty_string_when_html_blank(self):
         pf = _make_print_format(html="")
-        self.assertEqual(_get_typst_source(pf), "")
+        source_type, source_data = _get_typst_source(pf)
+        self.assertEqual(source_type, "inline")
+        self.assertEqual(source_data, "")
 
     def test_returns_empty_string_when_html_none(self):
         pf = _make_print_format(html=None)
-        self.assertEqual(_get_typst_source(pf), "")
+        source_type, source_data = _get_typst_source(pf)
+        self.assertEqual(source_type, "inline")
+        self.assertEqual(source_data, "")
 
 
 class TestExtractSourceFromHtml(FrappeTestCase):
@@ -227,3 +240,165 @@ class TestBuildTypstContext(FrappeTestCase):
             print_format=None, html=html, options={}, output=writer, pdf_generator="typst"
         )
         self.assertEqual(len(writer.pages), 2)
+
+
+class TestGetTypstSourceFilesystem(FrappeTestCase):
+    """Tests for _get_typst_source filesystem resolution (Phase 3)."""
+
+    def setUp(self):
+        super().setUp()
+        self.tmpdir = tempfile.mkdtemp()
+        self.pf = frappe._dict(
+            print_format_type="Typst",
+            html="inline content",
+            module="Accounts",
+            name="Test Invoice",
+        )
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+        super().tearDown()
+
+    def _patches(self, is_custom=0):
+        """Return context managers that redirect module path to tmpdir."""
+        return [
+            patch("tweaks.utils.typst_print.frappe.get_module_path", return_value=self.tmpdir),
+            patch("tweaks.utils.typst_print.frappe.get_cached_value", return_value=is_custom),
+        ]
+
+    # --- inline fallback ---
+
+    def test_inline_fallback_when_no_files(self):
+        with self._patches()[0], self._patches()[1]:
+            source_type, source_data = _get_typst_source(self.pf)
+        self.assertEqual(source_type, "inline")
+        self.assertEqual(source_data, "inline content")
+
+    def test_returns_inline_for_none_print_format(self):
+        source_type, source_data = _get_typst_source(None)
+        self.assertEqual(source_type, "inline")
+        self.assertEqual(source_data, "")
+
+    def test_no_module_falls_back_to_inline(self):
+        pf = frappe._dict(html="inline", module=None, name="X")
+        source_type, source_data = _get_typst_source(pf)
+        self.assertEqual(source_type, "inline")
+
+    # --- .typ file priority ---
+
+    def test_typ_file_takes_priority_over_html(self):
+        typ_path = os.path.join(self.tmpdir, "test_invoice.typ")
+        with open(typ_path, "w", encoding="utf-8") as f:
+            f.write("#strong[From file]")
+
+        with self._patches()[0], self._patches()[1]:
+            source_type, source_data = _get_typst_source(self.pf)
+
+        self.assertEqual(source_type, "typ")
+        self.assertEqual(source_data, typ_path)
+
+    # --- .tar.gz priority ---
+
+    def _write_tar_gz(self, content: bytes = b"#strong[From archive]") -> str:
+        tar_path = os.path.join(self.tmpdir, "test_invoice.tar.gz")
+        with tarfile.open(tar_path, "w:gz") as tar:
+            info = tarfile.TarInfo(name="main.typ")
+            info.size = len(content)
+            tar.addfile(info, io.BytesIO(content))
+        return tar_path
+
+    def test_tar_gz_takes_priority_over_typ_and_html(self):
+        # Both .typ and .tar.gz present — .tar.gz wins
+        with open(os.path.join(self.tmpdir, "test_invoice.typ"), "w") as f:
+            f.write("#strong[From .typ]")
+        tar_path = self._write_tar_gz()
+
+        with self._patches()[0], self._patches()[1]:
+            source_type, source_data = _get_typst_source(self.pf)
+
+        self.assertEqual(source_type, "tar.gz")
+        self.assertEqual(source_data, tar_path)
+
+    # --- custom module skips filesystem ---
+
+    def test_custom_module_skips_filesystem(self):
+        with open(os.path.join(self.tmpdir, "test_invoice.typ"), "w") as f:
+            f.write("#strong[From file]")
+
+        # is_custom_module = 1 → skip filesystem, fall back to inline
+        with self._patches(is_custom=1)[0], self._patches(is_custom=1)[1]:
+            source_type, source_data = _get_typst_source(self.pf)
+
+        self.assertEqual(source_type, "inline")
+        self.assertEqual(source_data, "inline content")
+
+    # --- _extract_main_typ_from_tar ---
+
+    def test_extract_main_typ_from_tar(self):
+        expected = "#strong[Hello from archive]"
+        tar_path = self._write_tar_gz(expected.encode("utf-8"))
+        content = _extract_main_typ_from_tar(tar_path)
+        self.assertEqual(content, expected)
+
+    def test_extract_main_typ_raises_when_missing(self):
+        tar_path = os.path.join(self.tmpdir, "empty.tar.gz")
+        with tarfile.open(tar_path, "w:gz"):
+            pass  # empty archive — no main.typ
+
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            _extract_main_typ_from_tar(tar_path)
+
+    # --- end-to-end: file-based .typ compiles to PDF ---
+
+    def test_pdf_generator_compiles_typ_file(self):
+        source = "#set page(width: 100pt, height: 50pt)\n#strong[From .typ file]"
+        typ_path = os.path.join(self.tmpdir, "test_invoice.typ")
+        with open(typ_path, "w", encoding="utf-8") as f:
+            f.write(source)
+
+        pf = frappe._dict(
+            print_format_type="Typst",
+            html="",
+            module="Accounts",
+            name="Test Invoice",
+        )
+        # Provide matching HTML content so the fallback branch also works
+        html_with_markers = f"<!-- typst-source-start -->{source}<!-- typst-source-end -->"
+
+        with self._patches()[0], self._patches()[1]:
+            result = pdf_generator(
+                print_format=pf,
+                html=html_with_markers,
+                options={},
+                output=None,
+                pdf_generator="typst",
+            )
+
+        self.assertIsInstance(result, bytes)
+        self.assertTrue(result.startswith(b"%PDF"))
+
+    # --- end-to-end: .tar.gz archive compiles to PDF ---
+
+    def test_pdf_generator_compiles_tar_gz_archive(self):
+        source = "#set page(width: 100pt, height: 50pt)\n#strong[From archive]"
+        tar_path = self._write_tar_gz(source.encode("utf-8"))
+
+        pf = frappe._dict(
+            print_format_type="Typst",
+            html="",
+            module="Accounts",
+            name="Test Invoice",
+        )
+        html_with_markers = f"<!-- typst-source-start -->{source}<!-- typst-source-end -->"
+
+        with self._patches()[0], self._patches()[1]:
+            result = pdf_generator(
+                print_format=pf,
+                html=html_with_markers,
+                options={},
+                output=None,
+                pdf_generator="typst",
+            )
+
+        self.assertIsInstance(result, bytes)
+        self.assertTrue(result.startswith(b"%PDF"))

@@ -6,16 +6,23 @@ Hooks:
     processes '#', '{', '}' characters.  Returns a Jinja template whose
     rendered output is the original Typst source embedded in HTML comment
     markers ready for extraction by the pdf_generator hook.
-  - pdf_generator: extracts the Typst source from the HTML comment markers,
-    builds the full data context via build_typst_context(), compiles via
-    TypstBuilder, and returns PDF bytes.
+  - pdf_generator: extracts the Typst source from the HTML comment markers
+    (or reloads from the filesystem for file-based formats), builds the full
+    data context via build_typst_context(), compiles via TypstBuilder, and
+    returns PDF bytes.
 
 Data context (Phase 2):
   sys_inputs carries str-only scalar metadata.  Structured data is injected
   as virtual JSON files (doc.json, user.json, letterhead.json) via
   builder.files so templates can access full document and session data.
+
+Source resolution (Phase 3):
+  For standard (non-custom-module) print formats, _get_typst_source checks the
+  module filesystem path for a .tar.gz archive or a .typ file before falling
+  back to the html field, mirroring Frappe's .html convention.
 """
 
+import os
 import re
 
 import frappe
@@ -37,19 +44,32 @@ def get_print_format_template(jenv, print_format):
     HTML comment markers (bypassing Jinja processing via {% raw %}) when
     print_format_type == "Typst".  Returns None for all other formats so
     Frappe falls through to its default rendering.
+
+    For file-based formats (.tar.gz / .typ), the content of main.typ (or the
+    .typ file) is embedded so that Frappe's printview produces usable HTML
+    that the pdf_generator hook can recognise.
     """
     if not print_format or getattr(print_format, "print_format_type", None) != "Typst":
         return None
 
-    source = _get_typst_source(print_format)
-    if not source:
+    source_type, source_data = _get_typst_source(print_format)
+
+    if source_type == "tar.gz":
+        content = _extract_main_typ_from_tar(source_data)
+    elif source_type == "typ":
+        with open(source_data, encoding="utf-8") as f:
+            content = f.read()
+    else:
+        content = source_data  # inline string
+
+    if not content:
         return None
 
     # Wrap source in {% raw %}...{% endraw %} so Jinja never interprets
     # '#', '{', '}' that appear in Typst markup.  Surround with comment
     # markers so the pdf_generator hook can extract the source from the
     # full printview HTML.
-    wrapper = _SOURCE_START + "{% raw %}" + source + "{% endraw %}" + _SOURCE_END
+    wrapper = _SOURCE_START + "{% raw %}" + content + "{% endraw %}" + _SOURCE_END
     return jenv.from_string(wrapper)
 
 
@@ -62,22 +82,16 @@ def pdf_generator(print_format, html, options, output, pdf_generator):
     """
     Called by frappe/utils/print_utils.py when pdf_generator != "wkhtmltopdf".
 
-    Extracts Typst source from HTML comment markers, builds the full data
-    context, compiles via TypstBuilder, and returns PDF bytes.  Returns None
-    if pdf_generator != "typst" so other hooks in the chain can handle it.
+    Extracts Typst source from HTML comment markers or reloads from the
+    filesystem (for .tar.gz / .typ formats), builds the full data context,
+    compiles via TypstBuilder, and returns PDF bytes.  Returns None if
+    pdf_generator != "typst" so other hooks in the chain can handle it.
 
     When `output` (a pypdf.PdfWriter) is provided, compiled pages are appended
     to it and the writer is returned instead of raw bytes.
     """
     if pdf_generator != "typst":
         return None
-
-    source = _extract_source_from_html(html)
-    if not source:
-        frappe.throw(
-            frappe._("Typst source not found in print output."),
-            title=frappe._("Typst Print Error"),
-        )
 
     form_dict = frappe.local.form_dict
     doctype = form_dict.get("doctype")
@@ -100,7 +114,32 @@ def pdf_generator(print_format, html, options, output, pdf_generator):
     from tweaks.utils.typst import TypstBuilder
 
     builder = TypstBuilder()
-    builder.read_string(source)
+
+    if print_format is not None:
+        source_type, source_data = _get_typst_source(print_format)
+        if source_type in ("tar.gz", "typ"):
+            # File-based: TypstBuilder loads the file/archive directly.
+            builder.read_file_path(source_data)
+        else:
+            # Inline: use html field content, falling back to HTML markers.
+            if not source_data:
+                source_data = _extract_source_from_html(html) or ""
+            if not source_data:
+                frappe.throw(
+                    frappe._("Typst source not found in print output."),
+                    title=frappe._("Typst Print Error"),
+                )
+            builder.read_string(source_data)
+    else:
+        # No print_format (test / programmatic mode): extract from HTML markers.
+        source = _extract_source_from_html(html)
+        if not source:
+            frappe.throw(
+                frappe._("Typst source not found in print output."),
+                title=frappe._("Typst Print Error"),
+            )
+        builder.read_string(source)
+
     builder.files.update(extra_files)
 
     pdf_bytes = builder.compile(format="pdf", sys_inputs=sys_inputs)
@@ -222,13 +261,57 @@ def build_typst_context(
 # ---------------------------------------------------------------------------
 
 
-def _get_typst_source(print_format) -> str:
+def _get_typst_source(print_format) -> tuple[str, str]:
     """
-    Phase 1: returns inline Typst markup from the print format's html field.
-    Phase 3 will extend this to also check the module filesystem path for
-    .typ / .tar.gz files before falling back to the html field.
+    Resolve the Typst source for a print format.
+
+    Returns a (source_type, data) tuple:
+      ("tar.gz", "/abs/path")  — .tar.gz archive on the module filesystem
+      ("typ",    "/abs/path")  — single .typ file on the module filesystem
+      ("inline", "...markup") — html field content (fallback)
+
+    Filesystem sources are only checked for standard (non-custom-module)
+    formats that have a module set, mirroring Frappe's .html convention in
+    frappe/www/printview.py.  The priority order is: .tar.gz > .typ > html.
     """
-    return (print_format.html or "").strip()
+    if print_format:
+        module = getattr(print_format, "module", None)
+        if module:
+            is_custom_module = frappe.get_cached_value("Module Def", module, "custom")
+            if not is_custom_module:
+                base_dir = frappe.get_module_path(
+                    module, "Print Format", print_format.name
+                )
+                scrubbed = frappe.scrub(print_format.name)
+
+                tar_path = os.path.join(base_dir, scrubbed + ".tar.gz")
+                if os.path.exists(tar_path):
+                    return ("tar.gz", tar_path)
+
+                typ_path = os.path.join(base_dir, scrubbed + ".typ")
+                if os.path.exists(typ_path):
+                    return ("typ", typ_path)
+
+    return (
+        "inline",
+        (getattr(print_format, "html", None) or "").strip() if print_format else "",
+    )
+
+
+def _extract_main_typ_from_tar(tar_path: str) -> str:
+    """Extract the content of main.typ from a .tar.gz Typst archive."""
+    import tarfile
+
+    with tarfile.open(tar_path, "r:gz") as tar:
+        try:
+            member = tar.getmember("main.typ")
+        except KeyError:
+            frappe.throw(
+                frappe._("Typst archive {0} must contain main.typ").format(tar_path),
+                title=frappe._("Typst Print Error"),
+            )
+        f = tar.extractfile(member)
+        return f.read().decode("utf-8")
 
 
 def _extract_source_from_html(html: str) -> str | None:
