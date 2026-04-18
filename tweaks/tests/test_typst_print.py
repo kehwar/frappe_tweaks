@@ -160,7 +160,7 @@ class TestBuildTypstContext(FrappeTestCase):
 
     def test_sys_inputs_contains_expected_keys(self):
         sys_inputs, _ = build_typst_context()
-        for key in ("doctype", "docname", "print_format_name", "language", "lh_name", "lh_company", "lh_logo_url"):
+        for key in ("doctype", "docname", "print_format_name", "language", "lh_name", "lh_logo_url"):
             self.assertIn(key, sys_inputs)
 
     def test_extra_files_contains_required_json_files(self):
@@ -189,7 +189,6 @@ class TestBuildTypstContext(FrappeTestCase):
     def test_letterhead_sys_inputs_empty_when_no_letterhead(self):
         sys_inputs, _ = build_typst_context(no_letterhead=True)
         self.assertEqual(sys_inputs["lh_name"], "")
-        self.assertEqual(sys_inputs["lh_company"], "")
         self.assertEqual(sys_inputs["lh_logo_url"], "")
 
     def test_doc_json_uses_doc_fields_when_doc_provided(self):

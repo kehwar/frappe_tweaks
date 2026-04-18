@@ -20,8 +20,22 @@ Source resolution (Phase 3):
   For standard (non-custom-module) print formats, _get_typst_source checks the
   module filesystem path for a .tar.gz archive or a .typ file before falling
   back to the html field, mirroring Frappe's .html convention.
+
+  Jinja pre-processing (Phase 4):
+  Before compilation, .typ and inline sources are rendered through a Jinja2
+  environment (autoescape=False) with context variables:
+    doc         — full document dict (same data as doc.json)
+    user        — current user dict (same data as user.json)
+    letterhead  — letter head dict (same data as letterhead.json)
+  This lets templates inject dynamic Typst markup using {{ doc.terms }},
+  {{ letterhead.content }}, {% if ... %}...{% endif %}, etc.
+  Any Typst markup that contains literal Jinja delimiters (unlikely) can be
+  protected with {% raw %}...{% endraw %} blocks.
+  .tar.gz archives are passed directly to TypstBuilder without Jinja
+  pre-processing; use the Python before_print hook instead for those.
 """
 
+import json as _json
 import os
 import re
 
@@ -117,9 +131,13 @@ def pdf_generator(print_format, html, options, output, pdf_generator):
 
     if print_format is not None:
         source_type, source_data = _get_typst_source(print_format)
-        if source_type in ("tar.gz", "typ"):
-            # File-based: TypstBuilder loads the file/archive directly.
+        if source_type == "tar.gz":
+            # tar.gz archives are passed directly — Jinja not applied.
             builder.read_file_path(source_data)
+        elif source_type == "typ":
+            with open(source_data, encoding="utf-8") as fh:
+                raw_source = fh.read()
+            builder.read_string(_render_jinja(raw_source, extra_files))
         else:
             # Inline: use html field content, falling back to HTML markers.
             if not source_data:
@@ -129,7 +147,7 @@ def pdf_generator(print_format, html, options, output, pdf_generator):
                     frappe._("Typst source not found in print output."),
                     title=frappe._("Typst Print Error"),
                 )
-            builder.read_string(source_data)
+            builder.read_string(_render_jinja(source_data, extra_files))
     else:
         # No print_format (test / programmatic mode): extract from HTML markers.
         source = _extract_source_from_html(html)
@@ -138,7 +156,7 @@ def pdf_generator(print_format, html, options, output, pdf_generator):
                 frappe._("Typst source not found in print output."),
                 title=frappe._("Typst Print Error"),
             )
-        builder.read_string(source)
+        builder.read_string(_render_jinja(source, extra_files))
 
     builder.files.update(extra_files)
 
@@ -178,7 +196,7 @@ def build_typst_context(
     Returns:
         sys_inputs: dict[str, str] — scalar metadata for Typst sys.inputs.
             Keys: doctype, docname, print_format_name, language, and
-            letterhead scalar fields (lh_name, lh_company, lh_logo_url).
+            letterhead scalar fields (lh_name, lh_logo_url).
         extra_files: dict[str, bytes] — virtual JSON files to inject into
             builder.files before compilation.
             - doc.json: full document as dict (frappe.as_json serialised)
@@ -216,7 +234,6 @@ def build_typst_context(
     # --- letterhead.json ---
     lh_data: dict = {}
     lh_name = ""
-    lh_company = ""
     lh_logo_url = ""
 
     if not no_letterhead and letter_head:
@@ -226,11 +243,9 @@ def build_typst_context(
                 "name": lh_doc.name,
                 "html": lh_doc.content or "",
                 "footer": lh_doc.footer or "",
-                "company": lh_doc.company or "",
                 "logo_url": lh_doc.image or "",
             }
             lh_name = lh_doc.name
-            lh_company = lh_doc.company or ""
             lh_logo_url = lh_doc.image or ""
         except frappe.DoesNotExistError:
             pass
@@ -242,7 +257,6 @@ def build_typst_context(
         "print_format_name": str(form_dict.get("format") or ""),
         "language": str(frappe.local.lang or ""),
         "lh_name": lh_name,
-        "lh_company": lh_company,
         "lh_logo_url": lh_logo_url,
     }
 
@@ -261,6 +275,42 @@ def build_typst_context(
 # ---------------------------------------------------------------------------
 
 
+def _render_jinja(source: str, extra_files: dict[str, bytes]) -> str:
+    """
+    Render a Typst source string as a Jinja2 template.
+
+    Context variables available in templates:
+      doc         — document dict (from doc.json)
+      user        — user dict (from user.json)
+      letterhead  — letter head dict (from letterhead.json)
+
+    Custom filters:
+      strip_tags  — strips HTML tags from a value, leaving plain text.
+                    Use for any Frappe field that may contain HTML (e.g. terms,
+                    description, company_address_display).
+                    {{ doc.terms | strip_tags }}
+
+    autoescape is disabled so Typst special characters are not HTML-escaped.
+    """
+    from jinja2 import Environment
+
+    context = {}
+    for key in ("doc", "user", "letterhead"):
+        fname = f"{key}.json"
+        context[key] = _json.loads(extra_files[fname]) if fname in extra_files else {}
+
+    env = Environment(autoescape=False)  # noqa: S701 — not rendering HTML
+    env.filters["strip_tags"] = _strip_tags
+    return env.from_string(source).render(**context)
+
+
+def _strip_tags(value: str) -> str:
+    """Strip HTML tags from *value*, returning plain text."""
+    from frappe.utils import strip_html_tags
+
+    return strip_html_tags(str(value or ""))
+
+
 def _get_typst_source(print_format) -> tuple[str, str]:
     """
     Resolve the Typst source for a print format.
@@ -277,20 +327,18 @@ def _get_typst_source(print_format) -> tuple[str, str]:
     if print_format:
         module = getattr(print_format, "module", None)
         if module:
-            is_custom_module = frappe.get_cached_value("Module Def", module, "custom")
-            if not is_custom_module:
-                base_dir = frappe.get_module_path(
-                    module, "Print Format", print_format.name
-                )
-                scrubbed = frappe.scrub(print_format.name)
+            base_dir = frappe.get_module_path(
+                module, "Print Format", print_format.name
+            )
+            scrubbed = frappe.scrub(print_format.name)
 
-                tar_path = os.path.join(base_dir, scrubbed + ".tar.gz")
-                if os.path.exists(tar_path):
-                    return ("tar.gz", tar_path)
+            tar_path = os.path.join(base_dir, scrubbed + ".tar.gz")
+            if os.path.exists(tar_path):
+                return ("tar.gz", tar_path)
 
-                typ_path = os.path.join(base_dir, scrubbed + ".typ")
-                if os.path.exists(typ_path):
-                    return ("typ", typ_path)
+            typ_path = os.path.join(base_dir, scrubbed + ".typ")
+            if os.path.exists(typ_path):
+                return ("typ", typ_path)
 
     return (
         "inline",
