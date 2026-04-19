@@ -118,6 +118,7 @@ website_route_rules = [
 # Typst Print Format hooks
 get_print_format_template = ["tweaks.utils.typst_print.get_print_format_template"]
 pdf_generator = ["tweaks.utils.typst_print.pdf_generator"]
+page_js = {"print": "public/js/print_typst_view.js"}
 
 # Timeline hooks
 additional_timeline_content = {
