@@ -17,11 +17,6 @@ after_install = [
     "tweaks.custom.doctype.user_group.apply_user_group_patches",
     "tweaks.custom.doctype.role.apply_role_patches",
     "tweaks.tweaks.doctype.ac_rule.ac_rule_utils.after_install",
-    "tweaks.utils.typst_print_setup.install",
-]
-
-before_uninstall = [
-    "tweaks.utils.typst_print_setup.uninstall",
 ]
 
 after_migrate = [
@@ -114,11 +109,6 @@ auth_hooks = ["tweaks.custom.utils.authentication.validate_user_password"]
 website_route_rules = [
     {"from_route": "/h/<file_name>", "to_route": "html-file"},
 ]
-
-# Typst Print Format hooks
-get_print_format_template = ["tweaks.utils.typst_print.get_print_format_template"]
-pdf_generator = ["tweaks.utils.typst_print.pdf_generator"]
-page_js = {"print": "public/js/print_typst_view.js"}
 
 # Timeline hooks
 additional_timeline_content = {

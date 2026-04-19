@@ -47,7 +47,6 @@ from tweaks.utils.document_review import (
     submit_document_review,
 )
 from tweaks.utils.duckdb import make_queryable
-from tweaks.utils.typst import build
 
 
 def admin_sql(query, *args, **kwargs):
@@ -172,9 +171,6 @@ def safe_exec_globals(out):
             ),
             "duckdb": NamespaceDict(
                 make_queryable=make_queryable,
-            ),
-            "typst": NamespaceDict(
-                build=build,
             ),
         }
     )
