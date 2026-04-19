@@ -11,26 +11,30 @@ Hooks:
     data context via build_typst_context(), compiles via TypstBuilder, and
     returns PDF bytes.
 
-Data context (Phase 2):
+Data context:
   sys_inputs carries str-only scalar metadata.  Structured data is injected
   as virtual JSON files (doc.json, user.json, letterhead.json) via
   builder.files so templates can access full document and session data.
 
-Source resolution (Phase 3):
+Source resolution:
   For standard (non-custom-module) print formats, _get_typst_source checks the
   module filesystem path for a .tar.gz archive or a .typ file before falling
   back to the html field, mirroring Frappe's .html convention.
 
-  Jinja pre-processing (Phase 4):
-  Before compilation, .typ and inline sources are rendered through a Jinja2
-  environment (autoescape=False) with context variables:
+Jinja pre-processing:
+  Before compilation, .typ and inline sources are rendered through
+  frappe.utils.jinja.render_template (safe_render=False — trusted app source,
+  avoids false positives on Typst's ".__" patterns).
+
+  Context variables available in every .typ template:
     doc         — full document dict (same data as doc.json)
     user        — current user dict (same data as user.json)
     letterhead  — letter head dict (same data as letterhead.json)
-  This lets templates inject dynamic Typst markup using {{ doc.terms }},
-  {{ letterhead.content }}, {% if ... %}...{% endif %}, etc.
-  Any Typst markup that contains literal Jinja delimiters (unlikely) can be
-  protected with {% raw %}...{% endraw %} blocks.
+    get_doc     — get_doc(doctype, name) → dict  (wraps frappe.get_cached_doc)
+
+  Frappe's Jinja env globals (get_safe_globals) are also available, including
+  html2text(), frappe.utils.date_diff(), frappe.utils.fmt_money(), etc.
+
   .tar.gz archives are passed directly to TypstBuilder without Jinja
   pre-processing; use the Python before_print hook instead for those.
 """
@@ -277,38 +281,44 @@ def build_typst_context(
 
 def _render_jinja(source: str, extra_files: dict[str, bytes]) -> str:
     """
-    Render a Typst source string as a Jinja2 template.
+    Render a Typst source string through ``frappe.utils.jinja.render_template``.
+
+    Uses the shared Frappe Jinja environment so all app-registered hooks
+    (methods, filters) are available, including the tweaks filters
+    (strip_tags, date_diff) registered in hooks.py.
 
     Context variables available in templates:
       doc         — document dict (from doc.json)
       user        — user dict (from user.json)
       letterhead  — letter head dict (from letterhead.json)
+      get_doc     — callable: get_doc(doctype, name) → dict, returns {} on error.
+                    Templates fetch linked docs on demand:
+                    {% set company = get_doc('Company', doc.company) %}
 
-    Custom filters:
-      strip_tags  — strips HTML tags from a value, leaving plain text.
-                    Use for any Frappe field that may contain HTML (e.g. terms,
-                    description, company_address_display).
-                    {{ doc.terms | strip_tags }}
-
-    autoescape is disabled so Typst special characters are not HTML-escaped.
+    Custom filters (registered via tweaks hooks.py jinja.filters):
+      strip_tags  — {{ doc.terms | strip_tags }}
+      date_diff   — {{ doc.valid_till | date_diff(doc.transaction_date) }}
     """
-    from jinja2 import Environment
+    from frappe.utils.jinja import render_template
 
-    context = {}
+    context: dict = {}
     for key in ("doc", "user", "letterhead"):
         fname = f"{key}.json"
         context[key] = _json.loads(extra_files[fname]) if fname in extra_files else {}
 
-    env = Environment(autoescape=False)  # noqa: S701 — not rendering HTML
-    env.filters["strip_tags"] = _strip_tags
-    return env.from_string(source).render(**context)
+    def _get_doc(doctype: str, name: str) -> dict:
+        if not name:
+            return {}
+        try:
+            return frappe.get_cached_doc(doctype, name).as_dict()
+        except Exception:
+            return {}
 
+    context["get_doc"] = _get_doc
 
-def _strip_tags(value: str) -> str:
-    """Strip HTML tags from *value*, returning plain text."""
-    from frappe.utils import strip_html_tags
-
-    return strip_html_tags(str(value or ""))
+    # safe_render=False: Typst source is trusted app code, not user input.
+    # Also avoids false positives on ".__" which can appear in Typst syntax.
+    return render_template(source, context, safe_render=False)
 
 
 def _get_typst_source(print_format) -> tuple[str, str]:
