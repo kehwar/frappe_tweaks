@@ -88,4 +88,17 @@ frappe.ui.form.PrintView = class TweaksTypstPrintView extends frappe.ui.form.Pri
 
         super.render_pdf();
     }
+
+    printit() {
+        const print_format = this.get_print_format();
+
+        if (print_format.print_format_type === "Typst") {
+            // Open the PDF in a new tab — the browser's native PDF viewer
+            // provides its own print button, which prints the actual PDF.
+            this.render_page("/api/method/frappe.utils.print_format.download_pdf?");
+            return;
+        }
+
+        super.printit();
+    }
 };
