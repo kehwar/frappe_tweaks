@@ -10,7 +10,6 @@ import json
 import frappe
 from frappe import _
 from frappe.modules import scrub
-from frappe.utils import now
 from frappe.utils.background_jobs import enqueue
 
 
@@ -26,16 +25,11 @@ def create_sync_job(
     target_document_type=None,
     target_document_name=None,
     parent_sync_job=None,
-    queue=None,
-    timeout=None,
-    retry_delay=None,
-    max_retries=None,
     trigger_type="Manual",
     triggered_by_doc=None,
     triggered_by_document_type=None,
     triggered_by_document_name=None,
     trigger_document_timestamp=None,
-    queue_on_insert=None,
     dry_run=False,
     insert_enabled=True,
     update_enabled=True,
@@ -58,16 +52,11 @@ def create_sync_job(
         target_document_type: Optional pre-specified target document type (overrides job type default)
         target_document_name: Optional pre-specified target document name
         parent_sync_job: Optional parent sync job name
-        queue: Optional queue override
-        timeout: Optional timeout override
-        retry_delay: Optional retry delay override
-        max_retries: Optional max retries override
         trigger_type: How the job was triggered (default: Manual)
         triggered_by_doc: Optional document that triggered this sync job
         triggered_by_document_type: Optional document type that triggered this sync job
         triggered_by_document_name: Optional document name that triggered this sync job
         trigger_document_timestamp: Optional timestamp of the triggering document
-        queue_on_insert: Whether to queue job on insert (default: None - False in dev, True in production)
         dry_run: Whether to calculate diff only without saving (default: False)
         insert_enabled: Allow insert operations (default: True)
         update_enabled: Allow update operations (default: True)
@@ -105,10 +94,6 @@ def create_sync_job(
         target_document_type = params.get("target_document_type", target_document_type)
         target_document_name = params.get("target_document_name", target_document_name)
         parent_sync_job = params.get("parent_sync_job", parent_sync_job)
-        queue = params.get("queue", queue)
-        timeout = params.get("timeout", timeout)
-        retry_delay = params.get("retry_delay", retry_delay)
-        max_retries = params.get("max_retries", max_retries)
         trigger_type = params.get("trigger_type", trigger_type)
         triggered_by_doc = params.get("triggered_by_doc", triggered_by_doc)
         triggered_by_document_type = params.get(
@@ -120,7 +105,6 @@ def create_sync_job(
         trigger_document_timestamp = params.get(
             "trigger_document_timestamp", trigger_document_timestamp
         )
-        queue_on_insert = params.get("queue_on_insert", queue_on_insert)
         dry_run = params.get("dry_run", dry_run)
         insert_enabled = params.get("insert_enabled", insert_enabled)
         update_enabled = params.get("update_enabled", update_enabled)
@@ -128,11 +112,6 @@ def create_sync_job(
         update_without_changes_enabled = params.get(
             "update_without_changes_enabled", update_without_changes_enabled
         )
-
-    # Set queue_on_insert default based on environment
-    if queue_on_insert is None:
-        # In dev mode, default to False; in production, default to True
-        queue_on_insert = not frappe.conf.get("developer_mode", False)
 
     # Validate required parameter
     if not sync_job_type:
@@ -185,12 +164,7 @@ def create_sync_job(
             "operation": operation.title() if operation else None,
             "context": frappe.as_json(context) if context else None,
             "parent_sync_job": parent_sync_job,
-            "queue": queue or job_type.queue,
-            "timeout": timeout or job_type.timeout,
-            "retry_delay": retry_delay or job_type.retry_delay,
-            "max_retries": max_retries or job_type.max_retries,
             "trigger_type": trigger_type,
-            "queue_on_insert": queue_on_insert,
             "dry_run": dry_run,
             "insert_enabled": insert_enabled,
             "update_enabled": update_enabled,
@@ -218,16 +192,11 @@ def enqueue_sync_job(
     target_document_type=None,
     target_document_name=None,
     parent_sync_job=None,
-    queue=None,
-    timeout=None,
-    retry_delay=None,
-    max_retries=None,
     trigger_type="Manual",
     triggered_by_doc=None,
     triggered_by_document_type=None,
     triggered_by_document_name=None,
     trigger_document_timestamp=None,
-    queue_on_insert=None,
     dry_run=False,
     insert_enabled=True,
     update_enabled=True,
@@ -250,16 +219,11 @@ def enqueue_sync_job(
         target_document_type: Optional pre-specified target document type (overrides job type default)
         target_document_name: Optional pre-specified target document name
         parent_sync_job: Optional parent sync job name
-        queue: Optional queue override
-        timeout: Optional timeout override
-        retry_delay: Optional retry delay override
-        max_retries: Optional max retries override
         trigger_type: How the job was triggered (default: Manual)
         triggered_by_doc: Optional document that triggered this sync job
         triggered_by_document_type: Optional document type that triggered this sync job
         triggered_by_document_name: Optional document name that triggered this sync job
         trigger_document_timestamp: Optional timestamp of the triggering document
-        queue_on_insert: Whether to queue job on insert (default: None - False in dev, True in production)
         dry_run: Whether to calculate diff only without saving (default: False)
         insert_enabled: Allow insert operations (default: True)
         update_enabled: Allow update operations (default: True)
@@ -299,16 +263,11 @@ def enqueue_sync_job(
             "target_document_type": target_document_type,
             "target_document_name": target_document_name,
             "parent_sync_job": parent_sync_job,
-            "queue": queue,
-            "timeout": timeout,
-            "retry_delay": retry_delay,
-            "max_retries": max_retries,
             "trigger_type": trigger_type,
             "triggered_by_doc": triggered_by_doc,
             "triggered_by_document_type": triggered_by_document_type,
             "triggered_by_document_name": triggered_by_document_name,
             "trigger_document_timestamp": trigger_document_timestamp,
-            "queue_on_insert": queue_on_insert,
             "dry_run": dry_run,
             "insert_enabled": insert_enabled,
             "update_enabled": update_enabled,
@@ -402,35 +361,3 @@ def check_sync_job_module_exists(module, name):
     except ImportError:
         return False
 
-
-def auto_retry_failed_jobs():
-    """
-    Auto-retry failed jobs that are due for retry
-
-    Called by scheduler
-    """
-    from frappe.query_builder import Order
-    from frappe.query_builder.functions import Now
-
-    # Query failed jobs due for retry
-    SyncJob = frappe.qb.DocType("Sync Job")
-
-    failed_jobs = (
-        frappe.qb.from_(SyncJob)
-        .select(SyncJob.name, SyncJob.retry_count, SyncJob.max_retries)
-        .where(SyncJob.status == "Failed")
-        .where(SyncJob.retry_count < SyncJob.max_retries)
-        .where(SyncJob.retry_after <= Now())
-        .orderby(SyncJob.retry_after, order=Order.asc)
-        .run(as_dict=True)
-    )
-
-    # Retry each job
-    for job_data in failed_jobs:
-        try:
-            job = frappe.get_doc("Sync Job", job_data.name)
-            job.retry()
-        except Exception:
-            frappe.log_error(
-                f"Failed to auto-retry Sync Job {job_data.name}", "Auto Retry Sync Job"
-            )

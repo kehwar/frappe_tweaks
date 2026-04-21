@@ -3,25 +3,6 @@
 
 frappe.ui.form.on('Sync Job', {
     refresh(frm) {
-        // Add Start button for pending jobs
-        if (frm.doc.status === 'Pending') {
-            frm.add_custom_button(__('Start'), () => {
-                frappe.call({
-                    method: 'start',
-                    doc: frm.doc,
-                    callback: (r) => {
-                        if (!r.exc) {
-                            frappe.show_alert({
-                                message: __('Sync job queued'),
-                                indicator: 'blue',
-                            })
-                            frm.reload_doc()
-                        }
-                    },
-                })
-            })
-        }
-
         // Add Cancel button
         if (frm.doc.status === 'Pending' || frm.doc.status === 'Queued' || frm.doc.status === 'Failed') {
             frm.add_custom_button(__('Cancel'), () => {
