@@ -18,14 +18,16 @@ def run_doc_method(doctype, docnames, method, kwargs=None, task_id=None):
         docnames = frappe.parse_json(docnames)
 
     if len(docnames) < 20:
-        return _run_doc_method(doctype, docnames, method, kwargs, task_id)
+        return _run_doc_method(
+            doctype, docnames, doc_method=method, kwargs=kwargs, task_id=task_id
+        )
     elif len(docnames) <= 500:
         frappe.msgprint(_("Bulk operation is enqueued in background."), alert=True)
         frappe.enqueue(
             _run_doc_method,
             doctype=doctype,
             docnames=docnames,
-            method=method,
+            doc_method=method,
             kwargs=kwargs,
             task_id=task_id,
             queue="short",
@@ -38,7 +40,10 @@ def run_doc_method(doctype, docnames, method, kwargs=None, task_id=None):
         )
 
 
-def _run_doc_method(doctype, docnames, method, kwargs=None, task_id=None):
+def _run_doc_method(
+    doctype, docnames, doc_method=None, method=None, kwargs=None, task_id=None
+):
+    method = doc_method or method
     if kwargs:
         kwargs = frappe.parse_json(kwargs)
     else:
