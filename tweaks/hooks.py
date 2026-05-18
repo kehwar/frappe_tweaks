@@ -118,6 +118,16 @@ additional_timeline_content = {
 # Boot info hooks
 get_additional_bootinfo = ["tweaks.utils.document_review.add_document_review_bootinfo"]
 
+# Navbar items
+standard_navbar_items = [
+	{
+		"item_label": "Switch Language",
+		"item_type": "Action",
+		"action": "new tweaks.ui.LanguageSwitcher().show()",
+		"is_standard": 1,
+	},
+]
+
 # Cache hooks
 clear_user_cache = [
     "tweaks.tweaks.doctype.ac_rule.ac_rule_utils.clear_ac_rule_user_cache"

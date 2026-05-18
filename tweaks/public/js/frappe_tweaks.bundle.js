@@ -1,3 +1,4 @@
 import "../../custom/doctype/customer"
 import "./tweaks/document_review"
 import "./tweaks/async_tasks"
+import "./tweaks/language_switcher"
