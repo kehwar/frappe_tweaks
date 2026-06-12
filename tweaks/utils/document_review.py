@@ -165,18 +165,6 @@ def evaluate_document_reviews(doc, method=None):
     Args:
             doc: Document instance
     """
-    # Prevent reentrant calls (e.g. on_change -> notify_update -> evaluate again)
-    if frappe.flags.in_document_review_evaluation:
-        return
-    frappe.flags.in_document_review_evaluation = True
-
-    try:
-        _evaluate_document_reviews_inner(doc)
-    finally:
-        frappe.flags.in_document_review_evaluation = False
-
-
-def _evaluate_document_reviews_inner(doc):
     # Early exit if no rules for this doctype
     rules = get_rules_for_doctype(doc.doctype)
     if not rules:
