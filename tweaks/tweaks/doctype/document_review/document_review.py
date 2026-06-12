@@ -1,6 +1,8 @@
 # Copyright (c) 2026, Erick W.R. and contributors
 # For license information, please see license.txt
 
+import json
+
 import frappe
 from frappe.model.document import Document
 
@@ -8,7 +10,6 @@ from frappe.model.document import Document
 class DocumentReview(Document):
     # begin: auto-generated types
     # This code is auto-generated. Do not modify anything in this block.
-
     from typing import TYPE_CHECKING
 
     if TYPE_CHECKING:
@@ -24,6 +25,17 @@ class DocumentReview(Document):
         review_rule: DF.Link
         title: DF.Data | None
     # end: auto-generated types
+
+    def load_from_db(self):
+        super().load_from_db()
+        # Frappe JSON field stores dict as json.dumps() string but doesn't
+        # auto-deserialize on load. Parse it back to dict for convenience.
+        if self.review_data and isinstance(self.review_data, str):
+            try:
+                self.review_data = json.loads(self.review_data)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        return self
 
     def before_save(self):
         """Populate reference title from linked document."""
@@ -43,9 +55,11 @@ class DocumentReview(Document):
 
     def on_change(self):
         """Notify linked document about the change."""
-
-        reference_doc = frappe.get_doc(self.reference_doctype, self.reference_name)
-        reference_doc.notify_update()
+        try:
+            reference_doc = frappe.get_doc(self.reference_doctype, self.reference_name)
+            reference_doc.notify_update()
+        except frappe.DoesNotExistError:
+            pass
 
     def on_submit(self):
         """Trigger referenced document on_change to re-evaluate conditions."""

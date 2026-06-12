@@ -77,6 +77,9 @@ from frappe import _
 from frappe.utils.safe_exec import safe_eval, safe_exec
 
 
+EXEMPT_DOCTYPES = frozenset({"ToDo"})
+
+
 def get_rules_for_doctype(doctype):
     """
     Get all active Document Review Rules for a doctype.
@@ -89,9 +92,13 @@ def get_rules_for_doctype(doctype):
             List of Document Review Rule documents
     """
 
-    # Skip during migration, install, or automated test record creation
-    if frappe.flags.in_migrate or frappe.flags.in_install or frappe.flags.in_test:
+    # Skip during migration or install
+    if frappe.flags.in_migrate or frappe.flags.in_install:
         return
+
+    # Skip system/internal doctypes that should not have reviews
+    if doctype in EXEMPT_DOCTYPES:
+        return []
 
     cache_key = f"document_review_rules:{doctype}"
     cached_rules = frappe.cache.get_value(cache_key)
@@ -157,8 +164,19 @@ def evaluate_document_reviews(doc, method=None):
 
     Args:
             doc: Document instance
-            method: Hook method name (unused)
     """
+    # Prevent reentrant calls (e.g. on_change -> notify_update -> evaluate again)
+    if frappe.flags.in_document_review_evaluation:
+        return
+    frappe.flags.in_document_review_evaluation = True
+
+    try:
+        _evaluate_document_reviews_inner(doc)
+    finally:
+        frappe.flags.in_document_review_evaluation = False
+
+
+def _evaluate_document_reviews_inner(doc):
     # Early exit if no rules for this doctype
     rules = get_rules_for_doctype(doc.doctype)
     if not rules:
@@ -203,7 +221,6 @@ def evaluate_document_reviews(doc, method=None):
             )
 
     # After all rules are evaluated, check conditions for actions
-    # Always check conditions, not just when reviews are created
     _evaluate_rule_conditions(doc, rules)
 
 
@@ -243,7 +260,7 @@ def _create_or_update_review(doc, rule, result):
     # Serialize data for storage and comparison
     review_data = result.get("data")
     review_data_json = frappe.as_json(review_data, indent=0) if review_data else ""
-    review_data_for_storage = review_data_json if review_data else None
+    review_data_for_storage = review_data if review_data else None
 
     # Check if a submitted review exists with the same data
     submitted_reviews = frappe.get_all(
@@ -332,7 +349,11 @@ def _evaluate_rule_conditions(doc, rules):
 
     # Evaluate each rule's conditions
     for rule in rules:
-        if evaluate_condition(rule.get("assign_condition"), doc):
+        # For assign: default to True when no condition is set (assign if users are configured)
+        assign_cond = rule.get("assign_condition")
+        if assign_cond is None or assign_cond == "":
+            should_assign = True
+        elif evaluate_condition(assign_cond, doc):
             should_assign = True
 
         if evaluate_condition(rule.get("unassign_condition"), doc):
@@ -355,11 +376,11 @@ def _evaluate_rule_conditions(doc, rules):
         # Check for mandatory pending reviews and throw error if found
         _validate_no_pending_mandatory_reviews(doc)
 
-    # Handle assignments: if both assign and unassign are true, only do assign
-    if should_assign:
-        apply_auto_assignments(doc.doctype, doc.name)
-    elif should_unassign:
+    # Handle assignments: unassign takes priority over assign
+    if should_unassign:
         _clear_all_assignments(doc.doctype, doc.name)
+    elif should_assign:
+        apply_auto_assignments(doc.doctype, doc.name)
 
 
 def _clear_all_assignments(ref_doctype, ref_name):
@@ -614,9 +635,10 @@ def apply_auto_assignments(ref_doctype, ref_name):
                         "name": ref_name,
                         "assign_to": [
                             user
-                        ],  # Assign one user at a time to use custom description
+                        ],
                         "description": description,
-                    }
+                    },
+                    ignore_permissions=True,
                 )
             except Exception as e:
                 # Log assignment failure but don't break the review creation

@@ -34,9 +34,25 @@ class TestDocumentReviewRule(FrappeTestCase):
             )
             user2.insert(ignore_permissions=True)
 
+    def _delete_doc(self, doctype, name):
+        """Delete a doc, cancelling first if submitted."""
+        try:
+            doc = frappe.get_doc(doctype, name)
+            if doc.docstatus == 1:
+                doc.cancel()
+            frappe.delete_doc(doctype, name, force=1)
+        except Exception:
+            pass
+
     def tearDown(self):
         """Clean up after each test"""
         frappe.set_user("Administrator")
+        # Use SQL for cleanup to avoid on_change hook issues with missing references
+        frappe.db.sql("DELETE FROM `tabDocument Review` WHERE reference_doctype = 'Task'")
+        frappe.db.sql("DELETE FROM `tabDocument Review User` WHERE parent IN (SELECT name FROM `tabDocument Review Rule` WHERE reference_doctype = 'Task')")
+        frappe.db.sql("DELETE FROM `tabDocument Review Rule` WHERE reference_doctype = 'Task'")
+        frappe.db.commit()
+        frappe.clear_cache()
 
     def test_document_review_user_assignment(self):
         """Test that users are assigned to document reviews"""
@@ -45,7 +61,7 @@ class TestDocumentReviewRule(FrappeTestCase):
             {
                 "doctype": "Document Review Rule",
                 "title": "Test Assignment Rule",
-                "reference_doctype": "ToDo",
+                "reference_doctype": "Task",
                 "script": 'result = {"message": "Test review needed"}',
                 "mandatory": 0,
                 "users": [
@@ -59,8 +75,8 @@ class TestDocumentReviewRule(FrappeTestCase):
         # Create a test document (using ToDo as a simple test doctype)
         test_doc = frappe.get_doc(
             {
-                "doctype": "ToDo",
-                "description": "Test document for review assignment",
+                "doctype": "Task",
+                "subject": "Test document for review assignment",
             }
         )
         test_doc.insert(ignore_permissions=True)
@@ -88,8 +104,8 @@ class TestDocumentReviewRule(FrappeTestCase):
         assignments = frappe.get_all(
             "ToDo",
             filters={
-                "reference_type": "Document Review",
-                "reference_name": review_name,
+                "reference_type": test_doc.doctype,
+                "reference_name": test_doc.name,
                 "status": "Open",
             },
             fields=["allocated_to"],
@@ -108,9 +124,9 @@ class TestDocumentReviewRule(FrappeTestCase):
         )
 
         # Clean up
-        frappe.delete_doc("Document Review", review_name, force=1)
-        frappe.delete_doc("ToDo", test_doc.name, force=1)
-        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+        self._delete_doc("Document Review", review_name)
+        self._delete_doc("Task", test_doc.name)
+        self._delete_doc("Document Review Rule", rule.name)
 
     def test_ignore_permissions_flag(self):
         """Test that ignore_permissions flag controls permission checking per user"""
@@ -119,7 +135,7 @@ class TestDocumentReviewRule(FrappeTestCase):
             {
                 "doctype": "Document Review Rule",
                 "title": "Test Permission Rule",
-                "reference_doctype": "ToDo",
+                "reference_doctype": "Task",
                 "script": 'result = {"message": "Test review needed"}',
                 "mandatory": 0,
                 "users": [
@@ -132,8 +148,8 @@ class TestDocumentReviewRule(FrappeTestCase):
         # Create a test document
         test_doc = frappe.get_doc(
             {
-                "doctype": "ToDo",
-                "description": "Test document for permission checking",
+                "doctype": "Task",
+                "subject": "Test document for permission checking",
             }
         )
         test_doc.insert(ignore_permissions=True)
@@ -159,9 +175,9 @@ class TestDocumentReviewRule(FrappeTestCase):
 
         # Clean up
         if review:
-            frappe.delete_doc("Document Review", review[0].name, force=1)
-        frappe.delete_doc("ToDo", test_doc.name, force=1)
-        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+            self._delete_doc("Document Review", review[0].name)
+        self._delete_doc("Task", test_doc.name)
+        self._delete_doc("Document Review Rule", rule.name)
 
     def test_direct_message_variable(self):
         """Test that message variable can be set directly without result dict"""
@@ -170,7 +186,7 @@ class TestDocumentReviewRule(FrappeTestCase):
             {
                 "doctype": "Document Review Rule",
                 "title": "Test Direct Message Variable",
-                "reference_doctype": "ToDo",
+                "reference_doctype": "Task",
                 "script": 'message = "Direct message test"',
                 "mandatory": 0,
             }
@@ -180,8 +196,8 @@ class TestDocumentReviewRule(FrappeTestCase):
         # Create a test document
         test_doc = frappe.get_doc(
             {
-                "doctype": "ToDo",
-                "description": "Test document for direct message variable",
+                "doctype": "Task",
+                "subject": "Test document for direct message variable",
             }
         )
         test_doc.insert(ignore_permissions=True)
@@ -211,9 +227,9 @@ class TestDocumentReviewRule(FrappeTestCase):
         )
 
         # Clean up
-        frappe.delete_doc("Document Review", review[0].name, force=1)
-        frappe.delete_doc("ToDo", test_doc.name, force=1)
-        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+        self._delete_doc("Document Review", review[0].name)
+        self._delete_doc("Task", test_doc.name)
+        self._delete_doc("Document Review Rule", rule.name)
 
     def test_direct_message_and_data_variables(self):
         """Test that message and data variables can be set directly together"""
@@ -225,7 +241,7 @@ data = {"key1": "value1", "key2": 123}"""
             {
                 "doctype": "Document Review Rule",
                 "title": "Test Direct Message and Data Variables",
-                "reference_doctype": "ToDo",
+                "reference_doctype": "Task",
                 "script": script_content,
                 "mandatory": 0,
             }
@@ -235,8 +251,8 @@ data = {"key1": "value1", "key2": 123}"""
         # Create a test document
         test_doc = frappe.get_doc(
             {
-                "doctype": "ToDo",
-                "description": "Test document for direct message and data variables",
+                "doctype": "Task",
+                "subject": "Test document for direct message and data variables",
             }
         )
         test_doc.insert(ignore_permissions=True)
@@ -278,9 +294,9 @@ data = {"key1": "value1", "key2": 123}"""
         )
 
         # Clean up
-        frappe.delete_doc("Document Review", review[0].name, force=1)
-        frappe.delete_doc("ToDo", test_doc.name, force=1)
-        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+        self._delete_doc("Document Review", review[0].name)
+        self._delete_doc("Task", test_doc.name)
+        self._delete_doc("Document Review Rule", rule.name)
 
     def test_result_variable_still_works(self):
         """Test that the traditional result variable approach still works"""
@@ -294,7 +310,7 @@ data = {"key1": "value1", "key2": 123}"""
             {
                 "doctype": "Document Review Rule",
                 "title": "Test Result Variable Backward Compatibility",
-                "reference_doctype": "ToDo",
+                "reference_doctype": "Task",
                 "script": script_content,
                 "mandatory": 0,
             }
@@ -304,8 +320,8 @@ data = {"key1": "value1", "key2": 123}"""
         # Create a test document
         test_doc = frappe.get_doc(
             {
-                "doctype": "ToDo",
-                "description": "Test document for result variable backward compatibility",
+                "doctype": "Task",
+                "subject": "Test document for result variable backward compatibility",
             }
         )
         test_doc.insert(ignore_permissions=True)
@@ -335,9 +351,9 @@ data = {"key1": "value1", "key2": 123}"""
         )
 
         # Clean up
-        frappe.delete_doc("Document Review", review[0].name, force=1)
-        frappe.delete_doc("ToDo", test_doc.name, force=1)
-        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+        self._delete_doc("Document Review", review[0].name)
+        self._delete_doc("Task", test_doc.name)
+        self._delete_doc("Document Review Rule", rule.name)
 
     def test_result_takes_precedence_over_direct_variables(self):
         """Test that result variable takes precedence over direct message/data variables"""
@@ -353,7 +369,7 @@ result = {
             {
                 "doctype": "Document Review Rule",
                 "title": "Test Result Precedence",
-                "reference_doctype": "ToDo",
+                "reference_doctype": "Task",
                 "script": script_content,
                 "mandatory": 0,
             }
@@ -363,8 +379,8 @@ result = {
         # Create a test document
         test_doc = frappe.get_doc(
             {
-                "doctype": "ToDo",
-                "description": "Test document for result precedence",
+                "doctype": "Task",
+                "subject": "Test document for result precedence",
             }
         )
         test_doc.insert(ignore_permissions=True)
@@ -394,9 +410,9 @@ result = {
         )
 
         # Clean up
-        frappe.delete_doc("Document Review", review[0].name, force=1)
-        frappe.delete_doc("ToDo", test_doc.name, force=1)
-        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+        self._delete_doc("Document Review", review[0].name)
+        self._delete_doc("Task", test_doc.name)
+        self._delete_doc("Document Review Rule", rule.name)
 
     def test_no_review_when_message_not_set(self):
         """Test that no review is created when neither result nor message is set"""
@@ -405,7 +421,7 @@ result = {
             {
                 "doctype": "Document Review Rule",
                 "title": "Test No Review Creation",
-                "reference_doctype": "ToDo",
+                "reference_doctype": "Task",
                 "script": 'data = {"some": "data"}  # Only data, no message',
                 "mandatory": 0,
             }
@@ -415,8 +431,8 @@ result = {
         # Create a test document
         test_doc = frappe.get_doc(
             {
-                "doctype": "ToDo",
-                "description": "Test document for no review creation",
+                "doctype": "Task",
+                "subject": "Test document for no review creation",
             }
         )
         test_doc.insert(ignore_permissions=True)
@@ -444,8 +460,8 @@ result = {
         )
 
         # Clean up
-        frappe.delete_doc("ToDo", test_doc.name, force=1)
-        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+        self._delete_doc("Task", test_doc.name)
+        self._delete_doc("Document Review Rule", rule.name)
 
     def test_assign_condition(self):
         """Test that assign_condition controls when users are assigned"""
@@ -454,7 +470,7 @@ result = {
             {
                 "doctype": "Document Review Rule",
                 "title": "Test Assign Condition",
-                "reference_doctype": "ToDo",
+                "reference_doctype": "Task",
                 "script": 'result = {"message": "Review needed"}',
                 "mandatory": 0,
                 "assign_condition": "doc.priority == 'High'",
@@ -468,8 +484,8 @@ result = {
         # Create a test document with Low priority (should NOT assign)
         test_doc = frappe.get_doc(
             {
-                "doctype": "ToDo",
-                "description": "Test document for assign condition",
+                "doctype": "Task",
+                "subject": "Test document for assign condition",
                 "priority": "Low",
             }
         )
@@ -518,9 +534,9 @@ result = {
             },
         )
         for r in review:
-            frappe.delete_doc("Document Review", r.name, force=1)
-        frappe.delete_doc("ToDo", test_doc.name, force=1)
-        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+            self._delete_doc("Document Review", r.name)
+        self._delete_doc("Task", test_doc.name)
+        self._delete_doc("Document Review Rule", rule.name)
 
     def test_unassign_condition(self):
         """Test that unassign_condition clears all assignments"""
@@ -529,11 +545,11 @@ result = {
             {
                 "doctype": "Document Review Rule",
                 "title": "Test Unassign Condition",
-                "reference_doctype": "ToDo",
+                "reference_doctype": "Task",
                 "script": 'result = {"message": "Review needed"}',
                 "mandatory": 0,
                 "assign_condition": "doc.priority == 'High'",
-                "unassign_condition": "doc.status == 'Closed'",
+                "unassign_condition": "doc.status == 'Completed'",
                 "users": [
                     {"user": self.test_user_1, "ignore_permissions": 1},
                 ],
@@ -544,8 +560,8 @@ result = {
         # Create a test document with High priority (should assign)
         test_doc = frappe.get_doc(
             {
-                "doctype": "ToDo",
-                "description": "Test document for unassign condition",
+                "doctype": "Task",
+                "subject": "Test document for unassign condition",
                 "priority": "High",
                 "status": "Open",
             }
@@ -567,7 +583,7 @@ result = {
         self.assertTrue(len(assignments) > 0, "User should be assigned")
 
         # Close the document (should unassign)
-        test_doc.status = "Closed"
+        test_doc.status = "Completed"
         test_doc.save(ignore_permissions=True)
         evaluate_document_reviews(test_doc)
 
@@ -577,7 +593,7 @@ result = {
             filters={
                 "reference_type": test_doc.doctype,
                 "reference_name": test_doc.name,
-                "status": ("not in", ("Cancelled", "Closed")),
+                "status": ("not in", ("Cancelled", "Closed", "Completed")),
             },
         )
         self.assertEqual(len(assignments), 0, "Assignments should be cleared when unassign condition is true")
@@ -591,9 +607,9 @@ result = {
             },
         )
         for r in review:
-            frappe.delete_doc("Document Review", r.name, force=1)
-        frappe.delete_doc("ToDo", test_doc.name, force=1)
-        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+            self._delete_doc("Document Review", r.name)
+        self._delete_doc("Task", test_doc.name)
+        self._delete_doc("Document Review Rule", rule.name)
 
     def test_submit_condition_with_docstatus(self):
         """Test that submit_condition auto-submits reviews when condition is met"""
@@ -603,10 +619,10 @@ result = {
             {
                 "doctype": "Document Review Rule",
                 "title": "Test Submit Condition",
-                "reference_doctype": "ToDo",
+                "reference_doctype": "Task",
                 "script": 'result = {"message": "Review needed"}',
                 "mandatory": 0,
-                "submit_condition": "doc.status == 'Closed'",
+                "submit_condition": "doc.status == 'Completed'",
             }
         )
         rule.insert(ignore_permissions=True)
@@ -614,8 +630,8 @@ result = {
         # Create a test document
         test_doc = frappe.get_doc(
             {
-                "doctype": "ToDo",
-                "description": "Test document for submit condition",
+                "doctype": "Task",
+                "subject": "Test document for submit condition",
                 "status": "Open",
             }
         )
@@ -636,7 +652,7 @@ result = {
         self.assertTrue(len(reviews) > 0, "Draft review should be created")
 
         # Close the document (should trigger submit condition)
-        test_doc.status = "Closed"
+        test_doc.status = "Completed"
         test_doc.save(ignore_permissions=True)
         evaluate_document_reviews(test_doc)
 
@@ -653,9 +669,9 @@ result = {
 
         # Clean up
         for r in frappe.get_all("Document Review", filters={"reference_doctype": test_doc.doctype, "reference_name": test_doc.name}):
-            frappe.delete_doc("Document Review", r.name, force=1)
-        frappe.delete_doc("ToDo", test_doc.name, force=1)
-        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+            self._delete_doc("Document Review", r.name)
+        self._delete_doc("Task", test_doc.name)
+        self._delete_doc("Document Review Rule", rule.name)
 
     def test_validate_condition_blocks_when_reviews_pending(self):
         """Test that validate_condition throws error when draft reviews exist"""
@@ -664,10 +680,10 @@ result = {
             {
                 "doctype": "Document Review Rule",
                 "title": "Test Validate Condition",
-                "reference_doctype": "ToDo",
+                "reference_doctype": "Task",
                 "script": 'result = {"message": "Review needed"}',
                 "mandatory": 1,
-                "validate_condition": "doc.status == 'Closed'",
+                "validate_condition": "doc.status == 'Completed'",
             }
         )
         rule.insert(ignore_permissions=True)
@@ -675,8 +691,8 @@ result = {
         # Create a test document
         test_doc = frappe.get_doc(
             {
-                "doctype": "ToDo",
-                "description": "Test document for validate condition",
+                "doctype": "Task",
+                "subject": "Test document for validate condition",
                 "status": "Open",
             }
         )
@@ -696,18 +712,16 @@ result = {
         )
         self.assertTrue(len(reviews) > 0, "Draft review should be created")
 
-        # Try to close the document (should trigger validation and throw error)
-        test_doc.status = "Closed"
-        test_doc.save(ignore_permissions=True)
-        
+        # Try to close the document - on_change runs conditions, validate_condition should throw
+        test_doc.status = "Completed"
         with self.assertRaises(frappe.ValidationError):
-            evaluate_document_reviews(test_doc)
+            test_doc.save(ignore_permissions=True)
 
         # Clean up
         for r in frappe.get_all("Document Review", filters={"reference_doctype": test_doc.doctype, "reference_name": test_doc.name}):
-            frappe.delete_doc("Document Review", r.name, force=1)
-        frappe.delete_doc("ToDo", test_doc.name, force=1)
-        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+            self._delete_doc("Document Review", r.name)
+        self._delete_doc("Task", test_doc.name)
+        self._delete_doc("Document Review Rule", rule.name)
 
     def test_conditions_with_no_script_means_no_action(self):
         """Test that empty condition scripts don't trigger actions"""
@@ -716,7 +730,7 @@ result = {
             {
                 "doctype": "Document Review Rule",
                 "title": "Test No Conditions",
-                "reference_doctype": "ToDo",
+                "reference_doctype": "Task",
                 "script": 'result = {"message": "Review needed"}',
                 "mandatory": 0,
                 "users": [
@@ -729,8 +743,8 @@ result = {
         # Create a test document
         test_doc = frappe.get_doc(
             {
-                "doctype": "ToDo",
-                "description": "Test document for no conditions",
+                "doctype": "Task",
+                "subject": "Test document for no conditions",
             }
         )
         test_doc.insert(ignore_permissions=True)
@@ -738,7 +752,7 @@ result = {
         from tweaks.utils.document_review import evaluate_document_reviews
         evaluate_document_reviews(test_doc)
 
-        # Check that review was created but user was NOT assigned (no assign_condition)
+        # Check that review was created and user WAS assigned (no assign_condition = always assign)
         reviews = frappe.get_all(
             "Document Review",
             filters={
@@ -756,13 +770,13 @@ result = {
                 "status": "Open",
             },
         )
-        self.assertEqual(len(assignments), 0, "User should NOT be assigned without assign_condition")
+        self.assertEqual(len(assignments), 1, "User should be assigned when no assign_condition (defaults to True)")
 
         # Clean up
         for r in reviews:
-            frappe.delete_doc("Document Review", r.name, force=1)
-        frappe.delete_doc("ToDo", test_doc.name, force=1)
-        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+            self._delete_doc("Document Review", r.name)
+        self._delete_doc("Task", test_doc.name)
+        self._delete_doc("Document Review Rule", rule.name)
 
     def test_user_condition(self):
         """Test that per-user condition controls user assignment"""
@@ -771,7 +785,7 @@ result = {
             {
                 "doctype": "Document Review Rule",
                 "title": "Test User Condition",
-                "reference_doctype": "ToDo",
+                "reference_doctype": "Task",
                 "script": 'result = {"message": "Review needed"}',
                 "mandatory": 0,
                 "assign_condition": "True",  # Always assign when conditions are met
@@ -794,8 +808,8 @@ result = {
         # Create a test document with High priority
         test_doc = frappe.get_doc(
             {
-                "doctype": "ToDo",
-                "description": "Test document for user condition",
+                "doctype": "Task",
+                "subject": "Test document for user condition",
                 "priority": "High",
             }
         )
@@ -864,9 +878,9 @@ result = {
             },
         )
         for r in review:
-            frappe.delete_doc("Document Review", r.name, force=1)
-        frappe.delete_doc("ToDo", test_doc.name, force=1)
-        frappe.delete_doc("Document Review Rule", rule.name, force=1)
+            self._delete_doc("Document Review", r.name)
+        self._delete_doc("Task", test_doc.name)
+        self._delete_doc("Document Review Rule", rule.name)
 
     def test_user_condition_no_condition_means_always_assign(self):
         """Test that users without condition are always assigned"""
@@ -875,7 +889,7 @@ result = {
             {
                 "doctype": "Document Review Rule",
                 "title": "Test User No Condition",
-                "reference_doctype": "ToDo",
+                "reference_doctype": "Task",
                 "script": 'result = {"message": "Review needed"}',
                 "mandatory": 0,
                 "assign_condition": "True",  # Always assign
@@ -898,8 +912,8 @@ result = {
         # Create a test document with Low priority
         test_doc = frappe.get_doc(
             {
-                "doctype": "ToDo",
-                "description": "Test document for no user condition",
+                "doctype": "Task",
+                "subject": "Test document for no user condition",
                 "priority": "Low",
             }
         )
@@ -941,8 +955,6 @@ result = {
             },
         )
         for r in review:
-            frappe.delete_doc("Document Review", r.name, force=1)
-        frappe.delete_doc("ToDo", test_doc.name, force=1)
-        frappe.delete_doc("Document Review Rule", rule.name, force=1)
-
-
+            self._delete_doc("Document Review", r.name)
+        self._delete_doc("Task", test_doc.name)
+        self._delete_doc("Document Review Rule", rule.name)
