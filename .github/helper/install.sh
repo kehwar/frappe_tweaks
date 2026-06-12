@@ -77,6 +77,7 @@ then
 fi
 
 bench --site test_site reinstall --yes
+bench set-config -g server_script_enabled true
 bench --site test_site install-app erpnext
 bench --site test_site install-app tweaks
 
