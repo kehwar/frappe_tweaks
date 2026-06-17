@@ -17,6 +17,7 @@ after_install = [
     "tweaks.custom.doctype.user_group.apply_user_group_patches",
     "tweaks.custom.doctype.role.apply_role_patches",
     "tweaks.tweaks.doctype.ac_rule.ac_rule_utils.after_install",
+    "tweaks.utils.sync_job_type.sync_job_types",
 ]
 
 after_migrate = [

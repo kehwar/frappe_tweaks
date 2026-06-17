@@ -41,9 +41,17 @@ class SyncJobType(Document):
             self.is_standard = "No"
             if (
                 frappe.session.user == "Administrator"
-                and getattr(frappe.local.conf, "developer_mode", 0) == 1
+                and frappe.conf.developer_mode
             ):
                 self.is_standard = "Yes"
+
+        # Standard Sync Job Types cannot be modified in production
+        if self.is_standard == "Yes" and not frappe.conf.developer_mode:
+            frappe.throw(
+                _(
+                    "Standard Sync Job Type cannot be modified. Enable Developer Mode to edit."
+                )
+            )
 
         if self.is_standard == "No":
             # Allow only script manager to edit
@@ -55,13 +63,6 @@ class SyncJobType(Document):
                         "Cannot edit a standard sync job type. Please duplicate and create a new one"
                     )
                 )
-
-        if self.is_standard == "Yes" and frappe.session.user != "Administrator":
-            frappe.throw(
-                _(
-                    "Only Administrator can save a standard sync job type. Please rename and save."
-                )
-            )
 
         # Soft validate sync job module if exists
         if self.is_standard == "Yes":
